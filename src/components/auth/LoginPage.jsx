@@ -52,7 +52,7 @@ export default function LoginPage() {
               <Shield size={28} />
             </div>
             <h1 className="hdr-title" style={{ fontSize: '24px', marginBottom: '8px' }}>
-              Bolna<span className="hdr-accent"> Dashboard</span>
+              Calling<span className="hdr-accent"> Gen</span>
             </h1>
             <p style={{ 
               fontSize: '13px', 

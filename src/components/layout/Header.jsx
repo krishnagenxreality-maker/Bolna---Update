@@ -20,7 +20,7 @@ export const Header = ({ activeView, setActiveView }) => {
             </defs>
           </svg>
         </div>
-        <span className="hdr-title">Bolna<span className="hdr-accent"> Dashboard</span></span>
+        <span className="hdr-title">Calling<span className="hdr-accent"> Gen</span></span>
       </div>
       <div className="hdr-nav">
         <button

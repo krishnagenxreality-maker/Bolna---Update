@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { SmokeBackground } from '../layout/SmokeBackground';
-import { 
-  Users, UserPlus, Trash2, LogOut, X, Shield, 
-  Building2, Key, Monitor, Pencil, Eye, EyeOff 
+import {
+  Users, UserPlus, Trash2, LogOut, X, Shield,
+  Building2, Key, Monitor, Pencil, Eye, EyeOff
 } from 'lucide-react';
 import '../../styles/BolnaDashboard.css';
 
@@ -14,7 +14,7 @@ export default function AdminPortal() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     userId: '',
     password: '',
@@ -22,7 +22,7 @@ export default function AdminPortal() {
     bolnaApiKey: '',
     bolnaAgentId: ''
   });
-  
+
   const [editingUserId, setEditingUserId] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -106,7 +106,7 @@ export default function AdminPortal() {
   return (
     <div className="app">
       <SmokeBackground />
-      
+
       <header className="hdr">
         <div className="hdr-left">
           <div className="logo-mark">
@@ -114,7 +114,7 @@ export default function AdminPortal() {
           </div>
           <span className="hdr-title">Admin<span className="hdr-accent"> Portal</span></span>
         </div>
-        
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <div className="hdr-badge">System Administrator</div>
           <button onClick={logout} className="logout-btn" style={{
@@ -192,7 +192,7 @@ export default function AdminPortal() {
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                        <button 
+                        <button
                           onClick={() => handleOpenEdit(u)}
                           style={{
                             background: 'none', border: 'none',
@@ -204,9 +204,9 @@ export default function AdminPortal() {
                         >
                           <Pencil size={16} />
                         </button>
-                        
+
                         {u.userId !== 'AdminGenx' && (
-                          <button 
+                          <button
                             onClick={() => setShowDeleteConfirm(u.userId)}
                             style={{
                               background: 'none', border: 'none',
@@ -256,7 +256,7 @@ export default function AdminPortal() {
                       type="text"
                       className="field-input"
                       value={formData.userId}
-                      onChange={e => setFormData({...formData, userId: e.target.value})}
+                      onChange={e => setFormData({ ...formData, userId: e.target.value })}
                       required
                     />
                   </div>
@@ -267,11 +267,11 @@ export default function AdminPortal() {
                         type={showPassword ? 'text' : 'password'}
                         className="field-input"
                         value={formData.password}
-                        onChange={e => setFormData({...formData, password: e.target.value})}
+                        onChange={e => setFormData({ ...formData, password: e.target.value })}
                         required
                         style={{ paddingRight: '40px' }}
                       />
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         style={{
@@ -294,7 +294,7 @@ export default function AdminPortal() {
                     type="text"
                     className="field-input"
                     value={formData.organization}
-                    onChange={e => setFormData({...formData, organization: e.target.value})}
+                    onChange={e => setFormData({ ...formData, organization: e.target.value })}
                     required
                   />
                 </div>
@@ -306,7 +306,7 @@ export default function AdminPortal() {
                       type="text"
                       className="field-input"
                       value={formData.bolnaApiKey}
-                      onChange={e => setFormData({...formData, bolnaApiKey: e.target.value})}
+                      onChange={e => setFormData({ ...formData, bolnaApiKey: e.target.value })}
                       required
                     />
                   </div>
@@ -316,14 +316,14 @@ export default function AdminPortal() {
                       type="text"
                       className="field-input"
                       value={formData.bolnaAgentId}
-                      onChange={e => setFormData({...formData, bolnaAgentId: e.target.value})}
+                      onChange={e => setFormData({ ...formData, bolnaAgentId: e.target.value })}
                       required
                     />
                   </div>
                 </div>
 
                 {error && <div style={{ color: '#ff7070', fontSize: '12px', marginTop: '8px' }}>{error}</div>}
-                
+
                 <button type="submit" className="btn-call" style={{ width: '100%', marginTop: '12px', justifyContent: 'center' }}>
                   {showEditForm ? 'Update User Account' : 'Create User Account'}
                 </button>
@@ -341,7 +341,7 @@ export default function AdminPortal() {
             padding: '20px'
           }}>
             <div className="panel" style={{ width: '100%', maxWidth: '400px', padding: '32px', textAlign: 'center' }}>
-              <div className="logo-mark" style={{ 
+              <div className="logo-mark" style={{
                 width: '48px', height: '48px', margin: '0 auto 20px',
                 background: 'rgba(255, 112, 112, 0.1)', border: '1px solid rgba(255, 112, 112, 0.2)',
                 color: '#ff7070'
@@ -352,21 +352,21 @@ export default function AdminPortal() {
               <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px', marginBottom: '32px' }}>
                 Are you sure you want to delete user <strong style={{ color: 'white' }}>"{showDeleteConfirm}"</strong>? This action is permanent.
               </p>
-              
+
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button 
+                <button
                   onClick={() => setShowDeleteConfirm(null)}
                   className="nav-btn"
                   style={{ flex: 1, padding: '12px' }}
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={confirmDeleteUser}
                   disabled={isDeleting}
                   className="btn-call"
-                  style={{ 
-                    flex: 1, padding: '12px', 
+                  style={{
+                    flex: 1, padding: '12px',
                     background: 'rgba(255, 112, 112, 0.15)',
                     borderColor: 'rgba(255, 112, 112, 0.3)',
                     color: '#ff7070',
