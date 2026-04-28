@@ -1,0 +1,1197 @@
+import { useState, useRef, useEffect, useCallback } from "react";
+
+const BATCH_SIZE = 10;
+const BATCH_DELAY_MS = 10 * 60 * 1000;
+const POLL_INTERVAL_MS = 10000;
+
+const STATUS_META = {
+  pending:   { label: "Pending",    cls: "s-pending"   },
+  queued:    { label: "Queued",     cls: "s-queued"    },
+  calling:   { label: "Calling…",  cls: "s-calling"   },
+  completed: { label: "Completed", cls: "s-done"      },
+  called:    { label: "Called",    cls: "s-done"      },
+  failed:    { label: "Failed",    cls: "s-failed"    },
+};
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function escHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+export default function BolnaDashboard() {
+  const [apiKey, setApiKey]         = useState("");
+  const [agentId, setAgentId]       = useState("");
+  const [contacts, setContacts]     = useState([]);
+  const [logs, setLogs]             = useState([]);
+  const [isCalling, setIsCalling]   = useState(false);
+  const [showProgress, setShowProgress] = useState(false);
+  const [showDone, setShowDone]     = useState(false);
+  const [doneSummary, setDoneSummary] = useState("");
+  const [xlsxReady, setXlsxReady]   = useState(false);
+  const [activeView, setActiveView] = useState("manager");
+  const [detailsStatusTab, setDetailsStatusTab] = useState("all");
+  const [responseTab, setResponseTab] = useState("");
+  const [searchDate, setSearchDate] = useState(new Date().toISOString().split('T')[0]);
+
+
+
+  const contactsRef  = useRef([]);
+  const callQueueRef = useRef([]);
+  const pollRef      = useRef(null);
+  const logBoxRef    = useRef(null);
+  const fileInputRef = useRef(null);
+  const dragRef      = useRef(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  // Load XLSX from CDN
+  useEffect(() => {
+    if (window.XLSX) { setXlsxReady(true); return; }
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    s.onload = () => setXlsxReady(true);
+    document.head.appendChild(s);
+  }, []);
+
+  // Auto-scroll log
+  useEffect(() => {
+    if (logBoxRef.current) logBoxRef.current.scrollTop = logBoxRef.current.scrollHeight;
+  }, [logs]);
+
+  const addLog = useCallback((msg, type = "info") => {
+    const ts = new Date().toLocaleTimeString();
+    setLogs(prev => [...prev, { msg, type, ts, id: Date.now() + Math.random() }]);
+  }, []);
+
+  // ── sync contactsRef whenever contacts state changes ──
+  useEffect(() => { contactsRef.current = contacts; }, [contacts]);
+
+  function updateContactStatus(id, status, response = "") {
+    const now = new Date().toISOString().split('T')[0];
+    setContacts(prev => prev.map(c => c.id === id ? { ...c, status, response, date: now } : c));
+    // also update ref for logic reads
+    const idx = contactsRef.current.findIndex(c => c.id === id);
+    if (idx !== -1) {
+      contactsRef.current[idx].status = status;
+      contactsRef.current[idx].response = response;
+      contactsRef.current[idx].date = now;
+    }
+  }
+
+  function updateContactExecId(id, execId) {
+    setContacts(prev => prev.map(c => c.id === id ? { ...c, executionId: execId } : c));
+    const idx = contactsRef.current.findIndex(c => c.id === id);
+    if (idx !== -1) contactsRef.current[idx].executionId = execId;
+  }
+
+  // ── File handling ──
+  function handleFile(file) {
+    if (!xlsxReady) { alert("XLSX library not loaded yet, please wait."); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = window.XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = window.XLSX.utils.sheet_to_json(ws, { defval: "" });
+        parseContacts(rows);
+      } catch(err) { alert("Could not parse file: " + err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function parseContacts(rows) {
+    const nameKeys  = ["name","full name","full_name"];
+    const phoneKeys = ["phone","phone number","phone_number","mobile","contact"];
+
+    let nameKey = null, phoneKey = null;
+    if (rows.length > 0) {
+      const keys = Object.keys(rows[0]);
+      nameKey  = keys.find(k => nameKeys.some(n  => k.toLowerCase().includes(n)));
+      phoneKey = keys.find(k => phoneKeys.some(n => k.toLowerCase().includes(n)));
+    }
+    if (!nameKey || !phoneKey) {
+      alert(`Could not find Name/Phone columns.\nFound: ${Object.keys(rows[0]||{}).join(", ")}`);
+      return;
+    }
+
+    const parsed = rows.map((r, i) => {
+      let phone = String(r[phoneKey] || "").trim();
+      let cleaned = phone.replace(/[^\d+]/g, "");
+      if (!cleaned.startsWith("+")) {
+        if      (cleaned.length === 10)                          phone = "+91" + cleaned;
+        else if (cleaned.length === 12 && cleaned.startsWith("91")) phone = "+" + cleaned;
+        else if (cleaned.length > 5)                             phone = "+91" + cleaned;
+      } else { phone = cleaned; }
+      return { id: i, name: String(r[nameKey]||"").trim(), phone, status: "pending", executionId: null, date: new Date().toISOString().split('T')[0] };
+    }).filter(c => c.name && c.phone);
+
+    if (!parsed.length) { alert("No valid contacts found."); return; }
+    contactsRef.current = parsed;
+    setContacts(parsed);
+    setShowDone(false);
+    setLogs([]);
+  }
+
+  // ── API calls ──
+  async function makeCall(key, agId, phone) {
+    const res = await fetch("https://api.bolna.ai/call", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ agent_id: agId, recipient_phone_number: phone })
+    });
+    if (!res.ok) { const txt = await res.text(); throw new Error(`HTTP ${res.status}: ${txt.slice(0,100)}`); }
+    const data = await res.json();
+    if (!data.execution_id) throw new Error("No execution_id returned");
+    return data.execution_id;
+  }
+
+  function startPolling(key) {
+    if (pollRef.current) return;
+    pollRef.current = setInterval(() => pollStatuses(key), POLL_INTERVAL_MS);
+    pollStatuses(key);
+  }
+
+  async function pollStatuses(key) {
+    const inProgress = contactsRef.current.filter(c => c.executionId && (c.status === "calling" || c.status === "queued"));
+    if (!inProgress.length) {
+      clearInterval(pollRef.current); pollRef.current = null;
+      checkIfAllDone(); return;
+    }
+    for (const contact of inProgress) {
+      try {
+        const res = await fetch(`https://api.bolna.ai/executions/${contact.executionId}`, {
+          headers: { "Authorization": `Bearer ${key}` }
+        });
+        if (!res.ok) continue;
+        const data = await res.json();
+        const sl = (data.status || "").toLowerCase();
+        const isSuccess = ["completed","no answer","no_answer","call disconnected","call_disconnected","busy"].includes(sl);
+        if (isSuccess) { updateContactStatus(contact.id, "called", sl); addLog(`✓ Called: ${contact.name}`, "ok"); }
+        else if (["failed","error","cancelled"].includes(sl)) { updateContactStatus(contact.id, "failed", sl); addLog(`✗ Failed: ${contact.name} — ${data.error_message || sl}`, "err"); }
+      } catch(e) { /* ignore */ }
+      await sleep(300);
+    }
+    checkIfAllDone();
+  }
+
+  function checkIfAllDone() {
+    const cs = contactsRef.current;
+    const done   = cs.filter(c => c.status === "completed" || c.status === "called").length;
+    const failed = cs.filter(c => c.status === "failed").length;
+    const pending = cs.filter(c => ["pending","calling","queued"].includes(c.status)).length;
+    if (pending === 0 && callQueueRef.current.length === 0) {
+      clearInterval(pollRef.current); pollRef.current = null;
+      setShowDone(true);
+      setDoneSummary(`${done} call(s) completed successfully${failed > 0 ? `, ${failed} failed` : ""}.`);
+      setIsCalling(false);
+      addLog(`All done. ${done} called, ${failed} failed.`, "ok");
+    }
+  }
+
+  async function dispatchNextBatch(key, agId) {
+    if (!callQueueRef.current.length) { addLog("All calls dispatched, monitoring statuses…", "info"); startPolling(key); return; }
+    const batch = callQueueRef.current.splice(0, BATCH_SIZE);
+    addLog(`Dispatching batch of ${batch.length} call(s)…`, "info");
+    for (const id of batch) {
+      const contact = contactsRef.current.find(c => c.id === id);
+      if (!contact) continue;
+      updateContactStatus(id, "queued");
+      try {
+        const execId = await makeCall(key, agId, contact.phone);
+        updateContactExecId(id, execId);
+        updateContactStatus(id, "calling");
+        addLog(`✓ Call queued: ${contact.name} (${contact.phone}) → exec ${execId.slice(0,8)}…`, "ok");
+      } catch(err) {
+        updateContactStatus(id, "failed", err.message);
+        addLog(`✗ Failed to call ${contact.name}: ${err.message}`, "err");
+      }
+      await sleep(600);
+    }
+    startPolling(key);
+    if (callQueueRef.current.length > 0) {
+      addLog(`Next batch in 10 minutes (${callQueueRef.current.length} remaining)…`, "info");
+      setTimeout(() => dispatchNextBatch(key, agId), BATCH_DELAY_MS);
+    }
+  }
+
+  async function startCalling() {
+    if (!apiKey || !agentId) { alert("Please enter your Bolna API Key and Agent ID first."); return; }
+    if (isCalling) return;
+    if (!contacts.length) { alert("No contacts loaded."); return; }
+    setIsCalling(true);
+    setShowProgress(true);
+    setShowDone(false);
+    callQueueRef.current = contactsRef.current.filter(c => c.status === "pending" || c.status === "failed").map(c => c.id);
+    addLog("Calls started — batching 10 every 10 minutes", "info");
+    await dispatchNextBatch(apiKey, agentId);
+  }
+
+  // ── Derived stats ──
+  const total   = contacts.length;
+  const done    = contacts.filter(c => c.status === "completed" || c.status === "called").length;
+  const active  = contacts.filter(c => c.status === "calling"   || c.status === "queued").length;
+  const failed  = contacts.filter(c => c.status === "failed").length;
+  const pct     = total > 0 ? Math.round(((done + failed) / total) * 100) : 0;
+
+  return (
+    <>
+      <style>{CSS}</style>
+      <div className="app">
+        {/* Smoke layers */}
+        <div className="smoke smoke-1" />
+        <div className="smoke smoke-2" />
+        <div className="smoke smoke-3" />
+
+        {/* Header */}
+        <header className="hdr">
+          <div className="hdr-left">
+            <div className="logo-mark">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M2 10C2 5.58 5.58 2 10 2s8 3.58 8 8-3.58 8-8 8-8-3.58-8-8Z" fill="url(#lg)" fillOpacity=".2" stroke="url(#lg)" strokeWidth="1.2"/>
+                <path d="M7 10.5l1.5 1.5L13 8" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <defs>
+                  <linearGradient id="lg" x1="2" y1="2" x2="18" y2="18" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#ffffff"/>
+                    <stop offset="1" stopColor="#888888"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <span className="hdr-title">Bolna<span className="hdr-accent"> Dashboard</span></span>
+          </div>
+          <div className="hdr-nav">
+            <button
+              className={`nav-btn ${activeView === 'manager' ? 'active' : ''}`}
+              onClick={() => setActiveView('manager')}
+            >
+              Call Manager
+            </button>
+            <button
+              className={`nav-btn ${activeView === 'details' ? 'active' : ''}`}
+              onClick={() => setActiveView('details')}
+            >
+              View Call Details
+            </button>
+            <button
+              className={`nav-btn ${activeView === 'responses' ? 'active' : ''}`}
+              onClick={() => setActiveView('responses')}
+            >
+              Response Details
+            </button>
+          </div>
+
+          <div className="hdr-badge">Voice AI Call Manager</div>
+
+        </header>
+
+        <main className="main">
+
+          {/* ── Manager View ── */}
+          {activeView === 'manager' && (
+            <>
+              {/* ── Config ── */}
+              <section className="panel">
+                <div className="panel-label">
+                  <span className="label-dot" />
+                  Configuration
+                </div>
+                <div className="config-grid">
+                  <div className="field">
+                    <label className="field-label">Bolna API Key</label>
+                    <input
+                      type="password"
+                      className="field-input"
+                      placeholder="sk-xxxxxxxxxxxxxxxx"
+                      value={apiKey}
+                      onChange={e => setApiKey(e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Agent ID</label>
+                    <input
+                      type="text"
+                      className="field-input"
+                      placeholder="123e4567-e89b-12d3-a456-…"
+                      value={agentId}
+                      onChange={e => setAgentId(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* ── Upload ── */}
+              <section className="panel">
+                <div className="panel-label">
+                  <span className="label-dot" />
+                  Upload Contact Sheet
+                </div>
+                <div
+                  className={`dropzone ${dragOver ? "dz-over" : ""}`}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if(f) handleFile(f); }}
+                >
+                  <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={e => { if(e.target.files[0]) handleFile(e.target.files[0]); }} />
+                  <div className="dz-icon">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                      <rect x="4" y="6" width="24" height="20" rx="3" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 2"/>
+                      <path d="M16 22V14M12 18l4-4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <div className="dz-title">Drop your Excel file here</div>
+                  <div className="dz-sub">Supports .xlsx, .xls, .csv · needs "Name" and "Phone Number" columns</div>
+                </div>
+              </section>
+
+              {/* ── Table ── */}
+              {contacts.length > 0 && (
+                <section className="panel panel-table">
+                  <div className="panel-head">
+                    <div className="panel-label" style={{marginBottom:0}}>
+                      <span className="label-dot" />
+                      Contacts
+                    </div>
+                    <div className="count-chip">{contacts.length} contacts</div>
+                  </div>
+                  <div className="table-wrap">
+                    <table className="ct">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Name</th>
+                          <th>Phone Number</th>
+                          <th>Status</th>
+                          <th>Response</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {contacts.map((c, i) => (
+                          <tr key={c.id}>
+                            <td className="td-num">{i+1}</td>
+                            <td className="td-name">{c.name}</td>
+                            <td className="td-phone">{c.phone}</td>
+                            <td>
+                              <span className={`spill ${STATUS_META[c.status]?.cls || "s-pending"}`}>
+                                {STATUS_META[c.status]?.label || c.status}
+                              </span>
+                            </td>
+                            <td className="td-response">{c.response || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
+
+              {/* ── Action Bar ── */}
+              {contacts.length > 0 && (
+                <div className="action-bar">
+                  <button
+                    className={`btn-call ${isCalling ? "btn-calling" : ""}`}
+                    disabled={isCalling}
+                    onClick={startCalling}
+                  >
+                    {isCalling ? (
+                      <><span className="pulse-dot"/><span>Calling in Progress…</span></>
+                    ) : (
+                      <><span className="phone-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                        </svg>
+                      </span><span>Make Calls</span></>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* ── Progress ── */}
+              {showProgress && (
+                <section className="panel">
+                  <div className="prog-head">
+                    <div className="panel-label" style={{marginBottom:0}}>
+                      <span className="label-dot" />
+                      Calling Progress
+                    </div>
+                    <div className="prog-rate">Rate: <strong>10 calls / 10 min</strong></div>
+                  </div>
+
+                  <div className="prog-track">
+                    <div className="prog-fill" style={{width: pct + "%"}} />
+                  </div>
+
+                  <div className="stats-grid">
+                    {[
+                      {num: total,  label:"Total",      cls:"sn-white"},
+                      {num: done,   label:"Completed",   cls:"sn-green"},
+                      {num: active, label:"In Progress", cls:"sn-blue"},
+                      {num: failed, label:"Failed",      cls:"sn-red"},
+                    ].map(s => (
+                      <div key={s.label} className="stat-box">
+                        <div className={`stat-num ${s.cls}`}>{s.num}</div>
+                        <div className="stat-lbl">{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="log-box" ref={logBoxRef}>
+                    {logs.map(l => (
+                      <div key={l.id} className={`log-row log-${l.type}`}>
+                        <span className="log-ts">{l.ts}</span>
+                        <span className="log-msg">{l.msg}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* ── Done Banner ── */}
+              {showDone && (
+                <div className="done-banner">
+                  <div className="done-icon">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                      <circle cx="20" cy="20" r="19" stroke="white" strokeWidth="1.5" strokeOpacity=".3"/>
+                      <path d="M13 20.5l5 5 9-10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <div className="done-title">All Calls Completed</div>
+                  <div className="done-sub">{doneSummary}</div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── Details View ── */}
+          {activeView === 'details' && (
+            <div className="details-view">
+              <section className="panel">
+                <div className="panel-head">
+                  <div className="panel-label" style={{marginBottom:0}}>
+                    <span className="label-dot" />
+                    Call Details Search
+                  </div>
+                  <div className="search-box">
+                    <span className="search-icon">📅</span>
+                    <input
+                      type="date"
+                      className="search-input"
+                      value={searchDate}
+                      onChange={e => setSearchDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="details-tabs">
+                  {['all', 'called', 'failed'].map(tab => (
+                    <button
+                      key={tab}
+                      className={`tab-btn ${detailsStatusTab === tab ? 'active' : ''}`}
+                      onClick={() => setDetailsStatusTab(tab)}
+                    >
+                      {tab === 'all' ? 'All Records' : tab === 'called' ? 'Called' : 'Failed'}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="table-wrap" style={{marginTop: '20px'}}>
+                  <table className="ct">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>Response</th>
+                        <th>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {contacts
+                        .filter(c => {
+                          const statusMatch = detailsStatusTab === 'all' || c.status === detailsStatusTab;
+                          const dateMatch = !searchDate || c.date === searchDate;
+                          return statusMatch && dateMatch;
+                        })
+                        .map((c, i) => (
+                          <tr key={c.id}>
+                            <td className="td-num">{i+1}</td>
+                            <td className="td-name">{c.name}</td>
+                            <td className="td-phone">{c.phone}</td>
+                            <td>
+                              <span className={`spill ${STATUS_META[c.status]?.cls || "s-pending"}`}>
+                                {STATUS_META[c.status]?.label || c.status}
+                              </span>
+                            </td>
+                            <td className="td-response">{c.response || "-"}</td>
+                            <td className="td-phone" style={{fontSize: '11px'}}>{c.date}</td>
+                          </tr>
+                        ))
+                      }
+                    </tbody>
+                  </table>
+                  {contacts.filter(c => {
+                    const statusMatch = detailsStatusTab === 'all' || c.status === detailsStatusTab;
+                    const dateMatch = !searchDate || c.date === searchDate;
+                    return statusMatch && dateMatch;
+                  }).length === 0 && (
+                    <div className="no-data">No records found for the selected date and status.</div>
+                  )}
+                </div>
+              </section>
+            </div>
+          )}
+
+
+          {activeView === 'responses' && (
+            <div className="responses-view">
+              <section className="panel">
+                <div className="panel-label">
+                  <span className="label-dot" />
+                  Response Details Analysis
+                </div>
+
+                <div className="details-tabs" style={{flexWrap: 'wrap'}}>
+                  {Array.from(new Set(contacts.map(c => c.response).filter(r => r))).sort().map(resp => (
+                    <button
+                      key={resp}
+                      className={`tab-btn ${responseTab === resp ? 'active' : ''}`}
+                      onClick={() => setResponseTab(resp)}
+                    >
+                      {resp.toUpperCase()}
+                    </button>
+                  ))}
+                  {Array.from(new Set(contacts.map(c => c.response).filter(r => r))).length === 0 && (
+                    <div className="no-data" style={{padding: '10px 0'}}>No responses captured yet.</div>
+                  )}
+                </div>
+
+                {responseTab && (
+                  <div className="table-wrap" style={{marginTop: '20px'}}>
+                    <table className="ct">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Name</th>
+                          <th>Phone</th>
+                          <th>Status</th>
+                          <th>Response</th>
+                          <th>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {contacts
+                          .filter(c => c.response === responseTab)
+                          .map((c, i) => (
+                            <tr key={c.id}>
+                              <td className="td-num">{i+1}</td>
+                              <td className="td-name">{c.name}</td>
+                              <td className="td-phone">{c.phone}</td>
+                              <td>
+                                <span className={`spill ${STATUS_META[c.status]?.cls || "s-pending"}`}>
+                                  {STATUS_META[c.status]?.label || c.status}
+                                </span>
+                              </td>
+                              <td className="td-response">{c.response}</td>
+                              <td className="td-phone" style={{fontSize: '11px'}}>{c.date}</td>
+                            </tr>
+                          ))
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {!responseTab && Array.from(new Set(contacts.map(c => c.response).filter(r => r))).length > 0 && (
+                  <div className="no-data">Select a response sheet above to view details.</div>
+                )}
+              </section>
+            </div>
+          )}
+        </main>
+
+      </div>
+    </>
+  );
+}
+
+/* ─── CSS ─────────────────────────────────────────────────────────── */
+const CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+
+  body {
+    background: #080808;
+    color: #f0f0f0;
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+  }
+
+  .app {
+    min-height: 100vh;
+    background: #080808;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Smoke layers */
+  .smoke {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(80px);
+    z-index: 0;
+  }
+  .smoke-1 {
+    width: 600px; height: 400px;
+    top: -100px; left: -150px;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.028) 0%, transparent 70%);
+    animation: drift1 18s ease-in-out infinite alternate;
+  }
+  .smoke-2 {
+    width: 500px; height: 500px;
+    bottom: -80px; right: -100px;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.022) 0%, transparent 70%);
+    animation: drift2 22s ease-in-out infinite alternate;
+  }
+  .smoke-3 {
+    width: 350px; height: 350px;
+    top: 40%; left: 55%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.015) 0%, transparent 70%);
+    animation: drift3 26s ease-in-out infinite alternate;
+  }
+  @keyframes drift1 { 0%{transform:translate(0,0)} 100%{transform:translate(60px,40px)} }
+  @keyframes drift2 { 0%{transform:translate(0,0)} 100%{transform:translate(-50px,-30px)} }
+  @keyframes drift3 { 0%{transform:translate(0,0)} 100%{transform:translate(-40px,50px)} }
+
+  /* Header */
+  .hdr {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 40px;
+    background: rgba(8,8,8,0.88);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .hdr-left { display:flex; align-items:center; gap:12px; }
+
+  .logo-mark {
+    width: 34px; height: 34px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    display: flex; align-items:center; justify-content:center;
+    color: rgba(255,255,255,0.8);
+  }
+
+  .hdr-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: rgba(255,255,255,0.9);
+    text-shadow: 0 0 20px rgba(255,255,255,0.15);
+  }
+  .hdr-accent { color: rgba(255,255,255,0.45); font-weight: 400; }
+
+  .hdr-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 6px 14px;
+    border-radius: 100px;
+  }
+
+  /* Main */
+  .main {
+    position: relative;
+    z-index: 1;
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 36px 40px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Panel */
+  .panel {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    padding: 26px 28px;
+    backdrop-filter: blur(6px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .panel-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 20px;
+  }
+
+  .label-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.5);
+    box-shadow: 0 0 6px rgba(255,255,255,0.4);
+    flex-shrink: 0;
+  }
+
+  /* Config grid */
+  .config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .field { display:flex; flex-direction:column; gap:8px; }
+
+  .field-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+  }
+
+  .field-input {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 9px;
+    padding: 12px 16px;
+    color: rgba(255,255,255,0.85);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .field-input::placeholder { color: rgba(255,255,255,0.2); }
+  .field-input:focus {
+    border-color: rgba(255,255,255,0.25);
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.04), 0 0 14px rgba(255,255,255,0.04);
+  }
+
+  /* Drop zone */
+  .dropzone {
+    border: 1.5px dashed rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 52px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    background: rgba(255,255,255,0.01);
+  }
+  .dropzone:hover, .dz-over {
+    border-color: rgba(255,255,255,0.28);
+    background: rgba(255,255,255,0.04);
+    box-shadow: 0 0 30px rgba(255,255,255,0.03) inset;
+  }
+
+  .dz-icon {
+    color: rgba(255,255,255,0.3);
+    margin-bottom: 14px;
+    display:flex; justify-content:center;
+  }
+  .dz-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.75);
+    text-shadow: 0 0 20px rgba(255,255,255,0.15);
+    margin-bottom: 6px;
+  }
+  .dz-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: rgba(255,255,255,0.25);
+  }
+
+  /* Table panel */
+  .panel-table { padding: 0; }
+
+  .panel-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 20px 28px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .count-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 4px 12px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 100px;
+    color: rgba(255,255,255,0.5);
+  }
+
+  .table-wrap { overflow-x:auto; max-height:360px; overflow-y:auto; }
+  .table-wrap::-webkit-scrollbar { width:4px; height:4px; }
+  .table-wrap::-webkit-scrollbar-track { background:transparent; }
+  .table-wrap::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+
+  .ct { width:100%; border-collapse:collapse; }
+
+  .ct thead th {
+    padding: 12px 20px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.02);
+    position: sticky; top:0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .ct tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background .15s;
+  }
+  .ct tbody tr:hover { background: rgba(255,255,255,0.03); }
+  .ct tbody tr:last-child { border-bottom: none; }
+
+  .ct td { padding: 13px 20px; font-size: 14px; }
+  .td-num  { font-family: 'JetBrains Mono', monospace; font-size:12px; color:rgba(255,255,255,0.2); }
+  .td-name { font-weight:500; color:rgba(255,255,255,0.8); text-shadow:0 0 14px rgba(255,255,255,0.08); }
+  .td-phone{ font-family:'JetBrains Mono',monospace; font-size:13px; color:rgba(255,255,255,0.35); }
+  .td-response { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.4); text-transform: lowercase; }
+
+
+  /* Status pills */
+  .spill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 100px;
+    display: inline-block;
+  }
+  .s-pending { background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.08); }
+  .s-queued  { background:rgba(255,220,100,0.08); color:#f5c842; border:1px solid rgba(245,200,66,0.2); }
+  .s-calling { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.7); border:1px solid rgba(255,255,255,0.15);
+                box-shadow: 0 0 10px rgba(255,255,255,0.07); }
+  .s-done    { background:rgba(200,255,200,0.06); color:#7dffb3; border:1px solid rgba(125,255,179,0.2); }
+  .s-failed  { background:rgba(255,80,80,0.08); color:#ff7070; border:1px solid rgba(255,100,100,0.2); }
+
+  /* Action bar */
+  .action-bar {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0;
+  }
+
+  .btn-call {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 52px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 100px;
+    cursor: pointer;
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.9);
+    transition: all .25s;
+    position: relative;
+    overflow: hidden;
+    text-shadow: 0 0 20px rgba(255,255,255,0.3);
+    box-shadow: 0 0 0 0 rgba(255,255,255,0);
+  }
+  .btn-call::before {
+    content:'';
+    position:absolute; inset:0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 60%);
+    pointer-events:none;
+  }
+  .btn-call:hover:not(:disabled) {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.3);
+    box-shadow: 0 0 30px rgba(255,255,255,0.08), 0 0 60px rgba(255,255,255,0.04);
+    transform: translateY(-1px);
+    text-shadow: 0 0 30px rgba(255,255,255,0.5);
+  }
+  .btn-call:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-calling {
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.12);
+  }
+
+  .pulse-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.7);
+    box-shadow: 0 0 8px rgba(255,255,255,0.5);
+    animation: pd 1.2s ease-in-out infinite;
+  }
+  @keyframes pd {
+    0%,100%{opacity:1;transform:scale(1)}
+    50%{opacity:.3;transform:scale(.6)}
+  }
+
+  .phone-icon { display:flex; align-items:center; color:rgba(255,255,255,0.7); }
+
+  /* Progress */
+  .prog-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:20px;
+  }
+  .prog-rate {
+    font-family: 'JetBrains Mono',monospace;
+    font-size: 12px;
+    color: rgba(255,255,255,0.25);
+  }
+  .prog-rate strong { color:rgba(255,255,255,0.5); font-weight:500; }
+
+  .prog-track {
+    height: 3px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 100px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .prog-fill {
+    height: 100%;
+    background: linear-gradient(90deg, rgba(255,255,255,0.5), rgba(255,255,255,0.85));
+    border-radius: 100px;
+    transition: width .6s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 0 12px rgba(255,255,255,0.3);
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4,1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .stat-box {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 18px 14px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 5px;
+    letter-spacing: -1px;
+  }
+  .sn-white { color:rgba(255,255,255,0.85); text-shadow:0 0 20px rgba(255,255,255,0.15); }
+  .sn-green { color:#7dffb3; text-shadow:0 0 20px rgba(125,255,179,0.25); }
+  .sn-blue  { color:rgba(255,255,255,0.65); text-shadow:0 0 20px rgba(255,255,255,0.1); }
+  .sn-red   { color:#ff7070; text-shadow:0 0 20px rgba(255,100,100,0.25); }
+
+  .stat-lbl {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+    font-weight: 600;
+  }
+
+  /* Log box */
+  .log-box {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    padding: 14px 16px;
+    max-height: 180px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .log-box::-webkit-scrollbar { width:3px; }
+  .log-box::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+
+  .log-row {
+    display: flex;
+    gap: 14px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 11px;
+  }
+  .log-row:last-child { border-bottom:none; }
+
+  .log-ts  { color:rgba(255,255,255,0.18); flex-shrink:0; }
+  .log-msg { color:rgba(255,255,255,0.4); }
+  .log-ok  .log-msg { color:rgba(125,255,179,0.7); }
+  .log-err .log-msg { color:rgba(255,112,112,0.7); }
+  .log-info .log-msg { color:rgba(255,255,255,0.45); }
+
+  /* Done banner */
+  .done-banner {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 44px 28px;
+    text-align: center;
+    animation: fadein .5s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .done-banner::before {
+    content:'';
+    position:absolute;
+    inset:0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.04) 0%, transparent 60%);
+    pointer-events:none;
+  }
+
+  @keyframes fadein {
+    from { opacity:0; transform:translateY(12px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  .done-icon {
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 16px;
+    display:flex; justify-content:center;
+    filter: drop-shadow(0 0 20px rgba(255,255,255,0.2));
+  }
+  .done-title {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: rgba(255,255,255,0.9);
+    text-shadow: 0 0 30px rgba(255,255,255,0.2);
+    margin-bottom: 8px;
+  }
+  .done-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: rgba(255,255,255,0.28);
+  }
+
+  @media (max-width: 640px) {
+    .hdr { padding: 16px 20px; flex-direction: column; gap: 14px; align-items: flex-start; }
+    .hdr-nav { margin: 0; }
+    .config-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .main { padding: 20px 20px 40px; }
+  }
+
+  /* Navigation */
+  .hdr-nav {
+    display: flex;
+    gap: 12px;
+    margin-right: auto;
+    margin-left: 40px;
+  }
+  .nav-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: rgba(255,255,255,0.3);
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .nav-btn:hover { color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.03); }
+  .nav-btn.active {
+    color: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.1);
+    box-shadow: 0 0 14px rgba(255,255,255,0.05);
+  }
+
+  /* Details View */
+  .details-view { animation: fadein .4s ease; }
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 6px 14px;
+  }
+  .search-icon { font-size: 14px; opacity: .5; }
+  .search-input {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.8);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    outline: none;
+  }
+  .search-input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+  }
+
+  .details-tabs {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding-bottom: 0px;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: rgba(255,255,255,0.3);
+    padding: 10px 4px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    margin-right: 20px;
+  }
+  .tab-btn:hover { color: rgba(255,255,255,0.6); }
+  .tab-btn.active {
+    color: rgba(255,255,255,0.9);
+    border-bottom-color: rgba(255,255,255,0.7);
+    text-shadow: 0 0 14px rgba(255,255,255,0.3);
+  }
+
+  .no-data {
+    padding: 40px;
+    text-align: center;
+    color: rgba(255,255,255,0.2);
+    font-size: 14px;
+    font-style: italic;
+  }
+
+`;
