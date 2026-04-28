@@ -4,12 +4,13 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './components/auth/LoginPage';
 import AdminPortal from './components/admin/AdminPortal';
 import BolnaDashboard from './BolnaDashboard';
+import HomePage from './components/home/HomePage';
 
 const ProtectedRoute = ({ children, role }) => {
   const { user } = useAuth();
   
   if (!user) return <Navigate to="/login" />;
-  if (role && user.role !== role) return <Navigate to={user.role === 'admin' ? '/admin' : '/'} />;
+  if (role && user.role !== role) return <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} />;
   
   return children;
 };
@@ -19,7 +20,8 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={user.role === 'admin' ? '/admin' : '/'} />} />
+      <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} />} />
       
       <Route 
         path="/admin" 
@@ -31,7 +33,7 @@ function AppRoutes() {
       />
       
       <Route 
-        path="/" 
+        path="/dashboard" 
         element={
           <ProtectedRoute role="user">
             <BolnaDashboard />
