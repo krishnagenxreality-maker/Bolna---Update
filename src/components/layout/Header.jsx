@@ -1,6 +1,10 @@
 import React from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { LogOut } from 'lucide-react';
 
 export const Header = ({ activeView, setActiveView }) => {
+  const { logout, user } = useAuth();
+
   return (
     <header className="hdr">
       <div className="hdr-left">
@@ -45,7 +49,23 @@ export const Header = ({ activeView, setActiveView }) => {
         </button>
       </div>
 
-      <div className="hdr-badge">Voice AI Call Manager</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="hdr-badge">{user?.organization || 'Voice AI Call Manager'}</div>
+        <button onClick={logout} className="logout-btn" style={{
+          background: 'rgba(239, 68, 68, 0.1)',
+          color: '#ef4444',
+          border: '1px solid rgba(239, 68, 68, 0.2)',
+          padding: '0.4rem 0.8rem',
+          borderRadius: '0.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          cursor: 'pointer',
+          fontSize: '0.85rem'
+        }}>
+          <LogOut size={14} /> Logout
+        </button>
+      </div>
     </header>
   );
 };

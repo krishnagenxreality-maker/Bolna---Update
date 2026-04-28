@@ -1,0 +1,12 @@
+{
+  "users": [
+    {
+      "userId": "AdminGenx",
+      "password": "Genx@25",
+      "role": "admin",
+      "organization": "Genx Reality",
+      "bolnaApiKey": "",
+      "bolnaAgentId": ""
+    }
+  ]
+}

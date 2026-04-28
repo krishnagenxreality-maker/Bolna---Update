@@ -52,9 +52,7 @@ export default function BolnaDashboard() {
           <>
             <ConfigPanel 
               apiKey={apiKey} 
-              setApiKey={setApiKey} 
               agentId={agentId} 
-              setAgentId={setAgentId} 
             />
             
             <UploadPanel handleFile={handleFile} />

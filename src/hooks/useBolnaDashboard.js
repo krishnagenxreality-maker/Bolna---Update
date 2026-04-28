@@ -4,8 +4,11 @@ import { sleep } from "../utils/helpers";
 import { makeCall, fetchExecutionStatus, analyzeSummaryWithDeepSeek } from "../services/api";
 import { parseContacts as parseContactsLogic } from "../services/fileService";
 import { DEEPSEEK_API_KEY } from "../utils/constants";
+import { useAuth } from "../context/AuthContext";
+import axios from "axios";
 
 export function useBolnaDashboard() {
+  const { user } = useAuth();
   const [apiKey, setApiKey]         = useState("");
   const [agentId, setAgentId]       = useState("");
   const [contacts, setContacts]     = useState([]);
@@ -20,6 +23,22 @@ export function useBolnaDashboard() {
   const [responseTab, setResponseTab] = useState("");
   const [leadsStatusTab, setLeadsStatusTab] = useState("interested");
   const [searchDate, setSearchDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Fetch user config from backend
+  useEffect(() => {
+    const fetchConfig = async () => {
+      if (user && user.userId) {
+        try {
+          const res = await axios.get(`http://localhost:5000/api/user-config/${user.userId}`);
+          if (res.data.bolnaApiKey) setApiKey(res.data.bolnaApiKey);
+          if (res.data.bolnaAgentId) setAgentId(res.data.bolnaAgentId);
+        } catch (err) {
+          console.error("Failed to fetch user config", err);
+        }
+      }
+    };
+    fetchConfig();
+  }, [user]);
 
   // Auto-select first response tab when entering responses view
   useEffect(() => {
