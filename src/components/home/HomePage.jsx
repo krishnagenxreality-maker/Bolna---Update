@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SmokeBackground } from '../layout/SmokeBackground';
 import { 
   Shield, LogIn, ArrowRight, CheckCircle2, 
@@ -9,7 +9,8 @@ import '../../styles/BolnaDashboard.css';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const showJoinModal = searchParams.get('join') === 'true';
 
   const features = [
     {
@@ -28,6 +29,14 @@ export default function HomePage() {
       desc: "Scale your sales pipeline effortlessly by automating the initial qualification and follow-up processes."
     }
   ];
+
+  const handleOpenJoin = () => {
+    setSearchParams({ join: 'true' });
+  };
+
+  const handleCloseJoin = () => {
+    setSearchParams({});
+  };
 
   return (
     <div className="app">
@@ -79,7 +88,7 @@ export default function HomePage() {
           </p>
           
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-            <button onClick={() => setShowJoinModal(true)} className="btn-call" style={{ padding: '16px 40px', fontSize: '16px' }}>
+            <button onClick={handleOpenJoin} className="btn-call" style={{ padding: '16px 40px', fontSize: '16px' }}>
               Join Now <ArrowRight size={20} style={{ marginLeft: '8px' }} />
             </button>
             <button className="nav-btn" style={{ padding: '16px 40px', fontSize: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -145,7 +154,7 @@ export default function HomePage() {
         }}>
           <div className="panel" style={{ width: '100%', maxWidth: '440px', padding: '40px', textAlign: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', position: 'absolute', top: '24px', right: '24px' }}>
-              <button onClick={() => setShowJoinModal(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.2)', cursor: 'pointer' }}>
+              <button onClick={handleCloseJoin} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.2)', cursor: 'pointer' }}>
                 <X size={24} />
               </button>
             </div>

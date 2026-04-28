@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { SmokeBackground } from '../layout/SmokeBackground';
-import { LogIn, User, Lock, AlertCircle, Shield } from 'lucide-react';
+import { LogIn, User, Lock, AlertCircle, Shield, ArrowLeft, Home } from 'lucide-react';
 import '../../styles/BolnaDashboard.css';
 
 export default function LoginPage() {
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,9 +43,64 @@ export default function LoginPage() {
           width: '100%',
           maxWidth: '420px',
           padding: '40px',
-          textAlign: 'center'
+          textAlign: 'center',
+          position: 'relative'
         }}>
-          <div style={{ marginBottom: '32px' }}>
+          {/* Navigation Buttons */}
+          <div style={{ 
+            position: 'absolute', 
+            top: '20px', 
+            left: '20px', 
+            right: '20px', 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            pointerEvents: 'none'
+          }}>
+            <button 
+              onClick={() => navigate(-1)} 
+              title="Back"
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                color: 'rgba(255,255,255,0.2)', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '12px',
+                fontFamily: 'Outfit',
+                pointerEvents: 'auto',
+                transition: 'color 0.2s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.color = 'white'}
+              onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.2)'}
+            >
+              <ArrowLeft size={16} /> Back
+            </button>
+            <button 
+              onClick={() => navigate('/')} 
+              title="Home"
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                color: 'rgba(255,255,255,0.2)', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '12px',
+                fontFamily: 'Outfit',
+                pointerEvents: 'auto',
+                transition: 'color 0.2s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.color = 'white'}
+              onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.2)'}
+            >
+              <Home size={16} /> Home
+            </button>
+          </div>
+
+          <div style={{ marginBottom: '32px', marginTop: '10px' }}>
             <div className="logo-mark" style={{ 
               width: '56px', height: '56px', 
               margin: '0 auto 16px',
