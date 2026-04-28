@@ -73,7 +73,7 @@ export default function LoginPage() {
                 className="field-input"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
-                placeholder="AdminGenx"
+                placeholder="User id"
                 required
               />
             </div>

@@ -83,6 +83,39 @@ app.delete('/api/users/:userId', (req, res) => {
   }
 });
 
+// Admin: Update user
+app.put('/api/users/:oldUserId', (req, res) => {
+  const { oldUserId } = req.params;
+  const updatedData = req.body;
+  const db = readDB();
+
+  // Prevent editing the primary admin's userId (optional, but safer)
+  if (oldUserId === 'AdminGenx' && updatedData.userId !== 'AdminGenx') {
+    return res.status(403).json({ success: false, message: 'Cannot change the primary administrator ID' });
+  }
+
+  const userIndex = db.users.findIndex(u => u.userId === oldUserId);
+  if (userIndex === -1) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
+
+  // Check if new userId already exists (if it was changed)
+  if (updatedData.userId !== oldUserId) {
+    if (db.users.find(u => u.userId === updatedData.userId)) {
+      return res.status(400).json({ success: false, message: 'New User ID already exists' });
+    }
+  }
+
+  // Merge data
+  db.users[userIndex] = {
+    ...db.users[userIndex],
+    ...updatedData
+  };
+
+  writeDB(db);
+  res.json({ success: true, user: db.users[userIndex] });
+});
+
 // User: Get config
 app.get('/api/user-config/:userId', (req, res) => {
   const { userId } = req.params;

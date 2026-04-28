@@ -7,6 +7,14 @@
       "organization": "Genx Reality",
       "bolnaApiKey": "",
       "bolnaAgentId": ""
+    },
+    {
+      "userId": "EditTestDone",
+      "password": "NewPass",
+      "organization": "Test Org",
+      "bolnaApiKey": "test_key",
+      "bolnaAgentId": "test_agent",
+      "role": "user"
     }
   ]
 }

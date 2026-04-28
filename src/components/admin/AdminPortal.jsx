@@ -2,20 +2,28 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { SmokeBackground } from '../layout/SmokeBackground';
-import { Users, UserPlus, Trash2, LogOut, X, Shield, Building2, Key, Monitor } from 'lucide-react';
+import { 
+  Users, UserPlus, Trash2, LogOut, X, Shield, 
+  Building2, Key, Monitor, Pencil, Eye, EyeOff 
+} from 'lucide-react';
 import '../../styles/BolnaDashboard.css';
 
 export default function AdminPortal() {
   const { logout, user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newUser, setNewUser] = useState({
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  
+  const [formData, setFormData] = useState({
     userId: '',
     password: '',
     organization: '',
     bolnaApiKey: '',
     bolnaAgentId: ''
   });
+  
+  const [editingUserId, setEditingUserId] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isDeleting, setIsDeleting] = useState(null);
@@ -34,18 +42,50 @@ export default function AdminPortal() {
     }
   };
 
+  const handleOpenAdd = () => {
+    setFormData({ userId: '', password: '', organization: '', bolnaApiKey: '', bolnaAgentId: '' });
+    setError('');
+    setSuccess('');
+    setShowPassword(false);
+    setShowAddForm(true);
+  };
+
+  const handleOpenEdit = (user) => {
+    setFormData({
+      userId: user.userId,
+      password: user.password,
+      organization: user.organization || '',
+      bolnaApiKey: user.bolnaApiKey || '',
+      bolnaAgentId: user.bolnaAgentId || ''
+    });
+    setEditingUserId(user.userId);
+    setError('');
+    setSuccess('');
+    setShowPassword(false);
+    setShowEditForm(true);
+  };
+
   const handleAddUser = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
     try {
-      await axios.post('http://localhost:5000/api/users', newUser);
-      setSuccess('User created successfully!');
-      setNewUser({ userId: '', password: '', organization: '', bolnaApiKey: '', bolnaAgentId: '' });
+      await axios.post('http://localhost:5000/api/users', formData);
       setShowAddForm(false);
       fetchUsers();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create user');
+    }
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      await axios.put(`http://localhost:5000/api/users/${editingUserId}`, formData);
+      setShowEditForm(false);
+      fetchUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update user');
     }
   };
 
@@ -119,7 +159,7 @@ export default function AdminPortal() {
               <div className="label-dot"></div>
               User Management
             </div>
-            <button onClick={() => setShowAddForm(true)} className="btn-call" style={{ padding: '8px 20px', fontSize: '13px' }}>
+            <button onClick={handleOpenAdd} className="btn-call" style={{ padding: '8px 20px', fontSize: '13px' }}>
               <UserPlus size={16} /> Create User
             </button>
           </div>
@@ -151,23 +191,36 @@ export default function AdminPortal() {
                       </span>
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      {u.userId !== 'AdminGenx' && (
+                      <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
                         <button 
-                          onClick={() => setShowDeleteConfirm(u.userId)}
+                          onClick={() => handleOpenEdit(u)}
                           style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'rgba(255, 112, 112, 0.4)',
-                            cursor: 'pointer',
-                            transition: 'color 0.2s'
+                            background: 'none', border: 'none',
+                            color: 'rgba(255, 255, 255, 0.3)',
+                            cursor: 'pointer', transition: 'color 0.2s'
                           }}
-                          id={`delete-${u.userId}`}
-                          onMouseOver={(e) => e.currentTarget.style.color = '#ff7070'}
-                          onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255, 112, 112, 0.4)'}
+                          onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
+                          onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.3)'}
                         >
-                          <Trash2 size={16} />
+                          <Pencil size={16} />
                         </button>
-                      )}
+                        
+                        {u.userId !== 'AdminGenx' && (
+                          <button 
+                            onClick={() => setShowDeleteConfirm(u.userId)}
+                            style={{
+                              background: 'none', border: 'none',
+                              color: 'rgba(255, 112, 112, 0.4)',
+                              cursor: 'pointer', transition: 'color 0.2s'
+                            }}
+                            id={`delete-${u.userId}`}
+                            onMouseOver={(e) => e.currentTarget.style.color = '#ff7070'}
+                            onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255, 112, 112, 0.4)'}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -176,8 +229,8 @@ export default function AdminPortal() {
           </div>
         </div>
 
-        {/* Create User Modal */}
-        {showAddForm && (
+        {/* User Modal (Add/Edit) */}
+        {(showAddForm || showEditForm) && (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 200,
             background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
@@ -188,34 +241,50 @@ export default function AdminPortal() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <div className="panel-label" style={{ marginBottom: 0 }}>
                   <div className="label-dot"></div>
-                  Create New User
+                  {showEditForm ? 'Edit User Details' : 'Create New User'}
                 </div>
-                <button onClick={() => setShowAddForm(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
+                <button onClick={() => { setShowAddForm(false); setShowEditForm(false); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
                   <X size={20} />
                 </button>
               </div>
 
-              <form onSubmit={handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <form onSubmit={showEditForm ? handleUpdateUser : handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div className="config-grid">
                   <div className="field">
                     <label className="field-label">User ID</label>
                     <input
                       type="text"
                       className="field-input"
-                      value={newUser.userId}
-                      onChange={e => setNewUser({...newUser, userId: e.target.value})}
+                      value={formData.userId}
+                      onChange={e => setFormData({...formData, userId: e.target.value})}
                       required
                     />
                   </div>
                   <div className="field">
                     <label className="field-label">Password</label>
-                    <input
-                      type="password"
-                      className="field-input"
-                      value={newUser.password}
-                      onChange={e => setNewUser({...newUser, password: e.target.value})}
-                      required
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        className="field-input"
+                        value={formData.password}
+                        onChange={e => setFormData({...formData, password: e.target.value})}
+                        required
+                        style={{ paddingRight: '40px' }}
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{
+                          position: 'absolute', right: '12px', top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none', border: 'none',
+                          color: 'rgba(255,255,255,0.3)', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center'
+                        }}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -224,8 +293,8 @@ export default function AdminPortal() {
                   <input
                     type="text"
                     className="field-input"
-                    value={newUser.organization}
-                    onChange={e => setNewUser({...newUser, organization: e.target.value})}
+                    value={formData.organization}
+                    onChange={e => setFormData({...formData, organization: e.target.value})}
                     required
                   />
                 </div>
@@ -236,8 +305,8 @@ export default function AdminPortal() {
                     <input
                       type="text"
                       className="field-input"
-                      value={newUser.bolnaApiKey}
-                      onChange={e => setNewUser({...newUser, bolnaApiKey: e.target.value})}
+                      value={formData.bolnaApiKey}
+                      onChange={e => setFormData({...formData, bolnaApiKey: e.target.value})}
                       required
                     />
                   </div>
@@ -246,8 +315,8 @@ export default function AdminPortal() {
                     <input
                       type="text"
                       className="field-input"
-                      value={newUser.bolnaAgentId}
-                      onChange={e => setNewUser({...newUser, bolnaAgentId: e.target.value})}
+                      value={formData.bolnaAgentId}
+                      onChange={e => setFormData({...formData, bolnaAgentId: e.target.value})}
                       required
                     />
                   </div>
@@ -255,8 +324,8 @@ export default function AdminPortal() {
 
                 {error && <div style={{ color: '#ff7070', fontSize: '12px', marginTop: '8px' }}>{error}</div>}
                 
-                <button type="submit" className="btn-call" style={{ width: '100%', marginTop: '12px' }}>
-                  Create User Account
+                <button type="submit" className="btn-call" style={{ width: '100%', marginTop: '12px', justifyContent: 'center' }}>
+                  {showEditForm ? 'Update User Account' : 'Create User Account'}
                 </button>
               </form>
             </div>
