@@ -133,6 +133,73 @@ app.get('/api/user-config/:userId', (req, res) => {
   }
 });
 
+// Admin: Get all requests
+app.get('/api/requests', (req, res) => {
+  const db = readDB();
+  res.json(db.requests || []);
+});
+
+// User: Submit a request
+app.post('/api/requests', (req, res) => {
+  const newRequest = req.body;
+  const db = readDB();
+  
+  if (!db.requests) {
+    db.requests = [];
+  }
+
+  const requestWithId = {
+    ...newRequest,
+    id: Date.now().toString(),
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
+
+  db.requests.push(requestWithId);
+  writeDB(db);
+  
+  res.json({ success: true, request: requestWithId });
+});
+
+// Admin: Update request status
+app.put('/api/requests/:id/status', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  const db = readDB();
+
+  if (!db.requests) {
+    return res.status(404).json({ success: false, message: 'No requests found' });
+  }
+
+  const reqIndex = db.requests.findIndex(r => r.id === id);
+  if (reqIndex !== -1) {
+    db.requests[reqIndex].status = status;
+    writeDB(db);
+    res.json({ success: true, request: db.requests[reqIndex] });
+  } else {
+    res.status(404).json({ success: false, message: 'Request not found' });
+  }
+});
+
+// Admin: Delete request
+app.delete('/api/requests/:id', (req, res) => {
+  const { id } = req.params;
+  const db = readDB();
+
+  if (!db.requests) {
+    return res.status(404).json({ success: false, message: 'No requests found' });
+  }
+
+  const reqIndex = db.requests.findIndex(r => r.id === id);
+  if (reqIndex !== -1) {
+    db.requests.splice(reqIndex, 1);
+    writeDB(db);
+    res.json({ success: true, message: 'Request deleted successfully' });
+  } else {
+    res.status(404).json({ success: false, message: 'Request not found' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

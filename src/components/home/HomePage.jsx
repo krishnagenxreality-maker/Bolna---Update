@@ -53,7 +53,7 @@ export default function HomePage() {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          <button className="nav-link" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'Outfit', fontWeight: '500' }}>Pricing</button>
+          <button onClick={() => navigate('/pricing')} className="nav-link" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'Outfit', fontWeight: '500' }}>Pricing</button>
           <button onClick={() => navigate('/login')} className="logout-btn" style={{
             background: 'rgba(255, 255, 255, 0.05)',
             color: '#fff',
@@ -176,7 +176,7 @@ export default function HomePage() {
               
               <button 
                 onClick={() => {
-                  alert('Registration is currently handled by the system administrator. Please contact us to get your credentials.');
+                  navigate('/pricing');
                 }}
                 className="nav-btn" 
                 style={{ width: '100%', padding: '16px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)' }}

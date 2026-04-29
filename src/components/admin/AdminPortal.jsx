@@ -11,9 +11,13 @@ import '../../styles/BolnaDashboard.css';
 export default function AdminPortal() {
   const { logout, user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
+  const [requests, setRequests] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [activeView, setActiveView] = useState('users');
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [createdFromRequestId, setCreatedFromRequestId] = useState(null);
 
   const [formData, setFormData] = useState({
     userId: '',
@@ -31,7 +35,52 @@ export default function AdminPortal() {
 
   useEffect(() => {
     fetchUsers();
+    fetchRequests();
   }, []);
+
+  const fetchRequests = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/requests');
+      setRequests(res.data);
+    } catch (err) {
+      console.error('Failed to fetch requests', err);
+    }
+  };
+
+  const handleMarkCreated = async (requestId) => {
+    try {
+      await axios.put(`http://localhost:5000/api/requests/${requestId}/status`, { status: 'Created' });
+      setRequests(requests.map(r => r.id === requestId ? { ...r, status: 'Created' } : r));
+      
+      const req = requests.find(r => r.id === requestId);
+      setFormData({
+        userId: req?.name || '',
+        password: '',
+        organization: req?.organizationName || '',
+        bolnaApiKey: '',
+        bolnaAgentId: ''
+      });
+      setError('');
+      setSuccess('');
+      setShowPassword(false);
+      setSelectedRequest(null);
+      setCreatedFromRequestId(requestId);
+      setShowAddForm(true);
+      setActiveView('users'); // Switch to users view since we are creating a user
+    } catch (err) {
+      alert('Failed to update status');
+    }
+  };
+
+  const handleDeleteRequest = async (requestId) => {
+    if (!window.confirm('Are you sure you want to delete this request?')) return;
+    try {
+      await axios.delete(`http://localhost:5000/api/requests/${requestId}`);
+      fetchRequests();
+    } catch (err) {
+      alert('Failed to delete request');
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -47,6 +96,7 @@ export default function AdminPortal() {
     setError('');
     setSuccess('');
     setShowPassword(false);
+    setCreatedFromRequestId(null);
     setShowAddForm(true);
   };
 
@@ -62,6 +112,7 @@ export default function AdminPortal() {
     setError('');
     setSuccess('');
     setShowPassword(false);
+    setCreatedFromRequestId(null);
     setShowEditForm(true);
   };
 
@@ -72,6 +123,12 @@ export default function AdminPortal() {
       await axios.post('http://localhost:5000/api/users', formData);
       setShowAddForm(false);
       fetchUsers();
+      
+      if (createdFromRequestId) {
+        await axios.delete(`http://localhost:5000/api/requests/${createdFromRequestId}`);
+        setCreatedFromRequestId(null);
+        fetchRequests();
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create user');
     }
@@ -155,79 +212,226 @@ export default function AdminPortal() {
 
         <div className="panel panel-table">
           <div className="panel-head">
-            <div className="panel-label">
-              <div className="label-dot"></div>
-              User Management
+            <div className="panel-label" style={{ display: 'flex', gap: '20px', marginBottom: 0, borderBottom: 'none' }}>
+              <button 
+                onClick={() => setActiveView('users')} 
+                className={`tab-btn ${activeView === 'users' ? 'active' : ''}`}
+                style={{ margin: 0 }}
+              >
+                User Management
+              </button>
+              <button 
+                onClick={() => setActiveView('requests')} 
+                className={`tab-btn ${activeView === 'requests' ? 'active' : ''}`}
+                style={{ margin: 0 }}
+              >
+                New User Requests
+              </button>
             </div>
-            <button onClick={handleOpenAdd} className="btn-call" style={{ padding: '8px 20px', fontSize: '13px' }}>
-              <UserPlus size={16} /> Create User
-            </button>
+            {activeView === 'users' && (
+              <button onClick={handleOpenAdd} className="btn-call" style={{ padding: '8px 20px', fontSize: '13px' }}>
+                <UserPlus size={16} /> Create User
+              </button>
+            )}
           </div>
 
           <div className="table-wrap">
-            <table className="ct">
-              <thead>
-                <tr>
-                  <th>User ID</th>
-                  <th>Organization</th>
-                  <th>Bolna API Key</th>
-                  <th>Bolna Agent ID</th>
-                  <th>Role</th>
-                  <th style={{ textAlign: 'center' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.userId}>
-                    <td className="td-name">{u.userId}</td>
-                    <td>{u.organization || '-'}</td>
-                    <td className="td-phone" style={{ fontSize: '11px' }}>
-                      {u.bolnaApiKey ? `••••${u.bolnaApiKey.slice(-4)}` : '-'}
-                    </td>
-                    <td className="td-phone" style={{ fontSize: '11px' }}>{u.bolnaAgentId || '-'}</td>
-                    <td>
-                      <span className={`spill ${u.role === 'admin' ? 's-calling' : 's-pending'}`}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                        <button
-                          onClick={() => handleOpenEdit(u)}
-                          style={{
-                            background: 'none', border: 'none',
-                            color: 'rgba(255, 255, 255, 0.3)',
-                            cursor: 'pointer', transition: 'color 0.2s'
-                          }}
-                          onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
-                          onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.3)'}
-                        >
-                          <Pencil size={16} />
-                        </button>
-
-                        {u.userId !== 'AdminGenx' && (
+            {activeView === 'users' ? (
+              <table className="ct">
+                <thead>
+                  <tr>
+                    <th>User ID</th>
+                    <th>Organization</th>
+                    <th>Bolna API Key</th>
+                    <th>Bolna Agent ID</th>
+                    <th>Role</th>
+                    <th style={{ textAlign: 'center' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.userId}>
+                      <td className="td-name">{u.userId}</td>
+                      <td>{u.organization || '-'}</td>
+                      <td className="td-phone" style={{ fontSize: '11px' }}>
+                        {u.bolnaApiKey ? `••••${u.bolnaApiKey.slice(-4)}` : '-'}
+                      </td>
+                      <td className="td-phone" style={{ fontSize: '11px' }}>{u.bolnaAgentId || '-'}</td>
+                      <td>
+                        <span className={`spill ${u.role === 'admin' ? 's-calling' : 's-pending'}`}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
                           <button
-                            onClick={() => setShowDeleteConfirm(u.userId)}
+                            onClick={() => handleOpenEdit(u)}
                             style={{
                               background: 'none', border: 'none',
-                              color: 'rgba(255, 112, 112, 0.4)',
+                              color: 'rgba(255, 255, 255, 0.3)',
                               cursor: 'pointer', transition: 'color 0.2s'
                             }}
-                            id={`delete-${u.userId}`}
-                            onMouseOver={(e) => e.currentTarget.style.color = '#ff7070'}
-                            onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255, 112, 112, 0.4)'}
+                            onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
+                            onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.3)'}
                           >
-                            <Trash2 size={16} />
+                            <Pencil size={16} />
                           </button>
-                        )}
-                      </div>
-                    </td>
+
+                          {u.userId !== 'AdminGenx' && (
+                            <button
+                              onClick={() => setShowDeleteConfirm(u.userId)}
+                              style={{
+                                background: 'none', border: 'none',
+                                color: 'rgba(255, 112, 112, 0.4)',
+                                cursor: 'pointer', transition: 'color 0.2s'
+                              }}
+                              id={`delete-${u.userId}`}
+                              onMouseOver={(e) => e.currentTarget.style.color = '#ff7070'}
+                              onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255, 112, 112, 0.4)'}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <table className="ct">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Organization</th>
+                    <th>Credits Selected</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'center' }}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {requests.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="no-data">No requests found.</td>
+                    </tr>
+                  ) : (
+                    requests.map((r) => (
+                      <tr key={r.id}>
+                        <td className="td-name">{r.name}</td>
+                        <td>{r.organizationName}</td>
+                        <td className="td-phone">{r.creditsSelected}</td>
+                        <td>
+                          <span className={`spill ${r.status === 'pending' ? 's-pending' : 's-done'}`}>
+                            {r.status || 'Pending'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                            <button
+                              onClick={() => setSelectedRequest(r)}
+                              style={{
+                                background: 'none', border: 'none',
+                                color: 'rgba(255, 255, 255, 0.3)',
+                                cursor: 'pointer', transition: 'color 0.2s'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
+                              onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.3)'}
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRequest(r.id)}
+                              style={{
+                                background: 'none', border: 'none',
+                                color: 'rgba(255, 112, 112, 0.4)',
+                                cursor: 'pointer', transition: 'color 0.2s'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.color = '#ff7070'}
+                              onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255, 112, 112, 0.4)'}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            {/* Keep the closing div of table-wrap here since we added the ternary inside it */}
           </div>
         </div>
+
+        {/* View Request Modal */}
+        {selectedRequest && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px'
+          }}>
+            <div className="panel" style={{ width: '100%', maxWidth: '540px', padding: '32px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <div className="panel-label" style={{ marginBottom: 0 }}>
+                  <div className="label-dot"></div>
+                  User Request Details
+                </div>
+                <button onClick={() => setSelectedRequest(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div className="config-grid">
+                  <div className="field">
+                    <label className="field-label">Name</label>
+                    <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                      {selectedRequest.name}
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Organization Name</label>
+                    <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                      {selectedRequest.organizationName}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="field-label">Credits Selected</label>
+                  <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                    {selectedRequest.creditsSelected}
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="field-label">Purpose of Using This</label>
+                  <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)', minHeight: '80px', whiteSpace: 'pre-wrap' }}>
+                    {selectedRequest.purpose}
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="field-label">Script Description</label>
+                  <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)', minHeight: '100px', whiteSpace: 'pre-wrap' }}>
+                    {selectedRequest.scriptContent}
+                  </div>
+                </div>
+
+                <button onClick={() => setSelectedRequest(null)} className="nav-btn" style={{ width: '100%', marginTop: '12px', border: '1px solid rgba(255,255,255,0.2)', padding: '12px', justifyContent: 'center' }}>
+                  Close
+                </button>
+                {selectedRequest.status !== 'Created' && (
+                  <button onClick={() => handleMarkCreated(selectedRequest.id)} className="btn-call" style={{ width: '100%', marginTop: '8px', justifyContent: 'center' }}>
+                    Create User
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* User Modal (Add/Edit) */}
         {(showAddForm || showEditForm) && (
@@ -243,7 +447,7 @@ export default function AdminPortal() {
                   <div className="label-dot"></div>
                   {showEditForm ? 'Edit User Details' : 'Create New User'}
                 </div>
-                <button onClick={() => { setShowAddForm(false); setShowEditForm(false); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
+                <button onClick={() => { setShowAddForm(false); setShowEditForm(false); setCreatedFromRequestId(null); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
                   <X size={20} />
                 </button>
               </div>
@@ -256,7 +460,7 @@ export default function AdminPortal() {
                       type="text"
                       className="field-input"
                       value={formData.userId}
-                      onChange={e => setFormData({ ...formData, userId: e.target.value })}
+                      onChange={e => setFormData(prev => ({ ...prev, userId: e.target.value }))}
                       required
                     />
                   </div>
@@ -267,7 +471,7 @@ export default function AdminPortal() {
                         type={showPassword ? 'text' : 'password'}
                         className="field-input"
                         value={formData.password}
-                        onChange={e => setFormData({ ...formData, password: e.target.value })}
+                        onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
                         required
                         style={{ paddingRight: '40px' }}
                       />
@@ -294,7 +498,7 @@ export default function AdminPortal() {
                     type="text"
                     className="field-input"
                     value={formData.organization}
-                    onChange={e => setFormData({ ...formData, organization: e.target.value })}
+                    onChange={e => setFormData(prev => ({ ...prev, organization: e.target.value }))}
                     required
                   />
                 </div>
@@ -306,7 +510,7 @@ export default function AdminPortal() {
                       type="text"
                       className="field-input"
                       value={formData.bolnaApiKey}
-                      onChange={e => setFormData({ ...formData, bolnaApiKey: e.target.value })}
+                      onChange={e => setFormData(prev => ({ ...prev, bolnaApiKey: e.target.value }))}
                       required
                     />
                   </div>
@@ -316,7 +520,7 @@ export default function AdminPortal() {
                       type="text"
                       className="field-input"
                       value={formData.bolnaAgentId}
-                      onChange={e => setFormData({ ...formData, bolnaAgentId: e.target.value })}
+                      onChange={e => setFormData(prev => ({ ...prev, bolnaAgentId: e.target.value }))}
                       required
                     />
                   </div>

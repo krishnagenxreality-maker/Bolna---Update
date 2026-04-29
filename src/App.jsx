@@ -5,6 +5,7 @@ import LoginPage from './components/auth/LoginPage';
 import AdminPortal from './components/admin/AdminPortal';
 import BolnaDashboard from './BolnaDashboard';
 import HomePage from './components/home/HomePage';
+import PricingPage from './components/pricing/PricingPage';
 
 const ProtectedRoute = ({ children, role }) => {
   const { user } = useAuth();
@@ -21,6 +22,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/pricing" element={<PricingPage />} />
       <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} />} />
       
       <Route 
