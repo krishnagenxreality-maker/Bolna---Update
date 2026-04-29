@@ -47,29 +47,22 @@ export default function AdminPortal() {
     }
   };
 
-  const handleMarkCreated = async (requestId) => {
-    try {
-      await axios.put(`http://localhost:5000/api/requests/${requestId}/status`, { status: 'Created' });
-      setRequests(requests.map(r => r.id === requestId ? { ...r, status: 'Created' } : r));
-      
-      const req = requests.find(r => r.id === requestId);
-      setFormData({
-        userId: req?.name || '',
-        password: '',
-        organization: req?.organizationName || '',
-        bolnaApiKey: '',
-        bolnaAgentId: ''
-      });
-      setError('');
-      setSuccess('');
-      setShowPassword(false);
-      setSelectedRequest(null);
-      setCreatedFromRequestId(requestId);
-      setShowAddForm(true);
-      setActiveView('users'); // Switch to users view since we are creating a user
-    } catch (err) {
-      alert('Failed to update status');
-    }
+  const handleMarkCreated = (requestId) => {
+    const req = requests.find(r => r.id === requestId);
+    setFormData({
+      userId: req?.name || '',
+      password: '',
+      organization: req?.organizationName || '',
+      bolnaApiKey: '',
+      bolnaAgentId: ''
+    });
+    setError('');
+    setSuccess('');
+    setShowPassword(false);
+    setSelectedRequest(null);
+    setCreatedFromRequestId(requestId);
+    setShowAddForm(true);
+    setActiveView('users'); // Switch to users view since we are creating a user
   };
 
   const handleDeleteRequest = async (requestId) => {
@@ -125,7 +118,7 @@ export default function AdminPortal() {
       fetchUsers();
       
       if (createdFromRequestId) {
-        await axios.delete(`http://localhost:5000/api/requests/${createdFromRequestId}`);
+        await axios.put(`http://localhost:5000/api/requests/${createdFromRequestId}/status`, { status: 'Created' });
         setCreatedFromRequestId(null);
         fetchRequests();
       }

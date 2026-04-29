@@ -141,6 +141,7 @@ app.get('/api/requests', (req, res) => {
 
 // User: Submit a request
 app.post('/api/requests', (req, res) => {
+  console.log('Received request:', req.body);
   const newRequest = req.body;
   const db = readDB();
   
