@@ -118,7 +118,7 @@ export default function AdminPortal() {
       fetchUsers();
       
       if (createdFromRequestId) {
-        await axios.put(`http://localhost:5000/api/requests/${createdFromRequestId}/status`, { status: 'Created' });
+        await axios.delete(`http://localhost:5000/api/requests/${createdFromRequestId}`);
         setCreatedFromRequestId(null);
         fetchRequests();
       }
