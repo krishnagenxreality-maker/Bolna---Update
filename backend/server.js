@@ -361,11 +361,17 @@ app.post('/api/contacts', async (req, res) => {
     if (leadsToInsert.length > 0) {
       // Use upsert on leads table as well, but matching by user/phone/date/category 
       // to avoid duplicate lead entries for the same call analysis
-      await supabase
+      const { error: leadError } = await supabase
         .from('leads')
         .upsert(leadsToInsert, { 
           onConflict: 'user_id,phone,call_date,category' 
         });
+
+      if (leadError) {
+        console.error('CRITICAL: Leads storage failed:', leadError);
+      } else {
+        console.log(`Successfully synced ${leadsToInsert.length} leads to Supabase.`);
+      }
     }
 
     res.json({ success: true, count: data.length });

@@ -91,9 +91,11 @@ export function useBolnaDashboard() {
   // sync contactsRef whenever contacts state changes
   useEffect(() => { contactsRef.current = contacts; }, [contacts]);
 
-  function updateContactStatus(id, status, response = "", leadCategory = "") {
+  function updateContactStatus(id, status, response = "", leadCategory = "", summary = "") {
     const now = new Date().toISOString().split('T')[0];
-    const updated = contactsRef.current.map(c => c.id === id ? { ...c, status, response, leadCategory, date: now } : c);
+    const updated = contactsRef.current.map(c => 
+      c.id === id ? { ...c, status, response, leadCategory, summary, date: now } : c
+    );
     
     setContacts(updated);
     contactsRef.current = updated;
@@ -126,12 +128,15 @@ export function useBolnaDashboard() {
         const parsed = parseContactsLogic(rows);
         if (!parsed.length) { alert("No valid contacts found."); return; }
         
-        contactsRef.current = parsed;
-        setContacts(parsed);
+        // Append new contacts to the existing list instead of replacing
+        const updatedContacts = [...contactsRef.current, ...parsed];
+        contactsRef.current = updatedContacts;
+        setContacts(updatedContacts);
+        
         setShowDone(false);
         setLogs([]);
         
-        // Save initial contacts to DB
+        // Save ONLY the new contacts to DB
         saveContactsToDB(parsed);
       } catch(err) { alert("Could not parse file: " + err.message); }
     };
@@ -178,7 +183,7 @@ export function useBolnaDashboard() {
           if (data.summary) {
             category = await analyzeSummaryWithDeepSeek(DEEPSEEK_API_KEY, data.summary);
           }
-          updateContactStatus(contact.id, "called", sl, category); 
+          updateContactStatus(contact.id, "called", sl, category, data.summary || ""); 
           addLog(`✓ Called: ${contact.name}${category ? ` (${category})` : ""}`, "ok"); 
         }
         else if (["failed","error","cancelled"].includes(sl)) { 
