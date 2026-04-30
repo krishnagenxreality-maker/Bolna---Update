@@ -20,7 +20,7 @@ export function parseContacts(rows) {
     phone = cleanPhoneNumber(phone);
     
     return { 
-      id: i, 
+      id: `${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`, 
       name: String(r[nameKey]||"").trim(), 
       phone, 
       status: "pending", 

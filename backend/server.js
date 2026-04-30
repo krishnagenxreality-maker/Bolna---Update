@@ -345,6 +345,29 @@ app.post('/api/contacts', async (req, res) => {
       .select();
 
     if (error) throw error;
+
+    // Handle dedicated leads table persistence
+    const leadsToInsert = contactsToInsert
+      .filter(c => c.lead_category && c.lead_category !== "")
+      .map(c => ({
+        user_id: userId,
+        name: c.name,
+        phone: c.phone,
+        category: c.lead_category,
+        summary: c.summary,
+        call_date: c.call_date
+      }));
+
+    if (leadsToInsert.length > 0) {
+      // Use upsert on leads table as well, but matching by user/phone/date/category 
+      // to avoid duplicate lead entries for the same call analysis
+      await supabase
+        .from('leads')
+        .upsert(leadsToInsert, { 
+          onConflict: 'user_id,phone,call_date,category' 
+        });
+    }
+
     res.json({ success: true, count: data.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
