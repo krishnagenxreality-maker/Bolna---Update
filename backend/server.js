@@ -1,203 +1,371 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const fs = require('fs');
-const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
+const bcrypt = require('bcryptjs');
 
 const app = express();
-const PORT = 5000;
-const DB_PATH = path.join(__dirname, 'db.json');
+const PORT = process.env.PORT || 5000;
+
+// Supabase Setup
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 app.use(cors());
 app.use(bodyParser.json());
 
-// Helper to read DB
-const readDB = () => {
-  const data = fs.readFileSync(DB_PATH, 'utf8');
-  return JSON.parse(data);
+// Helper to map DB row to API response (snake to camel)
+const mapUser = (user) => {
+  if (!user) return null;
+  const { bolna_api_key, bolna_agent_id, user_id, ...rest } = user;
+  return {
+    ...rest,
+    userId: user_id,
+    bolnaApiKey: bolna_api_key,
+    bolnaAgentId: bolna_agent_id
+  };
 };
 
-// Helper to write DB
-const writeDB = (data) => {
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf8');
+const mapRequest = (req) => {
+  if (!req) return null;
+  const { organization_name, script_content, credits_selected, created_at, ...rest } = req;
+  return {
+    ...rest,
+    organizationName: organization_name,
+    scriptContent: script_content,
+    creditsSelected: credits_selected,
+    createdAt: created_at
+  };
 };
 
 // Login Endpoint
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { userId, password } = req.body;
-  const db = readDB();
-  const user = db.users.find(u => u.userId === userId && u.password === password);
+  
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
 
-  if (user) {
-    // Return user info (excluding password)
-    const { password, ...userWithoutPassword } = user;
-    res.json({ success: true, user: userWithoutPassword });
-  } else {
-    res.status(401).json({ success: false, message: 'Invalid credentials' });
+    if (error || !user) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    let passwordMatch = false;
+    if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
+      passwordMatch = await bcrypt.compare(password, user.password);
+    } else {
+      passwordMatch = (password === user.password);
+      if (passwordMatch) {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await supabase.from('users').update({ password: hashedPassword }).eq('user_id', userId);
+      }
+    }
+
+    if (passwordMatch) {
+      const mapped = mapUser(user);
+      const { password: _, ...userWithoutPassword } = mapped;
+      res.json({ success: true, user: userWithoutPassword });
+    } else {
+      res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
 // Admin: Get all users
-app.get('/api/users', (req, res) => {
-  const db = readDB();
-  // Filter out admin or show all? Requirements say "Number of Users" and "User Details List".
-  // Usually admin is not counted in "Number of Users" or is it? Let's show all for now.
-  res.json(db.users);
+app.get('/api/users', async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    res.json(users.map(mapUser));
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // Admin: Create new user
-app.post('/api/users', (req, res) => {
+app.post('/api/users', async (req, res) => {
   const newUser = req.body;
-  const db = readDB();
   
-  if (db.users.find(u => u.userId === newUser.userId)) {
-    return res.status(400).json({ success: false, message: 'User ID already exists' });
-  }
+  try {
+    const hashedPassword = await bcrypt.hash(newUser.password, 10);
+    
+    const { data, error } = await supabase
+      .from('users')
+      .insert([{
+        user_id: newUser.userId,
+        password: hashedPassword,
+        role: newUser.role || 'user',
+        organization: newUser.organization,
+        bolna_api_key: newUser.bolnaApiKey,
+        bolna_agent_id: newUser.bolnaAgentId
+      }])
+      .select()
+      .single();
 
-  db.users.push({
-    ...newUser,
-    role: 'user' // Default to user role
-  });
-  
-  writeDB(db);
-  res.json({ success: true, user: newUser });
+    if (error) {
+      if (error.code === '23505') return res.status(400).json({ success: false, message: 'User ID already exists' });
+      throw error;
+    }
+
+    res.json({ success: true, user: mapUser(data) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // Admin: Delete user
-app.delete('/api/users/:userId', (req, res) => {
+app.delete('/api/users/:userId', async (req, res) => {
   const { userId } = req.params;
-  const db = readDB();
 
-  // Prevent deleting the primary admin
   if (userId === 'AdminGenx') {
     return res.status(403).json({ success: false, message: 'Cannot delete the primary administrator' });
   }
 
-  const userIndex = db.users.findIndex(u => u.userId === userId);
-  if (userIndex !== -1) {
-    db.users.splice(userIndex, 1);
-    writeDB(db);
+  try {
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('user_id', userId);
+
+    if (error) throw error;
     res.json({ success: true, message: 'User deleted successfully' });
-  } else {
-    res.status(404).json({ success: false, message: 'User not found' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
 // Admin: Update user
-app.put('/api/users/:oldUserId', (req, res) => {
+app.put('/api/users/:oldUserId', async (req, res) => {
   const { oldUserId } = req.params;
   const updatedData = req.body;
-  const db = readDB();
 
-  // Prevent editing the primary admin's userId (optional, but safer)
   if (oldUserId === 'AdminGenx' && updatedData.userId !== 'AdminGenx') {
     return res.status(403).json({ success: false, message: 'Cannot change the primary administrator ID' });
   }
 
-  const userIndex = db.users.findIndex(u => u.userId === oldUserId);
-  if (userIndex === -1) {
-    return res.status(404).json({ success: false, message: 'User not found' });
-  }
-
-  // Check if new userId already exists (if it was changed)
-  if (updatedData.userId !== oldUserId) {
-    if (db.users.find(u => u.userId === updatedData.userId)) {
-      return res.status(400).json({ success: false, message: 'New User ID already exists' });
+  try {
+    const toUpdate = {};
+    if (updatedData.userId) toUpdate.user_id = updatedData.userId;
+    if (updatedData.password) {
+      if (!updatedData.password.startsWith('$2')) {
+        toUpdate.password = await bcrypt.hash(updatedData.password, 10);
+      } else {
+        toUpdate.password = updatedData.password;
+      }
     }
+    if (updatedData.role) toUpdate.role = updatedData.role;
+    if (updatedData.organization !== undefined) toUpdate.organization = updatedData.organization;
+    if (updatedData.bolnaApiKey !== undefined) toUpdate.bolna_api_key = updatedData.bolnaApiKey;
+    if (updatedData.bolnaAgentId !== undefined) toUpdate.bolna_agent_id = updatedData.bolnaAgentId;
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(toUpdate)
+      .eq('user_id', oldUserId)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') return res.status(400).json({ success: false, message: 'New User ID already exists' });
+      throw error;
+    }
+
+    res.json({ success: true, user: mapUser(data) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-
-  // Merge data
-  db.users[userIndex] = {
-    ...db.users[userIndex],
-    ...updatedData
-  };
-
-  writeDB(db);
-  res.json({ success: true, user: db.users[userIndex] });
 });
 
 // User: Get config
-app.get('/api/user-config/:userId', (req, res) => {
+app.get('/api/user-config/:userId', async (req, res) => {
   const { userId } = req.params;
-  const db = readDB();
-  const user = db.users.find(u => u.userId === userId);
+  
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('bolna_api_key, bolna_agent_id, organization')
+      .eq('user_id', userId)
+      .single();
 
-  if (user) {
+    if (error || !user) return res.status(404).json({ success: false, message: 'User not found' });
+
     res.json({
-      bolnaApiKey: user.bolnaApiKey,
-      bolnaAgentId: user.bolnaAgentId,
+      bolnaApiKey: user.bolna_api_key,
+      bolnaAgentId: user.bolna_agent_id,
       organization: user.organization
     });
-  } else {
-    res.status(404).json({ success: false, message: 'User not found' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
 // Admin: Get all requests
-app.get('/api/requests', (req, res) => {
-  const db = readDB();
-  res.json(db.requests || []);
+app.get('/api/requests', async (req, res) => {
+  try {
+    const { data: requests, error } = await supabase
+      .from('requests')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(requests.map(mapRequest));
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // User: Submit a request
-app.post('/api/requests', (req, res) => {
-  console.log('Received request:', req.body);
-  const newRequest = req.body;
-  const db = readDB();
-  
-  if (!db.requests) {
-    db.requests = [];
-  }
-
-  const requestWithId = {
-    ...newRequest,
+app.post('/api/requests', async (req, res) => {
+  const r = req.body;
+  const requestToInsert = {
     id: Date.now().toString(),
-    status: 'pending',
-    createdAt: new Date().toISOString()
+    name: r.name,
+    organization_name: r.organizationName,
+    purpose: r.purpose,
+    script_content: r.scriptContent,
+    credits_selected: r.creditsSelected,
+    status: 'pending'
   };
 
-  db.requests.push(requestWithId);
-  writeDB(db);
-  
-  res.json({ success: true, request: requestWithId });
+  try {
+    const { data, error } = await supabase
+      .from('requests')
+      .insert([requestToInsert])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, request: mapRequest(data) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // Admin: Update request status
-app.put('/api/requests/:id/status', (req, res) => {
+app.put('/api/requests/:id/status', async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-  const db = readDB();
 
-  if (!db.requests) {
-    return res.status(404).json({ success: false, message: 'No requests found' });
-  }
+  try {
+    const { data, error } = await supabase
+      .from('requests')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single();
 
-  const reqIndex = db.requests.findIndex(r => r.id === id);
-  if (reqIndex !== -1) {
-    db.requests[reqIndex].status = status;
-    writeDB(db);
-    res.json({ success: true, request: db.requests[reqIndex] });
-  } else {
-    res.status(404).json({ success: false, message: 'Request not found' });
+    if (error) throw error;
+    res.json({ success: true, request: mapRequest(data) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
 // Admin: Delete request
-app.delete('/api/requests/:id', (req, res) => {
+app.delete('/api/requests/:id', async (req, res) => {
   const { id } = req.params;
-  const db = readDB();
 
-  if (!db.requests) {
-    return res.status(404).json({ success: false, message: 'No requests found' });
+  try {
+    const { error } = await supabase
+      .from('requests')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    res.json({ success: true, message: 'Request deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// --- CONTACTS ---
+
+const mapContact = (c) => {
+  if (!c) return null;
+  const { lead_category, call_date, created_at, execution_id, user_id, ...rest } = c;
+  return {
+    ...rest,
+    leadCategory: lead_category,
+    date: call_date,
+    executionId: execution_id,
+    userId: user_id
+  };
+};
+
+app.get('/api/contacts/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('contacts')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data.map(mapContact));
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/contacts', async (req, res) => {
+  const { userId, contacts } = req.body;
+  if (!userId || !Array.isArray(contacts)) {
+    return res.status(400).json({ success: false, message: 'Invalid data' });
   }
 
-  const reqIndex = db.requests.findIndex(r => r.id === id);
-  if (reqIndex !== -1) {
-    db.requests.splice(reqIndex, 1);
-    writeDB(db);
-    res.json({ success: true, message: 'Request deleted successfully' });
-  } else {
-    res.status(404).json({ success: false, message: 'Request not found' });
+  try {
+    const contactsToInsert = contacts.map(c => ({
+      id: c.id.toString(),
+      user_id: userId,
+      name: c.name,
+      phone: c.phone,
+      status: c.status,
+      response: c.response,
+      summary: c.summary,
+      lead_category: c.leadCategory,
+      execution_id: c.executionId,
+      call_date: c.date || new Date().toISOString().split('T')[0]
+    }));
+
+    const { data, error } = await supabase
+      .from('contacts')
+      .upsert(contactsToInsert, { onConflict: 'id' })
+      .select();
+
+    if (error) throw error;
+    res.json({ success: true, count: data.length });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.delete('/api/cleanup-leads', async (req, res) => {
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+  try {
+    const { error } = await supabase
+      .from('contacts')
+      .delete()
+      .lt('created_at', oneMonthAgo.toISOString())
+      .not('lead_category', 'is', null);
+
+    if (error) throw error;
+    res.json({ success: true, message: 'Cleanup completed' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

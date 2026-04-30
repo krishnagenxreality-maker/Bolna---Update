@@ -24,20 +24,40 @@ export function useBolnaDashboard() {
   const [leadsStatusTab, setLeadsStatusTab] = useState("interested");
   const [searchDate, setSearchDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Fetch user config from backend
+  // Fetch user config and contacts from backend
   useEffect(() => {
-    const fetchConfig = async () => {
+    const initData = async () => {
       if (user && user.userId) {
         try {
-          const res = await axios.get(`http://localhost:5000/api/user-config/${user.userId}`);
-          if (res.data.bolnaApiKey) setApiKey(res.data.bolnaApiKey);
-          if (res.data.bolnaAgentId) setAgentId(res.data.bolnaAgentId);
+          // Fetch Config
+          const configRes = await axios.get(`http://localhost:5000/api/user-config/${user.userId}`);
+          if (configRes.data.bolnaApiKey) setApiKey(configRes.data.bolnaApiKey);
+          if (configRes.data.bolnaAgentId) setAgentId(configRes.data.bolnaAgentId);
+
+          // Fetch Contacts
+          const contactsRes = await axios.get(`http://localhost:5000/api/contacts/${user.userId}`);
+          if (contactsRes.data && contactsRes.data.length > 0) {
+            setContacts(contactsRes.data);
+            contactsRef.current = contactsRes.data;
+          }
         } catch (err) {
-          console.error("Failed to fetch user config", err);
+          console.error("Failed to fetch user data", err);
         }
       }
     };
-    fetchConfig();
+    initData();
+  }, [user]);
+
+  const saveContactsToDB = useCallback(async (contactsToSave) => {
+    if (!user || !user.userId || !contactsToSave.length) return;
+    try {
+      await axios.post('http://localhost:5000/api/contacts', {
+        userId: user.userId,
+        contacts: contactsToSave
+      });
+    } catch (err) {
+      console.error("Failed to save contacts to DB", err);
+    }
   }, [user]);
 
   // Auto-select first response tab when entering responses view
@@ -73,20 +93,25 @@ export function useBolnaDashboard() {
 
   function updateContactStatus(id, status, response = "", leadCategory = "") {
     const now = new Date().toISOString().split('T')[0];
-    setContacts(prev => prev.map(c => c.id === id ? { ...c, status, response, leadCategory, date: now } : c));
-    const idx = contactsRef.current.findIndex(c => c.id === id);
-    if (idx !== -1) {
-      contactsRef.current[idx].status = status;
-      contactsRef.current[idx].response = response;
-      contactsRef.current[idx].leadCategory = leadCategory;
-      contactsRef.current[idx].date = now;
-    }
+    const updated = contactsRef.current.map(c => c.id === id ? { ...c, status, response, leadCategory, date: now } : c);
+    
+    setContacts(updated);
+    contactsRef.current = updated;
+    
+    // Persist to DB
+    const contact = updated.find(c => c.id === id);
+    if (contact) saveContactsToDB([contact]);
   }
 
-  function updateContactExecId(id, execId) {
-    setContacts(prev => prev.map(c => c.id === id ? { ...c, executionId: execId } : c));
-    const idx = contactsRef.current.findIndex(c => c.id === id);
-    if (idx !== -1) contactsRef.current[idx].executionId = execId;
+  function updateContactExecId(id, executionId) {
+    const updated = contactsRef.current.map(c => c.id === id ? { ...c, executionId } : c);
+    
+    setContacts(updated);
+    contactsRef.current = updated;
+
+    // Persist to DB
+    const contact = updated.find(c => c.id === id);
+    if (contact) saveContactsToDB([contact]);
   }
 
   function handleFile(file) {
@@ -100,10 +125,14 @@ export function useBolnaDashboard() {
         const rows = window.XLSX.utils.sheet_to_json(ws, { defval: "" });
         const parsed = parseContactsLogic(rows);
         if (!parsed.length) { alert("No valid contacts found."); return; }
+        
         contactsRef.current = parsed;
         setContacts(parsed);
         setShowDone(false);
         setLogs([]);
+        
+        // Save initial contacts to DB
+        saveContactsToDB(parsed);
       } catch(err) { alert("Could not parse file: " + err.message); }
     };
     reader.readAsArrayBuffer(file);

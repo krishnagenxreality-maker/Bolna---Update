@@ -56,6 +56,18 @@ export const LeadsView = ({ contacts, leadsStatusTab, setLeadsStatusTab }) => {
             <div className="no-data">No records found in this category.</div>
           )}
         </div>
+        <div style={{ 
+          marginTop: '32px', 
+          padding: '16px', 
+          background: 'rgba(255, 255, 255, 0.03)', 
+          borderRadius: '12px',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+          fontSize: '13px',
+          color: 'rgba(255, 255, 255, 0.4)',
+          lineHeight: '1.6'
+        }}>
+          "After every month the leads data will be deleted, so please make sure that you download your data. Due to security reasons and because we value our customers, we do not store or access your data. Your data always remains with you."
+        </div>
       </Panel>
     </div>
   );
