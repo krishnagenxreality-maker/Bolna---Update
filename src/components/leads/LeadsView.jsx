@@ -3,10 +3,41 @@ import { Panel, PanelHead } from '../ui/Panel';
 import { StatusPill } from '../ui/StatusPill';
 import { LEAD_CATEGORIES } from '../../utils/constants';
 import { DatePicker } from '../ui/DatePicker';
+import { Download } from 'lucide-react';
 
 export const LeadsView = ({ contacts, leadsStatusTab, setLeadsStatusTab, searchDate, setSearchDate }) => {
   const filteredContacts = contacts.filter(c => !searchDate || c.date === searchDate);
   const filteredLeads = filteredContacts.filter(c => c.leadCategory === leadsStatusTab);
+
+  const handleDownload = () => {
+    if (filteredLeads.length === 0) {
+      alert("No leads to download for this selection.");
+      return;
+    }
+
+    const headers = ['Name', 'Phone Number', 'Status', 'Response', 'Category', 'Date'];
+    
+    const csvContent = [
+      headers.join(','),
+      ...filteredLeads.map(c => [
+        `"${c.name || ''}"`,
+        `"${c.phone || ''}"`,
+        `"${c.status || ''}"`,
+        `"${(c.response || '').replace(/"/g, '""')}"`,
+        `"${c.leadCategory || ''}"`,
+        `"${c.date || ''}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `leads_${searchDate || 'all'}_${leadsStatusTab}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="leads-view">
@@ -16,7 +47,37 @@ export const LeadsView = ({ contacts, leadsStatusTab, setLeadsStatusTab, searchD
             <span className="label-dot" />
             AI Lead Analysis
           </div>
-          <DatePicker value={searchDate} onChange={setSearchDate} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button 
+              onClick={handleDownload}
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s',
+                fontFamily: 'inherit'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'rgba(255, 255, 255, 0.05)';
+                e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+              }}
+            >
+              <Download size={14} /> Download Leads
+            </button>
+            <DatePicker value={searchDate} onChange={setSearchDate} />
+          </div>
         </PanelHead>
 
         <div className="details-tabs" style={{padding: '0 20px', marginTop: '20px'}}>
