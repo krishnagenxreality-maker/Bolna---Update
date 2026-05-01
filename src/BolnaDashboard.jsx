@@ -21,6 +21,7 @@ import { CallDetailsView } from './components/details/CallDetailsView';
 import { ResponseAnalysisView } from './components/responses/ResponseAnalysisView';
 import { LeadsView } from './components/leads/LeadsView';
 import { CalendarDashboardView } from './components/calendar/CalendarDashboardView';
+import { ReportView } from './components/report/ReportView';
 
 export default function BolnaDashboard() {
   const {
@@ -117,6 +118,14 @@ export default function BolnaDashboard() {
             contacts={contacts}
             leadsStatusTab={leadsStatusTab}
             setLeadsStatusTab={setLeadsStatusTab}
+            searchDate={searchDate}
+            setSearchDate={setSearchDate}
+          />
+        )}
+        {activeView === 'report' && (
+          <ReportView
+            contacts={contacts}
+            agentId={agentId}
             searchDate={searchDate}
             setSearchDate={setSearchDate}
           />

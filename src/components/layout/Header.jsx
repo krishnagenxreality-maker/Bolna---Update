@@ -53,6 +53,12 @@ export const Header = ({ activeView, setActiveView }) => {
         >
           Leads
         </button>
+        <button
+          className={`nav-btn ${activeView === 'report' ? 'active' : ''}`}
+          onClick={() => setActiveView('report')}
+        >
+          Report
+        </button>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

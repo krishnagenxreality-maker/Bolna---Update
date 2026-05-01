@@ -61,3 +61,57 @@ export async function analyzeSummaryWithDeepSeek(apiKey, summary) {
     return "not_interested";
   }
 }
+
+export async function generateDailyReportWithDeepSeek(apiKey, stats, summaries) {
+  try {
+    const prompt = `You are a business analyst evaluating daily call center performance.
+Given the following numerical statistics and a list of call summaries, generate a concise report in exactly JSON format with two keys: "summary" and "conclusion".
+"summary": A paragraph summarizing the day's overall outcomes and activity volume.
+"conclusion": A paragraph highlighting any key insights, patterns, or actionable observations based on the lead responses and stats.
+
+Daily Stats:
+Total Calls: ${stats.total}
+Completed: ${stats.completed}
+Interested: ${stats.interested}
+Not Interested: ${stats.notInterested}
+Busy: ${stats.busy}
+Rescheduled: ${stats.rescheduled}
+
+Key Call Summaries (Sample):
+${summaries.join('\n')}
+
+Return ONLY valid JSON. Example:
+{
+  "summary": "...",
+  "conclusion": "..."
+}`;
+
+    const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+        response_format: { type: "json_object" }
+      })
+    });
+
+    if (!res.ok) {
+      throw new Error(`API error: ${res.status}`);
+    }
+
+    const data = await res.json();
+    const content = data.choices[0].message.content;
+    return JSON.parse(content);
+  } catch (err) {
+    console.error("AI Report Generation failed:", err);
+    return {
+      summary: "Failed to generate summary. Please check your API key and connection.",
+      conclusion: "Failed to generate conclusion."
+    };
+  }
+}
