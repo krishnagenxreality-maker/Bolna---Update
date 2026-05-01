@@ -1,15 +1,25 @@
 import React from 'react';
-import { Panel } from '../ui/Panel';
+import { Panel, PanelHead } from '../ui/Panel';
 import { StatusPill } from '../ui/StatusPill';
 import { LEAD_CATEGORIES } from '../../utils/constants';
+import { DatePicker } from '../ui/DatePicker';
 
-export const LeadsView = ({ contacts, leadsStatusTab, setLeadsStatusTab }) => {
-  const filteredLeads = contacts.filter(c => c.leadCategory === leadsStatusTab);
+export const LeadsView = ({ contacts, leadsStatusTab, setLeadsStatusTab, searchDate, setSearchDate }) => {
+  const filteredContacts = contacts.filter(c => !searchDate || c.date === searchDate);
+  const filteredLeads = filteredContacts.filter(c => c.leadCategory === leadsStatusTab);
 
   return (
     <div className="leads-view">
-      <Panel label="AI Lead Analysis">
-        <div className="details-tabs">
+      <Panel>
+        <PanelHead>
+          <div className="panel-label" style={{marginBottom:0}}>
+            <span className="label-dot" />
+            AI Lead Analysis
+          </div>
+          <DatePicker value={searchDate} onChange={setSearchDate} />
+        </PanelHead>
+
+        <div className="details-tabs" style={{padding: '0 20px', marginTop: '20px'}}>
           {LEAD_CATEGORIES.map(cat => (
             <button
               key={cat.id}
@@ -21,7 +31,7 @@ export const LeadsView = ({ contacts, leadsStatusTab, setLeadsStatusTab }) => {
           ))}
         </div>
 
-        <div className="table-wrap" style={{ marginTop: '20px' }}>
+        <div className="table-wrap" style={{ marginTop: '20px', padding: '0 20px' }}>
           <table className="ct">
             <thead>
               <tr>
@@ -53,11 +63,12 @@ export const LeadsView = ({ contacts, leadsStatusTab, setLeadsStatusTab }) => {
             </tbody>
           </table>
           {filteredLeads.length === 0 && (
-            <div className="no-data">No records found in this category.</div>
+            <div className="no-data">No records found in this category for the selected date.</div>
           )}
         </div>
         <div style={{ 
-          marginTop: '32px', 
+          marginTop: '20px', 
+          margin: '0 20px 20px',
           padding: '16px', 
           background: 'rgba(255, 255, 255, 0.03)', 
           borderRadius: '12px',
@@ -72,3 +83,4 @@ export const LeadsView = ({ contacts, leadsStatusTab, setLeadsStatusTab }) => {
     </div>
   );
 };
+

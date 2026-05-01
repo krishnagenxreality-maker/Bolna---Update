@@ -1,22 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { SmokeBackground } from '../layout/SmokeBackground';
-import { Shield, LogIn, CheckCircle2, X } from 'lucide-react';
+import { Shield, LogIn, CheckCircle2, X, ChevronDown, Check } from 'lucide-react';
 import '../../styles/BolnaDashboard.css';
+
+const PURPOSE_TEMPLATES = [
+  "Payment Reminder (Any service)",
+  "EMI / Loan Restructuring Offers",
+  "Credit Card Pre-approved Offers",
+  "Insurance Renewal (especially when near expiry)",
+  "Sales Offer",
+  "Educational Course / Job-Oriented Training Promotion",
+  "College Admission",
+  "College Fee Payment Reminder",
+  "Other"
+];
 
 export default function PricingPage() {
   const navigate = useNavigate();
+  const dropdownRef = useRef(null);
   
   const [showForm, setShowForm] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: '',
     organizationName: '',
-    purpose: '',
-    scriptContent: '',
+    selectedPurposes: [],
+    otherPurpose: '',
+    targetAudience: '',
+    scriptPoints: '',
     creditsSelected: ''
   });
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSelectPlan = (plan) => {
     let credits = '';
@@ -32,10 +59,33 @@ export default function PricingPage() {
     setShowForm(true);
   };
 
+  const togglePurpose = (purpose) => {
+    setFormData(prev => {
+      const selected = prev.selectedPurposes.includes(purpose)
+        ? prev.selectedPurposes.filter(p => p !== purpose)
+        : [...prev.selectedPurposes, purpose];
+      return { ...prev, selectedPurposes: selected };
+    });
+  };
+
   const handleSendRequest = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/requests', formData);
+      // Format data for backend
+      const finalPurpose = formData.selectedPurposes.join(', ') + 
+        (formData.selectedPurposes.includes('Other') && formData.otherPurpose ? ` (${formData.otherPurpose})` : '');
+      
+      const finalScriptContent = `Target Audience: ${formData.targetAudience}\nScript Points: ${formData.scriptPoints}`;
+
+      const payload = {
+        name: formData.name,
+        organizationName: formData.organizationName,
+        purpose: finalPurpose,
+        scriptContent: finalScriptContent,
+        creditsSelected: formData.creditsSelected
+      };
+
+      await axios.post('http://localhost:5000/api/requests', payload);
       setSuccess(true);
       setTimeout(() => {
         setShowForm(false);
@@ -43,8 +93,10 @@ export default function PricingPage() {
         setFormData({
           name: '',
           organizationName: '',
-          purpose: '',
-          scriptContent: '',
+          selectedPurposes: [],
+          otherPurpose: '',
+          targetAudience: '',
+          scriptPoints: '',
           creditsSelected: ''
         });
       }, 3000);
@@ -52,6 +104,8 @@ export default function PricingPage() {
       alert('Failed to send request. Please try again.');
     }
   };
+
+  const isOtherSelected = formData.selectedPurposes.includes('Other');
 
   return (
     <div className="app">
@@ -211,7 +265,7 @@ export default function PricingPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '20px'
           }}>
-            <div className="panel" style={{ width: '100%', maxWidth: '540px', padding: '32px' }}>
+            <div className="panel" style={{ width: '100%', maxWidth: '540px', padding: '32px', maxHeight: '90vh', overflowY: 'auto' }}>
               {success ? (
                 <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                   <CheckCircle2 size={48} className="sn-green" style={{ margin: '0 auto 16px' }} />
@@ -255,27 +309,102 @@ export default function PricingPage() {
                       />
                     </div>
 
-                    <div className="field">
+                    <div className="field" style={{ position: 'relative' }} ref={dropdownRef}>
                       <label className="field-label">Purpose of Using This</label>
-                      <input
-                        type="text"
+                      <div 
+                        onClick={() => setShowDropdown(!showDropdown)}
                         className="field-input"
-                        value={formData.purpose}
-                        onChange={e => setFormData({ ...formData, purpose: e.target.value })}
-                        required
-                      />
+                        style={{ 
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                          cursor: 'pointer', minHeight: '44px', padding: '8px 16px'
+                        }}
+                      >
+                        <span style={{ 
+                          color: formData.selectedPurposes.length > 0 ? '#fff' : 'rgba(255,255,255,0.3)',
+                          fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                        }}>
+                          {formData.selectedPurposes.length > 0 
+                            ? formData.selectedPurposes.join(', ') 
+                            : 'Select purpose(s)'}
+                        </span>
+                        <ChevronDown size={16} style={{ 
+                          transform: showDropdown ? 'rotate(180deg)' : 'none',
+                          transition: 'transform 0.2s',
+                          color: 'rgba(255,255,255,0.3)'
+                        }} />
+                      </div>
+                      
+                      {showDropdown && (
+                        <div style={{
+                          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                          marginTop: '8px', background: '#1a1a1a', 
+                          border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
+                          boxShadow: '0 10px 30px rgba(0,0,0,0.5)', overflow: 'hidden'
+                        }}>
+                          <div style={{ maxHeight: '240px', overflowY: 'auto', padding: '8px' }}>
+                            {PURPOSE_TEMPLATES.map((tpl) => (
+                              <div 
+                                key={tpl}
+                                onClick={() => togglePurpose(tpl)}
+                                style={{
+                                  padding: '10px 12px', borderRadius: '8px', cursor: 'pointer',
+                                  display: 'flex', alignItems: 'center', gap: '10px',
+                                  background: formData.selectedPurposes.includes(tpl) ? 'rgba(255,255,255,0.05)' : 'transparent',
+                                  transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = formData.selectedPurposes.includes(tpl) ? 'rgba(255,255,255,0.05)' : 'transparent'}
+                              >
+                                <div style={{
+                                  width: '18px', height: '18px', borderRadius: '4px',
+                                  border: '1px solid rgba(255,255,255,0.2)',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  background: formData.selectedPurposes.includes(tpl) ? '#fff' : 'transparent'
+                                }}>
+                                  {formData.selectedPurposes.includes(tpl) && <Check size={12} color="#000" strokeWidth={3} />}
+                                </div>
+                                <span style={{ color: '#fff', fontSize: '13px' }}>{tpl}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="field">
-                      <label className="field-label">Describe What the Script Should Contain</label>
-                      <textarea
-                        className="field-input"
-                        style={{ minHeight: '80px', resize: 'vertical' }}
-                        value={formData.scriptContent}
-                        onChange={e => setFormData({ ...formData, scriptContent: e.target.value })}
-                        required
-                      />
-                    </div>
+                    {isOtherSelected && (
+                      <>
+                        <div className="field">
+                          <label className="field-label">Enter Purpose</label>
+                          <input
+                            type="text"
+                            className="field-input"
+                            value={formData.otherPurpose}
+                            onChange={e => setFormData({ ...formData, otherPurpose: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div className="field">
+                          <label className="field-label">Who are you making calls to</label>
+                          <input
+                            type="text"
+                            className="field-input"
+                            value={formData.targetAudience}
+                            onChange={e => setFormData({ ...formData, targetAudience: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div className="field">
+                          <label className="field-label">Important points you want in the script</label>
+                          <textarea
+                            className="field-input"
+                            style={{ minHeight: '80px', resize: 'vertical' }}
+                            value={formData.scriptPoints}
+                            onChange={e => setFormData({ ...formData, scriptPoints: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </>
+                    )}
 
                     <div className="field">
                       <label className="field-label">Credits Selected</label>
@@ -288,7 +417,12 @@ export default function PricingPage() {
                       />
                     </div>
 
-                    <button type="submit" className="btn-call" style={{ width: '100%', marginTop: '12px', justifyContent: 'center' }}>
+                    <button 
+                      type="submit" 
+                      className="btn-call" 
+                      style={{ width: '100%', marginTop: '12px', justifyContent: 'center' }}
+                      disabled={formData.selectedPurposes.length === 0}
+                    >
                       Send Request
                     </button>
                   </form>

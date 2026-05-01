@@ -24,7 +24,7 @@ export default function AdminPortal() {
     password: '',
     organization: '',
     bolnaApiKey: '',
-    bolnaAgentId: ''
+    agents: [{ name: '', id: '' }]
   });
 
   const [editingUserId, setEditingUserId] = useState(null);
@@ -54,7 +54,7 @@ export default function AdminPortal() {
       password: '',
       organization: req?.organizationName || '',
       bolnaApiKey: '',
-      bolnaAgentId: ''
+      agents: [{ name: '', id: '' }]
     });
     setError('');
     setSuccess('');
@@ -85,7 +85,7 @@ export default function AdminPortal() {
   };
 
   const handleOpenAdd = () => {
-    setFormData({ userId: '', password: '', organization: '', bolnaApiKey: '', bolnaAgentId: '' });
+    setFormData({ userId: '', password: '', organization: '', bolnaApiKey: '', agents: [{ name: '', id: '' }] });
     setError('');
     setSuccess('');
     setShowPassword(false);
@@ -94,12 +94,26 @@ export default function AdminPortal() {
   };
 
   const handleOpenEdit = (user) => {
+    let parsedAgents = [{ name: '', id: user.bolnaAgentId || '' }];
+    try {
+      if (user.bolnaAgentId && (user.bolnaAgentId.startsWith('[') || user.bolnaAgentId.startsWith('{'))) {
+        const parsed = JSON.parse(user.bolnaAgentId);
+        if (Array.isArray(parsed)) {
+          parsedAgents = parsed;
+        } else {
+          parsedAgents = [parsed];
+        }
+      }
+    } catch (e) {
+      // Fallback to single ID if not valid JSON
+    }
+
     setFormData({
       userId: user.userId,
       password: user.password,
       organization: user.organization || '',
       bolnaApiKey: user.bolnaApiKey || '',
-      bolnaAgentId: user.bolnaAgentId || ''
+      agents: parsedAgents
     });
     setEditingUserId(user.userId);
     setError('');
@@ -113,7 +127,11 @@ export default function AdminPortal() {
     e.preventDefault();
     setError('');
     try {
-      await axios.post('http://localhost:5000/api/users', formData);
+      const payload = {
+        ...formData,
+        bolnaAgentId: JSON.stringify(formData.agents)
+      };
+      await axios.post('http://localhost:5000/api/users', payload);
       setShowAddForm(false);
       fetchUsers();
       
@@ -131,12 +149,53 @@ export default function AdminPortal() {
     e.preventDefault();
     setError('');
     try {
-      await axios.put(`http://localhost:5000/api/users/${editingUserId}`, formData);
+      const payload = {
+        ...formData,
+        bolnaAgentId: JSON.stringify(formData.agents)
+      };
+      await axios.put(`http://localhost:5000/api/users/${editingUserId}`, payload);
       setShowEditForm(false);
       fetchUsers();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update user');
     }
+  };
+
+  const addAgentField = () => {
+    setFormData(prev => ({
+      ...prev,
+      agents: [...prev.agents, { name: '', id: '' }]
+    }));
+  };
+
+  const removeAgentField = (index) => {
+    if (formData.agents.length === 1) return;
+    setFormData(prev => ({
+      ...prev,
+      agents: prev.agents.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAgentChange = (index, field, value) => {
+    setFormData(prev => {
+      const newAgents = [...prev.agents];
+      newAgents[index] = { ...newAgents[index], [field]: value };
+      return { ...prev, agents: newAgents };
+    });
+  };
+
+  const renderAgentId = (agentId) => {
+    if (!agentId) return '-';
+    try {
+      if (agentId.startsWith('[') || agentId.startsWith('{')) {
+        const parsed = JSON.parse(agentId);
+        if (Array.isArray(parsed)) {
+          return parsed.map(a => a.name || a.id).join(', ');
+        }
+        return parsed.name || parsed.id;
+      }
+    } catch (e) {}
+    return agentId;
   };
 
   const confirmDeleteUser = async () => {
@@ -249,7 +308,7 @@ export default function AdminPortal() {
                       <td className="td-phone" style={{ fontSize: '11px' }}>
                         {u.bolnaApiKey ? `••••${u.bolnaApiKey.slice(-4)}` : '-'}
                       </td>
-                      <td className="td-phone" style={{ fontSize: '11px' }}>{u.bolnaAgentId || '-'}</td>
+                      <td className="td-phone" style={{ fontSize: '11px' }}>{renderAgentId(u.bolnaAgentId)}</td>
                       <td>
                         <span className={`spill ${u.role === 'admin' ? 's-calling' : 's-pending'}`}>
                           {u.role}
@@ -496,7 +555,7 @@ export default function AdminPortal() {
                   />
                 </div>
 
-                <div className="config-grid">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div className="field">
                     <label className="field-label">Bolna API Key</label>
                     <input
@@ -507,15 +566,66 @@ export default function AdminPortal() {
                       required
                     />
                   </div>
-                  <div className="field">
-                    <label className="field-label">Bolna Agent ID</label>
-                    <input
-                      type="text"
-                      className="field-input"
-                      value={formData.bolnaAgentId}
-                      onChange={e => setFormData(prev => ({ ...prev, bolnaAgentId: e.target.value }))}
-                      required
-                    />
+
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <label className="field-label" style={{ marginBottom: 0 }}>Bolna Agents</label>
+                      <button 
+                        type="button" 
+                        onClick={addAgentField}
+                        className="btn-call" 
+                        style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '4px' }}
+                      >
+                        + Add Agent
+                      </button>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {formData.agents.map((agent, index) => (
+                        <div key={index} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+                          <div style={{ flex: 1 }}>
+                            <label className="field-label" style={{ fontSize: '10px', opacity: 0.5 }}>Agent Name</label>
+                            <input
+                              type="text"
+                              className="field-input"
+                              placeholder="e.g. Sales Assistant"
+                              value={agent.name}
+                              onChange={e => handleAgentChange(index, 'name', e.target.value)}
+                              required
+                            />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label className="field-label" style={{ fontSize: '10px', opacity: 0.5 }}>Agent ID</label>
+                            <input
+                              type="text"
+                              className="field-input"
+                              placeholder="Bolna ID"
+                              value={agent.id}
+                              onChange={e => handleAgentChange(index, 'id', e.target.value)}
+                              required
+                            />
+                          </div>
+                          {formData.agents.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeAgentField(index)}
+                              style={{
+                                background: 'rgba(255, 112, 112, 0.1)',
+                                border: '1px solid rgba(255, 112, 112, 0.2)',
+                                color: '#ff7070',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 

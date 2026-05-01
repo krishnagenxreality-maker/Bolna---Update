@@ -1,0 +1,89 @@
+.custom-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.dropdown-trigger:hover, .dropdown-trigger.open {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.03), 0 0 14px rgba(255,255,255,0.04);
+}
+
+.dropdown-value {
+  color: rgba(255, 255, 255, 0.85);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.dropdown-caret {
+  color: rgba(255,255,255,0.4);
+  transition: transform 0.2s ease;
+}
+
+.dropdown-trigger.open .dropdown-caret {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  background: rgba(18, 18, 18, 0.75);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 6px;
+  z-index: 9999;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02) inset;
+  animation: drop-pop 0.2s ease-out forwards;
+}
+
+@keyframes drop-pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dropdown-item {
+  padding: 10px 12px;
+  color: rgba(255,255,255,0.7);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.dropdown-item:hover {
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+}
+
+.dropdown-item.selected {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.9);
+  font-weight: 600;
+}
+
+.custom-dropdown.disabled .dropdown-trigger {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}

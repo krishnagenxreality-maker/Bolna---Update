@@ -10,7 +10,8 @@ import axios from "axios";
 export function useBolnaDashboard() {
   const { user } = useAuth();
   const [apiKey, setApiKey]         = useState("");
-  const [agentId, setAgentId]       = useState("");
+  const [agentId, setAgentId]       = useState(""); // This will store the CURRENTLY selected ID
+  const [availableAgents, setAvailableAgents] = useState([]); // List of {name, id}
   const [contacts, setContacts]     = useState([]);
   const [logs, setLogs]             = useState([]);
   const [isCalling, setIsCalling]   = useState(false);
@@ -32,13 +33,54 @@ export function useBolnaDashboard() {
           // Fetch Config
           const configRes = await axios.get(`http://localhost:5000/api/user-config/${user.userId}`);
           if (configRes.data.bolnaApiKey) setApiKey(configRes.data.bolnaApiKey);
-          if (configRes.data.bolnaAgentId) setAgentId(configRes.data.bolnaAgentId);
+          
+          let currentAgents = [];
+          if (configRes.data && configRes.data.bolnaAgentId) {
+            const raw = configRes.data.bolnaAgentId;
+            try {
+              if (typeof raw === 'string' && (raw.startsWith('[') || raw.startsWith('{'))) {
+                const parsed = JSON.parse(raw);
+                currentAgents = Array.isArray(parsed) ? parsed : [parsed];
+                setAvailableAgents(currentAgents);
+                if (currentAgents.length > 0) {
+                  setAgentId(`${currentAgents[0].name}::${currentAgents[0].id}`);
+                }
+              } else {
+                // Legacy support
+                const legacyAgent = { name: 'Default Agent', id: raw };
+                currentAgents = [legacyAgent];
+                setAvailableAgents(currentAgents);
+                setAgentId(`Default Agent::${raw}`);
+              }
+            } catch (e) {
+              const legacyAgent = { name: 'Default Agent', id: raw };
+              currentAgents = [legacyAgent];
+              setAvailableAgents(currentAgents);
+              setAgentId(`Default Agent::${raw}`);
+            }
+          } else {
+             setAvailableAgents([]);
+             setAgentId('');
+          }
 
           // Fetch Contacts
           const contactsRes = await axios.get(`http://localhost:5000/api/contacts/${user.userId}`);
           if (contactsRes.data && contactsRes.data.length > 0) {
-            setContacts(contactsRes.data);
-            contactsRef.current = contactsRes.data;
+            const defaultAgentId = currentAgents.length > 0 ? `${currentAgents[0].name}::${currentAgents[0].id}` : '';
+            
+            const mappedContacts = contactsRes.data.map(c => {
+              if (c.id && c.id.includes('::')) {
+                const parts = c.id.split('::');
+                if (parts.length >= 3) {
+                  return { ...c, agentId: `${parts[0]}::${parts[1]}` };
+                } else if (parts.length === 2) {
+                  return { ...c, agentId: parts[0] };
+                }
+              }
+              return { ...c, agentId: defaultAgentId };
+            });
+            setContacts(mappedContacts);
+            contactsRef.current = mappedContacts;
           }
         } catch (err) {
           console.error("Failed to fetch user data", err);
@@ -125,7 +167,11 @@ export function useBolnaDashboard() {
         const wb = window.XLSX.read(data, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = window.XLSX.utils.sheet_to_json(ws, { defval: "" });
-        const parsed = parseContactsLogic(rows);
+        const parsed = parseContactsLogic(rows).map(c => ({
+          ...c, 
+          id: agentId ? `${agentId}::${c.id}` : c.id,
+          agentId 
+        }));
         if (!parsed.length) { alert("No valid contacts found."); return; }
         
         // Append new contacts to the existing list instead of replacing
@@ -145,11 +191,15 @@ export function useBolnaDashboard() {
 
   const checkIfAllDone = useCallback(() => {
     const cs = contactsRef.current;
-    const doneCount   = cs.filter(c => c.status === "completed" || c.status === "called").length;
-    const failedCount = cs.filter(c => c.status === "failed").length;
-    const pendingCount = cs.filter(c => ["pending","calling","queued"].includes(c.status)).length;
     
-    if (pendingCount === 0 && callQueueRef.current.length === 0) {
+    // Only count completed/failed for the currently active agent to show accurate summary
+    const activeContacts = agentId ? cs.filter(c => c.agentId === agentId) : cs;
+    const doneCount   = activeContacts.filter(c => c.status === "completed" || c.status === "called").length;
+    const failedCount = activeContacts.filter(c => c.status === "failed").length;
+    
+    const inProgressCount = cs.filter(c => ["calling","queued"].includes(c.status)).length;
+    
+    if (inProgressCount === 0 && callQueueRef.current.length === 0) {
       if (pollRef.current) {
         clearInterval(pollRef.current);
         pollRef.current = null;
@@ -159,7 +209,7 @@ export function useBolnaDashboard() {
       setIsCalling(false);
       addLog(`All done. ${doneCount} called, ${failedCount} failed.`, "ok");
     }
-  }, [addLog]);
+  }, [addLog, agentId]);
 
   const pollStatuses = useCallback(async (key) => {
     const inProgress = contactsRef.current.filter(c => c.executionId && (c.status === "calling" || c.status === "queued"));
@@ -215,7 +265,8 @@ export function useBolnaDashboard() {
       if (!contact) continue;
       updateContactStatus(id, "queued");
       try {
-        const execId = await makeCall(key, agId, contact.phone);
+        const actualBolnaId = agId.includes('::') ? agId.split('::')[1] : agId;
+        const execId = await makeCall(key, actualBolnaId, contact.phone);
         updateContactExecId(id, execId);
         updateContactStatus(id, "calling");
         addLog(`✓ Call queued: ${contact.name} (${contact.phone}) → exec ${execId.slice(0,8)}…`, "ok");
@@ -239,21 +290,28 @@ export function useBolnaDashboard() {
     setIsCalling(true);
     setShowProgress(true);
     setShowDone(false);
-    callQueueRef.current = contactsRef.current.filter(c => c.status === "pending" || c.status === "failed").map(c => c.id);
+    
+    const activeContacts = contactsRef.current.filter(c => c.agentId === agentId);
+    callQueueRef.current = activeContacts.filter(c => c.status === "pending" || c.status === "failed").map(c => c.id);
+    
     addLog("Calls started — batching 10 every 10 minutes", "info");
     await dispatchNextBatch(apiKey, agentId);
   };
 
-  const total   = contacts.length;
-  const done    = contacts.filter(c => c.status === "completed" || c.status === "called").length;
-  const active  = contacts.filter(c => c.status === "calling"   || c.status === "queued").length;
-  const failed  = contacts.filter(c => c.status === "failed").length;
+  const displayContacts = agentId 
+    ? contacts.filter(c => c.agentId === agentId)
+    : contacts;
+
+  const total   = displayContacts.length;
+  const done    = displayContacts.filter(c => c.status === "completed" || c.status === "called").length;
+  const active  = displayContacts.filter(c => c.status === "calling"   || c.status === "queued").length;
+  const failed  = displayContacts.filter(c => c.status === "failed").length;
   const pct     = total > 0 ? Math.round(((done + failed) / total) * 100) : 0;
 
   return {
     apiKey, setApiKey,
     agentId, setAgentId,
-    contacts, setContacts,
+    contacts: displayContacts, setContacts,
     logs, setLogs,
     isCalling, setIsCalling,
     showProgress, setShowProgress,
@@ -267,6 +325,7 @@ export function useBolnaDashboard() {
     searchDate, setSearchDate,
     handleFile,
     startCalling,
+    availableAgents,
     stats: { total, done, active, failed, pct }
   };
 }

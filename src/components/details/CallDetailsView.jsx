@@ -1,6 +1,7 @@
 import React from 'react';
 import { Panel, PanelHead } from '../ui/Panel';
 import { StatusPill } from '../ui/StatusPill';
+import { DatePicker } from '../ui/DatePicker';
 
 export const CallDetailsView = ({ contacts, searchDate, setSearchDate, detailsStatusTab, setDetailsStatusTab }) => {
   return (
@@ -11,15 +12,7 @@ export const CallDetailsView = ({ contacts, searchDate, setSearchDate, detailsSt
             <span className="label-dot" />
             Call Details Search
           </div>
-          <div className="search-box">
-            <span className="search-icon">📅</span>
-            <input
-              type="date"
-              className="search-input"
-              value={searchDate}
-              onChange={e => setSearchDate(e.target.value)}
-            />
-          </div>
+          <DatePicker value={searchDate} onChange={setSearchDate} />
         </PanelHead>
 
         <div className="details-tabs">

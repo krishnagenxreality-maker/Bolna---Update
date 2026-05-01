@@ -38,6 +38,7 @@ export default function BolnaDashboard() {
     searchDate, setSearchDate,
     handleFile,
     startCalling,
+    availableAgents,
     stats
   } = useBolnaDashboard();
 
@@ -53,6 +54,8 @@ export default function BolnaDashboard() {
             <ConfigPanel 
               apiKey={apiKey} 
               agentId={agentId} 
+              setAgentId={setAgentId}
+              availableAgents={availableAgents}
             />
             
             <UploadPanel handleFile={handleFile} />
@@ -93,6 +96,8 @@ export default function BolnaDashboard() {
             contacts={contacts}
             responseTab={responseTab}
             setResponseTab={setResponseTab}
+            searchDate={searchDate}
+            setSearchDate={setSearchDate}
           />
         )}
         {activeView === 'leads' && (
@@ -100,6 +105,8 @@ export default function BolnaDashboard() {
             contacts={contacts}
             leadsStatusTab={leadsStatusTab}
             setLeadsStatusTab={setLeadsStatusTab}
+            searchDate={searchDate}
+            setSearchDate={setSearchDate}
           />
         )}
       </main>

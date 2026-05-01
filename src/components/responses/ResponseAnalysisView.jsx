@@ -1,14 +1,24 @@
 import React from 'react';
-import { Panel } from '../ui/Panel';
+import { Panel, PanelHead } from '../ui/Panel';
 import { StatusPill } from '../ui/StatusPill';
+import { DatePicker } from '../ui/DatePicker';
 
-export const ResponseAnalysisView = ({ contacts, responseTab, setResponseTab }) => {
-  const uniqueResponses = Array.from(new Set(contacts.map(c => c.response).filter(r => r))).sort();
+export const ResponseAnalysisView = ({ contacts, responseTab, setResponseTab, searchDate, setSearchDate }) => {
+  const filteredContacts = contacts.filter(c => !searchDate || c.date === searchDate);
+  const uniqueResponses = Array.from(new Set(filteredContacts.map(c => c.response).filter(r => r))).sort();
 
   return (
     <div className="responses-view">
-      <Panel label="Response Details Analysis">
-        <div className="details-tabs" style={{flexWrap: 'wrap'}}>
+      <Panel>
+        <PanelHead>
+          <div className="panel-label" style={{marginBottom:0}}>
+            <span className="label-dot" />
+            Response Details Analysis
+          </div>
+          <DatePicker value={searchDate} onChange={setSearchDate} />
+        </PanelHead>
+
+        <div className="details-tabs" style={{flexWrap: 'wrap', padding: '0 20px', marginTop: '20px'}}>
           {uniqueResponses.map(resp => (
             <button
               key={resp}
@@ -19,12 +29,12 @@ export const ResponseAnalysisView = ({ contacts, responseTab, setResponseTab }) 
             </button>
           ))}
           {uniqueResponses.length === 0 && (
-            <div className="no-data" style={{padding: '10px 0'}}>No responses captured yet.</div>
+            <div className="no-data" style={{padding: '10px 0'}}>No responses captured for this date.</div>
           )}
         </div>
 
         {responseTab && (
-          <div className="table-wrap" style={{marginTop: '20px'}}>
+          <div className="table-wrap" style={{marginTop: '20px', padding: '0 20px 20px'}}>
             <table className="ct">
               <thead>
                 <tr>
@@ -37,7 +47,7 @@ export const ResponseAnalysisView = ({ contacts, responseTab, setResponseTab }) 
                 </tr>
               </thead>
               <tbody>
-                {contacts
+                {filteredContacts
                   .filter(c => c.response === responseTab)
                   .map((c, i) => (
                     <tr key={c.id}>
@@ -54,12 +64,16 @@ export const ResponseAnalysisView = ({ contacts, responseTab, setResponseTab }) 
                 }
               </tbody>
             </table>
+            {filteredContacts.filter(c => c.response === responseTab).length === 0 && (
+              <div className="no-data">No records found for the selected response and date.</div>
+            )}
           </div>
         )}
         {!responseTab && uniqueResponses.length > 0 && (
-          <div className="no-data">Select a response sheet above to view details.</div>
+          <div className="no-data" style={{padding: '0 20px 20px'}}>Select a response sheet above to view details.</div>
         )}
       </Panel>
     </div>
   );
 };
+
