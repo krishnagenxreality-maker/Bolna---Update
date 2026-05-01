@@ -24,6 +24,12 @@ export const Header = ({ activeView, setActiveView }) => {
       </div>
       <div className="hdr-nav">
         <button
+          className={`nav-btn ${activeView === 'calendar' ? 'active' : ''}`}
+          onClick={() => setActiveView('calendar')}
+        >
+          Dashboard
+        </button>
+        <button
           className={`nav-btn ${activeView === 'manager' ? 'active' : ''}`}
           onClick={() => setActiveView('manager')}
         >

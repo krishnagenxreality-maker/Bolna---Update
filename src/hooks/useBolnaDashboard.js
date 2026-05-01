@@ -19,7 +19,7 @@ export function useBolnaDashboard() {
   const [showDone, setShowDone]     = useState(false);
   const [doneSummary, setDoneSummary] = useState("");
   const [xlsxReady, setXlsxReady]   = useState(false);
-  const [activeView, setActiveView] = useState("manager");
+  const [activeView, setActiveView] = useState("calendar");
   const [detailsStatusTab, setDetailsStatusTab] = useState("all");
   const [responseTab, setResponseTab] = useState("");
   const [leadsStatusTab, setLeadsStatusTab] = useState("interested");

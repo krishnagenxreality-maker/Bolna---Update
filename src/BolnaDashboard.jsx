@@ -20,6 +20,7 @@ import { DoneBanner } from './components/dashboard/DoneBanner';
 import { CallDetailsView } from './components/details/CallDetailsView';
 import { ResponseAnalysisView } from './components/responses/ResponseAnalysisView';
 import { LeadsView } from './components/leads/LeadsView';
+import { CalendarDashboardView } from './components/calendar/CalendarDashboardView';
 
 export default function BolnaDashboard() {
   const {
@@ -49,6 +50,17 @@ export default function BolnaDashboard() {
       <Header activeView={activeView} setActiveView={setActiveView} />
 
       <main className="main">
+        {activeView === 'calendar' && (
+          <CalendarDashboardView
+            contacts={contacts}
+            agentId={agentId}
+            setAgentId={setAgentId}
+            availableAgents={availableAgents}
+            setSearchDate={setSearchDate}
+            setActiveView={setActiveView}
+          />
+        )}
+
         {activeView === 'manager' && (
           <>
             <ConfigPanel 
