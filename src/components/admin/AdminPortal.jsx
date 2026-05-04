@@ -23,6 +23,7 @@ export default function AdminPortal() {
     userId: '',
     password: '',
     organization: '',
+    email: '',
     bolnaApiKey: '',
     agents: [{ name: '', id: '' }],
     credits: 0
@@ -60,6 +61,7 @@ export default function AdminPortal() {
       userId: req?.name || '',
       password: '',
       organization: req?.organizationName || '',
+      email: req?.email || '',
       bolnaApiKey: '',
       agents: [{ name: '', id: '' }],
       credits: parseCreditsFromRequest(req?.creditsSelected)
@@ -93,7 +95,7 @@ export default function AdminPortal() {
   };
 
   const handleOpenAdd = () => {
-    setFormData({ userId: '', password: '', organization: '', bolnaApiKey: '', agents: [{ name: '', id: '' }], credits: 0 });
+    setFormData({ userId: '', password: '', organization: '', email: '', bolnaApiKey: '', agents: [{ name: '', id: '' }], credits: 0 });
     setError('');
     setSuccess('');
     setShowPassword(false);
@@ -120,6 +122,7 @@ export default function AdminPortal() {
       userId: user.userId,
       password: user.password,
       organization: user.organization || '',
+      email: user.email || '',
       bolnaApiKey: user.bolnaApiKey || '',
       agents: parsedAgents,
       credits: user.credits || 0
@@ -463,6 +466,13 @@ export default function AdminPortal() {
                 </div>
 
                 <div className="field">
+                  <label className="field-label">Email ID</label>
+                  <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                    {selectedRequest.email || '-'}
+                  </div>
+                </div>
+
+                <div className="field">
                   <label className="field-label">Credits Selected</label>
                   <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
                     {selectedRequest.creditsSelected}
@@ -480,6 +490,13 @@ export default function AdminPortal() {
                   <label className="field-label">Script Description</label>
                   <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)', minHeight: '100px', whiteSpace: 'pre-wrap' }}>
                     {selectedRequest.scriptContent}
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="field-label">Purpose of the Call</label>
+                  <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)', minHeight: '80px', whiteSpace: 'pre-wrap' }}>
+                    {selectedRequest.callPurpose || '-'}
                   </div>
                 </div>
 
@@ -563,6 +580,17 @@ export default function AdminPortal() {
                     value={formData.organization}
                     onChange={e => setFormData(prev => ({ ...prev, organization: e.target.value }))}
                     required
+                  />
+                </div>
+
+                <div className="field">
+                  <label className="field-label">Email ID</label>
+                  <input
+                    type="email"
+                    className="field-input"
+                    value={formData.email}
+                    onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="user@example.com"
                   />
                 </div>
 

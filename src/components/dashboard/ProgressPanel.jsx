@@ -13,7 +13,6 @@ export const ProgressPanel = ({ showProgress, stats, logs }) => {
           <span className="label-dot" />
           Calling Progress
         </div>
-        <div className="prog-rate">Rate: <strong>10 calls / 10 min</strong></div>
       </div>
 
       <div className="prog-track">

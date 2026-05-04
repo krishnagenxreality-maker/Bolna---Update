@@ -623,3 +623,8 @@ body {
   font-size: 14px;
   font-style: italic;
 }
+
+/* Hide scrollbar visually while keeping scroll functional */
+[data-hide-scrollbar]::-webkit-scrollbar {
+  display: none;
+}

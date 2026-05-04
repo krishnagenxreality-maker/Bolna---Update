@@ -6,6 +6,7 @@ import AdminPortal from './components/admin/AdminPortal';
 import BolnaDashboard from './BolnaDashboard';
 import HomePage from './components/home/HomePage';
 import PricingPage from './components/pricing/PricingPage';
+import UpgradePricingPage from './components/upgrade/UpgradePricingPage';
 
 const ProtectedRoute = ({ children, role }) => {
   const { user } = useAuth();
@@ -39,6 +40,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute role="user">
             <BolnaDashboard />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/upgrade" 
+        element={
+          <ProtectedRoute role="user">
+            <UpgradePricingPage />
           </ProtectedRoute>
         } 
       />

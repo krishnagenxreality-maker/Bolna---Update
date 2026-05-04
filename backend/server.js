@@ -31,12 +31,13 @@ const mapUser = (user) => {
 
 const mapRequest = (req) => {
   if (!req) return null;
-  const { organization_name, script_content, credits_selected, created_at, ...rest } = req;
+  const { organization_name, script_content, credits_selected, created_at, call_purpose, ...rest } = req;
   return {
     ...rest,
     organizationName: organization_name,
     scriptContent: script_content,
     creditsSelected: credits_selected,
+    callPurpose: call_purpose,
     createdAt: created_at
   };
 };
@@ -108,6 +109,7 @@ app.post('/api/users', async (req, res) => {
         password: hashedPassword,
         role: newUser.role || 'user',
         organization: newUser.organization,
+        email: newUser.email || '',
         bolna_api_key: newUser.bolnaApiKey,
         bolna_agent_id: newUser.bolnaAgentId,
         credits: newUser.credits || 0
@@ -168,6 +170,7 @@ app.put('/api/users/:oldUserId', async (req, res) => {
     }
     if (updatedData.role) toUpdate.role = updatedData.role;
     if (updatedData.organization !== undefined) toUpdate.organization = updatedData.organization;
+    if (updatedData.email !== undefined) toUpdate.email = updatedData.email;
     if (updatedData.bolnaApiKey !== undefined) toUpdate.bolna_api_key = updatedData.bolnaApiKey;
     if (updatedData.bolnaAgentId !== undefined) toUpdate.bolna_agent_id = updatedData.bolnaAgentId;
 
@@ -283,7 +286,9 @@ app.post('/api/requests', async (req, res) => {
     id: Date.now().toString(),
     name: r.name,
     organization_name: r.organizationName,
+    email: r.email || '',
     purpose: r.purpose,
+    call_purpose: r.callPurpose || '',
     script_content: r.scriptContent,
     credits_selected: r.creditsSelected,
     status: 'pending'

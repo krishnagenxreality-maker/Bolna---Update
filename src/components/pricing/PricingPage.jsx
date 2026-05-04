@@ -28,8 +28,10 @@ export default function PricingPage() {
   const [formData, setFormData] = useState({
     name: '',
     organizationName: '',
+    email: '',
     selectedPurposes: [],
     otherPurpose: '',
+    callPurpose: '',
     targetAudience: '',
     scriptPoints: '',
     creditsSelected: ''
@@ -80,7 +82,9 @@ export default function PricingPage() {
       const payload = {
         name: formData.name,
         organizationName: formData.organizationName,
+        email: formData.email,
         purpose: finalPurpose,
+        callPurpose: formData.callPurpose,
         scriptContent: finalScriptContent,
         creditsSelected: formData.creditsSelected
       };
@@ -93,8 +97,10 @@ export default function PricingPage() {
         setFormData({
           name: '',
           organizationName: '',
+          email: '',
           selectedPurposes: [],
           otherPurpose: '',
+          callPurpose: '',
           targetAudience: '',
           scriptPoints: '',
           creditsSelected: ''
@@ -265,7 +271,7 @@ export default function PricingPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '20px'
           }}>
-            <div className="panel" style={{ width: '100%', maxWidth: '540px', padding: '32px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="panel" data-hide-scrollbar style={{ width: '100%', maxWidth: '540px', padding: '32px', maxHeight: '90vh', overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {success ? (
                 <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                   <CheckCircle2 size={48} className="sn-green" style={{ margin: '0 auto 16px' }} />
@@ -305,6 +311,18 @@ export default function PricingPage() {
                         className="field-input"
                         value={formData.organizationName}
                         onChange={e => setFormData({ ...formData, organizationName: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label className="field-label">Email ID</label>
+                      <input
+                        type="email"
+                        className="field-input"
+                        placeholder="yourname@example.com"
+                        value={formData.email}
+                        onChange={e => setFormData({ ...formData, email: e.target.value })}
                         required
                       />
                     </div>
@@ -374,16 +392,6 @@ export default function PricingPage() {
                     {isOtherSelected && (
                       <>
                         <div className="field">
-                          <label className="field-label">Enter Purpose</label>
-                          <input
-                            type="text"
-                            className="field-input"
-                            value={formData.otherPurpose}
-                            onChange={e => setFormData({ ...formData, otherPurpose: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div className="field">
                           <label className="field-label">Who are you making calls to</label>
                           <input
                             type="text"
@@ -405,6 +413,18 @@ export default function PricingPage() {
                         </div>
                       </>
                     )}
+
+                    <div className="field">
+                      <label className="field-label">Purpose of the Call</label>
+                      <textarea
+                        className="field-input"
+                        style={{ minHeight: '80px', resize: 'vertical' }}
+                        placeholder="Briefly describe the purpose of the calls you intend to make"
+                        value={formData.callPurpose}
+                        onChange={e => setFormData({ ...formData, callPurpose: e.target.value })}
+                        required
+                      />
+                    </div>
 
                     <div className="field">
                       <label className="field-label">Credits Selected</label>

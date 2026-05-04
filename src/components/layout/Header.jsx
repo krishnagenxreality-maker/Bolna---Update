@@ -1,9 +1,11 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { LogOut, Zap } from 'lucide-react';
 
 export const Header = ({ activeView, setActiveView, credits }) => {
   const { logout, user } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <header className="hdr">
@@ -83,6 +85,41 @@ export const Header = ({ activeView, setActiveView, credits }) => {
           <span>{credits}</span>
           <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: '400', fontSize: '10px', letterSpacing: '1px', textTransform: 'uppercase' }}>credits</span>
         </div>
+
+        {/* Upgrade Button */}
+        <button
+          onClick={() => navigate('/upgrade')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontFamily: "'Outfit', sans-serif",
+            fontSize: '12px',
+            fontWeight: '600',
+            letterSpacing: '0.5px',
+            color: 'rgba(255,255,255,0.8)',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            padding: '6px 14px',
+            borderRadius: '100px',
+            backdropFilter: 'blur(8px)',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)';
+            e.currentTarget.style.color = '#fff';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+            e.currentTarget.style.color = 'rgba(255,255,255,0.8)';
+          }}
+        >
+          Upgrade
+        </button>
+
         <div className="hdr-badge">{user?.organization || 'Voice AI Call Manager'}</div>
         <button onClick={logout} className="logout-btn" style={{
           background: 'rgba(239, 68, 68, 0.1)',
