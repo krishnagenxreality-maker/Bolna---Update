@@ -262,3 +262,20 @@
 
 .txt-green { color: #7dffb3 !important; }
 .txt-red { color: #ff7070 !important; }
+
+/* Disabled / future dates */
+.cdv-cell.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+
+.cdv-cell.disabled .cdv-day-num {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.cdv-cell.disabled:hover {
+  background: rgba(255, 255, 255, 0.015);
+  border-color: rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+}

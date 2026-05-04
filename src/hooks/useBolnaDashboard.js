@@ -24,6 +24,7 @@ export function useBolnaDashboard() {
   const [responseTab, setResponseTab] = useState("");
   const [leadsStatusTab, setLeadsStatusTab] = useState("interested");
   const [searchDate, setSearchDate] = useState(new Date().toISOString().split('T')[0]);
+  const [credits, setCredits] = useState(0);
 
   // Fetch user config and contacts from backend
   useEffect(() => {
@@ -33,6 +34,7 @@ export function useBolnaDashboard() {
           // Fetch Config
           const configRes = await axios.get(`http://localhost:5000/api/user-config/${user.userId}`);
           if (configRes.data.bolnaApiKey) setApiKey(configRes.data.bolnaApiKey);
+          if (configRes.data.credits !== undefined) setCredits(configRes.data.credits);
           
           let currentAgents = [];
           if (configRes.data && configRes.data.bolnaAgentId) {
@@ -270,6 +272,17 @@ export function useBolnaDashboard() {
         updateContactExecId(id, execId);
         updateContactStatus(id, "calling");
         addLog(`✓ Call queued: ${contact.name} (${contact.phone}) → exec ${execId.slice(0,8)}…`, "ok");
+        // Deduct 1 credit per successful call dispatch
+        if (user && user.userId) {
+          try {
+            const creditRes = await axios.post(`http://localhost:5000/api/user-credits/deduct/${user.userId}`);
+            if (creditRes.data.success) {
+              setCredits(creditRes.data.credits);
+            }
+          } catch (creditErr) {
+            console.error('Failed to deduct credit', creditErr);
+          }
+        }
       } catch(err) {
         updateContactStatus(id, "failed", err.message);
         addLog(`✗ Failed to call ${contact.name}: ${err.message}`, "err");
@@ -326,6 +339,7 @@ export function useBolnaDashboard() {
     handleFile,
     startCalling,
     availableAgents,
-    stats: { total, done, active, failed, pct }
+    stats: { total, done, active, failed, pct },
+    credits
   };
 }

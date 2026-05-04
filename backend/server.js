@@ -24,7 +24,8 @@ const mapUser = (user) => {
     ...rest,
     userId: user_id,
     bolnaApiKey: bolna_api_key,
-    bolnaAgentId: bolna_agent_id
+    bolnaAgentId: bolna_agent_id,
+    credits: user.credits || 0
   };
 };
 
@@ -108,7 +109,8 @@ app.post('/api/users', async (req, res) => {
         role: newUser.role || 'user',
         organization: newUser.organization,
         bolna_api_key: newUser.bolnaApiKey,
-        bolna_agent_id: newUser.bolnaAgentId
+        bolna_agent_id: newUser.bolnaAgentId,
+        credits: newUser.credits || 0
       }])
       .select()
       .single();
@@ -194,7 +196,7 @@ app.get('/api/user-config/:userId', async (req, res) => {
   try {
     const { data: user, error } = await supabase
       .from('users')
-      .select('bolna_api_key, bolna_agent_id, organization')
+      .select('bolna_api_key, bolna_agent_id, organization, credits')
       .eq('user_id', userId)
       .single();
 
@@ -203,8 +205,57 @@ app.get('/api/user-config/:userId', async (req, res) => {
     res.json({
       bolnaApiKey: user.bolna_api_key,
       bolnaAgentId: user.bolna_agent_id,
-      organization: user.organization
+      organization: user.organization,
+      credits: user.credits || 0
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// User: Get credits
+app.get('/api/user-credits/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('credits')
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !user) return res.status(404).json({ success: false, message: 'User not found' });
+    res.json({ credits: user.credits || 0 });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// User: Deduct 1 credit
+app.post('/api/user-credits/deduct/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('credits')
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const currentCredits = user.credits || 0;
+    if (currentCredits <= 0) {
+      return res.status(400).json({ success: false, message: 'No credits remaining' });
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .update({ credits: currentCredits - 1 })
+      .eq('user_id', userId)
+      .select('credits')
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, credits: data.credits });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

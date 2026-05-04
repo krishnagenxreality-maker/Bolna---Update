@@ -24,7 +24,8 @@ export default function AdminPortal() {
     password: '',
     organization: '',
     bolnaApiKey: '',
-    agents: [{ name: '', id: '' }]
+    agents: [{ name: '', id: '' }],
+    credits: 0
   });
 
   const [editingUserId, setEditingUserId] = useState(null);
@@ -47,6 +48,12 @@ export default function AdminPortal() {
     }
   };
 
+  const parseCreditsFromRequest = (creditsStr) => {
+    if (!creditsStr) return 0;
+    const match = creditsStr.match(/(\d+)/);
+    return match ? parseInt(match[1], 10) : 0;
+  };
+
   const handleMarkCreated = (requestId) => {
     const req = requests.find(r => r.id === requestId);
     setFormData({
@@ -54,7 +61,8 @@ export default function AdminPortal() {
       password: '',
       organization: req?.organizationName || '',
       bolnaApiKey: '',
-      agents: [{ name: '', id: '' }]
+      agents: [{ name: '', id: '' }],
+      credits: parseCreditsFromRequest(req?.creditsSelected)
     });
     setError('');
     setSuccess('');
@@ -85,7 +93,7 @@ export default function AdminPortal() {
   };
 
   const handleOpenAdd = () => {
-    setFormData({ userId: '', password: '', organization: '', bolnaApiKey: '', agents: [{ name: '', id: '' }] });
+    setFormData({ userId: '', password: '', organization: '', bolnaApiKey: '', agents: [{ name: '', id: '' }], credits: 0 });
     setError('');
     setSuccess('');
     setShowPassword(false);
@@ -113,7 +121,8 @@ export default function AdminPortal() {
       password: user.password,
       organization: user.organization || '',
       bolnaApiKey: user.bolnaApiKey || '',
-      agents: parsedAgents
+      agents: parsedAgents,
+      credits: user.credits || 0
     });
     setEditingUserId(user.userId);
     setError('');
@@ -127,14 +136,15 @@ export default function AdminPortal() {
     e.preventDefault();
     setError('');
     try {
+      const { agents, ...rest } = formData;
       const payload = {
-        ...formData,
-        bolnaAgentId: JSON.stringify(formData.agents)
+        ...rest,
+        bolnaAgentId: JSON.stringify(agents)
       };
       await axios.post('http://localhost:5000/api/users', payload);
       setShowAddForm(false);
       fetchUsers();
-      
+
       if (createdFromRequestId) {
         await axios.delete(`http://localhost:5000/api/requests/${createdFromRequestId}`);
         setCreatedFromRequestId(null);
@@ -149,9 +159,10 @@ export default function AdminPortal() {
     e.preventDefault();
     setError('');
     try {
+      const { agents, ...rest } = formData;
       const payload = {
-        ...formData,
-        bolnaAgentId: JSON.stringify(formData.agents)
+        ...rest,
+        bolnaAgentId: JSON.stringify(agents)
       };
       await axios.put(`http://localhost:5000/api/users/${editingUserId}`, payload);
       setShowEditForm(false);
@@ -194,7 +205,7 @@ export default function AdminPortal() {
         }
         return parsed.name || parsed.id;
       }
-    } catch (e) {}
+    } catch (e) { }
     return agentId;
   };
 
@@ -265,15 +276,15 @@ export default function AdminPortal() {
         <div className="panel panel-table">
           <div className="panel-head">
             <div className="panel-label" style={{ display: 'flex', gap: '20px', marginBottom: 0, borderBottom: 'none' }}>
-              <button 
-                onClick={() => setActiveView('users')} 
+              <button
+                onClick={() => setActiveView('users')}
                 className={`tab-btn ${activeView === 'users' ? 'active' : ''}`}
                 style={{ margin: 0 }}
               >
                 User Management
               </button>
-              <button 
-                onClick={() => setActiveView('requests')} 
+              <button
+                onClick={() => setActiveView('requests')}
                 className={`tab-btn ${activeView === 'requests' ? 'active' : ''}`}
                 style={{ margin: 0 }}
               >
@@ -570,16 +581,16 @@ export default function AdminPortal() {
                   <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                       <label className="field-label" style={{ marginBottom: 0 }}>Bolna Agents</label>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={addAgentField}
-                        className="btn-call" 
+                        className="btn-call"
                         style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '4px' }}
                       >
                         + Add Agent
                       </button>
                     </div>
-                    
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {formData.agents.map((agent, index) => (
                         <div key={index} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>

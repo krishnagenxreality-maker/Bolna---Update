@@ -41,14 +41,15 @@ export default function BolnaDashboard() {
     handleFile,
     startCalling,
     availableAgents,
-    stats
+    stats,
+    credits
   } = useBolnaDashboard();
 
   return (
     <div className="app">
       <SmokeBackground />
       
-      <Header activeView={activeView} setActiveView={setActiveView} />
+      <Header activeView={activeView} setActiveView={setActiveView} credits={credits} />
 
       <main className="main">
         {activeView === 'calendar' && (

@@ -58,6 +58,8 @@ export const CalendarDashboardView = ({
   const renderCells = () => {
     const cells = [];
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     daysOfWeek.forEach(day => {
       cells.push(<div key={`h-${day}`} className="cdv-dow">{day}</div>);
@@ -69,14 +71,17 @@ export const CalendarDashboardView = ({
 
     for (let i = 1; i <= daysInMonth; i++) {
       const stats = getDayStats(i);
-      const isToday = new Date().getDate() === i && new Date().getMonth() === month && new Date().getFullYear() === year;
+      const cellDate = new Date(year, month, i);
+      cellDate.setHours(0, 0, 0, 0);
+      const isToday = cellDate.getTime() === today.getTime();
+      const isFuture = cellDate.getTime() > today.getTime();
 
       cells.push(
         <div 
           key={`d-${i}`} 
-          className={`cdv-cell ${stats ? 'has-data' : ''} ${isToday ? 'today' : ''} ${hoveredDate === i ? 'hovered' : ''}`}
-          onClick={() => handleDayClick(i)}
-          onMouseEnter={() => setHoveredDate(i)}
+          className={`cdv-cell ${stats ? 'has-data' : ''} ${isToday ? 'today' : ''} ${isFuture ? 'disabled' : ''} ${hoveredDate === i ? 'hovered' : ''}`}
+          onClick={() => !isFuture && handleDayClick(i)}
+          onMouseEnter={() => !isFuture && setHoveredDate(i)}
           onMouseLeave={() => setHoveredDate(null)}
         >
           <div className="cdv-cell-header">
