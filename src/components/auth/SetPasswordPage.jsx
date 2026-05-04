@@ -1,35 +1,55 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { SmokeBackground } from '../layout/SmokeBackground';
-import { LogIn, User, Lock, AlertCircle, Shield, ArrowLeft, Home } from 'lucide-react';
+import { Lock, AlertCircle, Shield, KeyRound } from 'lucide-react';
+import axios from 'axios';
 import '../../styles/BolnaDashboard.css';
 
-export default function LoginPage() {
-  const [userId, setUserId] = useState('');
-  const [password, setPassword] = useState('');
+export default function SetPasswordPage() {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = location.state?.from || -1;
+
+  // If no user is logged in or user is not a first-time login user, redirect
+  if (!user || !user.isFirstLogin) {
+    return <Navigate to="/login" />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
     setIsLoading(true);
 
-    const result = await login(userId, password);
-    
-    if (result.success) {
-      if (result.isFirstLogin && result.role === 'user') {
-        navigate('/set-password');
-      } else {
-        navigate(result.role === 'admin' ? '/admin' : '/dashboard');
+    try {
+      const response = await axios.post(`http://localhost:5000/api/users/set-password/${user.userId}`, {
+        password: newPassword
+      });
+
+      if (response.data.success) {
+        // Password updated successfully
+        // We log out the user so they can log in with their new password
+        // as per the requirement "Update the user's password in the database... Redirect user to normal login flow"
+        logout();
+        navigate('/login', { state: { message: 'Password set successfully. Please log in with your new password.' } });
       }
-    } else {
-      setError(result.message);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update password');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -54,104 +74,50 @@ export default function LoginPage() {
           textAlign: 'center',
           position: 'relative'
         }}>
-          {/* Navigation Buttons */}
-          <div style={{ 
-            position: 'absolute', 
-            top: '20px', 
-            left: '20px', 
-            right: '20px', 
-            display: 'flex', 
-            justifyContent: 'space-between',
-            pointerEvents: 'none'
-          }}>
-            <button 
-              onClick={() => navigate(from)} 
-              title="Back"
-              style={{ 
-                background: 'none', 
-                border: 'none', 
-                color: 'rgba(255,255,255,0.2)', 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '12px',
-                fontFamily: 'Outfit',
-                pointerEvents: 'auto',
-                transition: 'color 0.2s'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.color = 'white'}
-              onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.2)'}
-            >
-              <ArrowLeft size={16} /> Back
-            </button>
-            <button 
-              onClick={() => navigate('/')} 
-              title="Home"
-              style={{ 
-                background: 'none', 
-                border: 'none', 
-                color: 'rgba(255,255,255,0.2)', 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '12px',
-                fontFamily: 'Outfit',
-                pointerEvents: 'auto',
-                transition: 'color 0.2s'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.color = 'white'}
-              onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.2)'}
-            >
-              <Home size={16} /> Home
-            </button>
-          </div>
-
-          <div style={{ marginBottom: '32px', marginTop: '10px' }}>
+          <div style={{ marginBottom: '32px' }}>
             <div className="logo-mark" style={{ 
               width: '56px', height: '56px', 
               margin: '0 auto 16px',
               borderRadius: '12px'
             }}>
-              <Shield size={28} />
+              <KeyRound size={28} />
             </div>
             <h1 className="hdr-title" style={{ fontSize: '24px', marginBottom: '8px' }}>
-              Calling<span className="hdr-accent"> Gen</span>
+              Set New<span className="hdr-accent"> Password</span>
             </h1>
             <p style={{ 
               fontSize: '13px', 
               color: 'rgba(255, 255, 255, 0.35)',
               fontFamily: 'Outfit, sans-serif'
             }}>
-              Enter your credentials to access the portal
+              Please set a new password for your account to continue
             </p>
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
             <div className="field">
               <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <User size={12} /> User ID
+                <Lock size={12} /> New Password
               </label>
               <input
-                type="text"
+                type="password"
                 className="field-input"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                placeholder="User id"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="••••••••"
                 required
               />
             </div>
 
             <div className="field">
               <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Lock size={12} /> Password
+                <Lock size={12} /> Confirm Password
               </label>
               <input
                 type="password"
                 className="field-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
                 required
               />
@@ -186,21 +152,32 @@ export default function LoginPage() {
               {isLoading ? (
                 <>
                   <div className="pulse-dot"></div>
-                  Verifying...
+                  Setting Password...
                 </>
               ) : (
                 <>
-                  <LogIn size={18} />
-                  Sign In
+                  <Shield size={18} />
+                  Set Password
                 </>
               )}
             </button>
           </form>
 
           <div style={{ marginTop: '32px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px' }}>
-            <div className="hdr-badge" style={{ display: 'inline-block' }}>
-              Secure Access Only
-            </div>
+            <button 
+              onClick={logout}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'rgba(255,255,255,0.3)',
+                fontSize: '12px',
+                fontFamily: 'Outfit',
+                cursor: 'pointer',
+                textDecoration: 'underline'
+              }}
+            >
+              Cancel and Logout
+            </button>
           </div>
         </div>
       </div>

@@ -19,13 +19,14 @@ app.use(bodyParser.json());
 // Helper to map DB row to API response (snake to camel)
 const mapUser = (user) => {
   if (!user) return null;
-  const { bolna_api_key, bolna_agent_id, user_id, ...rest } = user;
+  const { bolna_api_key, bolna_agent_id, user_id, is_first_login, ...rest } = user;
   return {
     ...rest,
     userId: user_id,
     bolnaApiKey: bolna_api_key,
     bolnaAgentId: bolna_agent_id,
-    credits: user.credits || 0
+    credits: user.credits || 0,
+    isFirstLogin: is_first_login !== false  // default true if null/undefined
   };
 };
 
@@ -71,7 +72,7 @@ app.post('/api/login', async (req, res) => {
     if (passwordMatch) {
       const mapped = mapUser(user);
       const { password: _, ...userWithoutPassword } = mapped;
-      res.json({ success: true, user: userWithoutPassword });
+      res.json({ success: true, user: userWithoutPassword, isFirstLogin: userWithoutPassword.isFirstLogin });
     } else {
       res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
@@ -112,7 +113,8 @@ app.post('/api/users', async (req, res) => {
         email: newUser.email || '',
         bolna_api_key: newUser.bolnaApiKey,
         bolna_agent_id: newUser.bolnaAgentId,
-        credits: newUser.credits || 0
+        credits: newUser.credits || 0,
+        is_first_login: true
       }])
       .select()
       .single();
@@ -259,6 +261,30 @@ app.post('/api/user-credits/deduct/:userId', async (req, res) => {
 
     if (error) throw error;
     res.json({ success: true, credits: data.credits });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// User: Set new password (first-time login)
+app.post('/api/users/set-password/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { password } = req.body;
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const { data, error } = await supabase
+      .from('users')
+      .update({ 
+        password: hashedPassword,
+        is_first_login: false 
+      })
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, user: mapUser(data) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

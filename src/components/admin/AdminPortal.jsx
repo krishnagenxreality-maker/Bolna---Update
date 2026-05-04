@@ -438,7 +438,15 @@ export default function AdminPortal() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '20px'
           }}>
-            <div className="panel" style={{ width: '100%', maxWidth: '540px', padding: '32px' }}>
+            <div className="panel" style={{ 
+              width: '100%', 
+              maxWidth: '540px', 
+              padding: '32px',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <div className="panel-label" style={{ marginBottom: 0 }}>
                   <div className="label-dot"></div>
@@ -449,7 +457,7 @@ export default function AdminPortal() {
                 </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div className="config-grid">
                   <div className="field">
                     <label className="field-label">Name</label>
@@ -465,37 +473,38 @@ export default function AdminPortal() {
                   </div>
                 </div>
 
-                <div className="field">
-                  <label className="field-label">Email ID</label>
-                  <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
-                    {selectedRequest.email || '-'}
+                <div className="config-grid">
+                  <div className="field">
+                    <label className="field-label">Email ID</label>
+                    <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                      {selectedRequest.email || '-'}
+                    </div>
                   </div>
-                </div>
-
-                <div className="field">
-                  <label className="field-label">Credits Selected</label>
-                  <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
-                    {selectedRequest.creditsSelected}
+                  <div className="field">
+                    <label className="field-label">Credits Selected</label>
+                    <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                      {selectedRequest.creditsSelected}
+                    </div>
                   </div>
                 </div>
 
                 <div className="field">
                   <label className="field-label">Purpose of Using This</label>
-                  <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)', minHeight: '80px', whiteSpace: 'pre-wrap' }}>
+                  <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)', minHeight: '60px', whiteSpace: 'pre-wrap' }}>
                     {selectedRequest.purpose}
                   </div>
                 </div>
 
                 <div className="field">
                   <label className="field-label">Script Description</label>
-                  <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)', minHeight: '100px', whiteSpace: 'pre-wrap' }}>
+                  <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)', minHeight: '80px', whiteSpace: 'pre-wrap' }}>
                     {selectedRequest.scriptContent}
                   </div>
                 </div>
 
                 <div className="field">
                   <label className="field-label">Purpose of the Call</label>
-                  <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)', minHeight: '80px', whiteSpace: 'pre-wrap' }}>
+                  <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)', minHeight: '60px', whiteSpace: 'pre-wrap' }}>
                     {selectedRequest.callPurpose || '-'}
                   </div>
                 </div>

@@ -53,8 +53,8 @@ export default function HomePage() {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          <button onClick={() => navigate('/pricing')} className="nav-link" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'Outfit', fontWeight: '500' }}>Pricing</button>
-          <button onClick={() => navigate('/login')} className="logout-btn" style={{
+          <button onClick={() => navigate('/login', { state: { from: '/' } })} className="nav-link" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'Outfit', fontWeight: '500' }}>Pricing</button>
+          <button onClick={() => navigate('/login', { state: { from: '/' } })} className="logout-btn" style={{
             background: 'rgba(255, 255, 255, 0.05)',
             color: '#fff',
             border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -167,7 +167,7 @@ export default function HomePage() {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <button 
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/login', { state: { from: '/?join=true' } })}
                 className="btn-call" 
                 style={{ width: '100%', padding: '16px', justifyContent: 'center' }}
               >

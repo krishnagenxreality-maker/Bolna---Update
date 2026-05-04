@@ -7,11 +7,18 @@ import BolnaDashboard from './BolnaDashboard';
 import HomePage from './components/home/HomePage';
 import PricingPage from './components/pricing/PricingPage';
 import UpgradePricingPage from './components/upgrade/UpgradePricingPage';
+import SetPasswordPage from './components/auth/SetPasswordPage';
 
-const ProtectedRoute = ({ children, role }) => {
+const ProtectedRoute = ({ children, role, skipFirstLoginCheck }) => {
   const { user } = useAuth();
   
   if (!user) return <Navigate to="/login" />;
+  
+  // If user is first login, redirect to set-password unless already there
+  if (user.isFirstLogin && user.role === 'user' && !skipFirstLoginCheck) {
+    return <Navigate to="/set-password" />;
+  }
+  
   if (role && user.role !== role) return <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} />;
   
   return children;
@@ -49,6 +56,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute role="user">
             <UpgradePricingPage />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/set-password" 
+        element={
+          <ProtectedRoute role="user" skipFirstLoginCheck={true}>
+            <SetPasswordPage />
           </ProtectedRoute>
         } 
       />

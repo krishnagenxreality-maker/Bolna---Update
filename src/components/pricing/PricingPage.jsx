@@ -129,7 +129,7 @@ export default function PricingPage() {
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
           <button onClick={() => navigate('/pricing')} className="nav-link" style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontFamily: 'Outfit', fontWeight: '600' }}>Pricing</button>
-          <button onClick={() => navigate('/login')} className="logout-btn" style={{
+          <button onClick={() => navigate('/login', { state: { from: '/pricing' } })} className="logout-btn" style={{
             background: 'rgba(255, 255, 255, 0.05)',
             color: '#fff',
             border: '1px solid rgba(255, 255, 255, 0.1)',
