@@ -32,7 +32,8 @@ const mapUser = (user) => {
     bolnaApiKey: bolna_api_key,
     bolnaAgentId: bolna_agent_id,
     credits: user.credits || 0,
-    isFirstLogin: is_first_login !== false  // default true if null/undefined
+    isFirstLogin: user_id !== 'AdminGenx' && is_first_login !== false, // Always false for AdminGenx for stability
+    userType: user.user_type || 'regular'
   };
 };
 
@@ -45,6 +46,7 @@ const mapRequest = (req) => {
     scriptContent: script_content,
     creditsSelected: credits_selected,
     callPurpose: call_purpose,
+    purposeType: rest.purpose_type || 'regular',
     createdAt: created_at
   };
 };
@@ -78,7 +80,12 @@ app.post('/api/login', async (req, res) => {
     if (passwordMatch) {
       const mapped = mapUser(user);
       const { password: _, ...userWithoutPassword } = mapped;
-      res.json({ success: true, user: userWithoutPassword, isFirstLogin: userWithoutPassword.isFirstLogin });
+      res.json({ 
+        success: true, 
+        user: userWithoutPassword, 
+        isFirstLogin: userWithoutPassword.isFirstLogin,
+        userType: userWithoutPassword.userType
+      });
     } else {
       res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
@@ -120,6 +127,7 @@ app.post('/api/users', async (req, res) => {
         bolna_api_key: newUser.bolnaApiKey,
         bolna_agent_id: newUser.bolnaAgentId,
         credits: newUser.credits || 0,
+        user_type: newUser.userType || 'regular',
         is_first_login: true
       }])
       .select()
@@ -181,6 +189,7 @@ app.put('/api/users/:oldUserId', async (req, res) => {
     if (updatedData.email !== undefined) toUpdate.email = updatedData.email;
     if (updatedData.bolnaApiKey !== undefined) toUpdate.bolna_api_key = updatedData.bolnaApiKey;
     if (updatedData.bolnaAgentId !== undefined) toUpdate.bolna_agent_id = updatedData.bolnaAgentId;
+    if (updatedData.userType !== undefined) toUpdate.user_type = updatedData.userType;
 
     const { data, error } = await supabase
       .from('users')
@@ -321,8 +330,9 @@ app.post('/api/requests', async (req, res) => {
     email: r.email || '',
     purpose: r.purpose,
     call_purpose: r.callPurpose || '',
-    script_content: r.scriptContent,
+    script_content: r.scriptContent || '',
     credits_selected: r.creditsSelected,
+    purpose_type: r.purposeType || 'regular',
     status: 'pending'
   };
 

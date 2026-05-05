@@ -17,7 +17,12 @@ export const AuthProvider = ({ children }) => {
         const userData = response.data.user;
         setUser(userData);
         localStorage.setItem('bolna_user', JSON.stringify(userData));
-        return { success: true, role: userData.role, isFirstLogin: response.data.isFirstLogin };
+        return { 
+          success: true, 
+          role: userData.role, 
+          isFirstLogin: response.data.isFirstLogin,
+          userType: response.data.userType
+        };
       }
     } catch (error) {
       return { success: false, message: error.response?.data?.message || 'Login failed' };

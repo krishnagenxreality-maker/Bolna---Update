@@ -26,7 +26,11 @@ export default function LoginPage() {
       if (result.isFirstLogin && result.role === 'user') {
         navigate('/set-password');
       } else {
-        navigate(result.role === 'admin' ? '/admin' : '/dashboard');
+        if (result.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate(result.userType === 'education' ? '/education-dashboard' : '/dashboard');
+        }
       }
     } else {
       setError(result.message);

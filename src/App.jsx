@@ -9,6 +9,7 @@ import PricingPage from './components/pricing/PricingPage';
 import UpgradePricingPage from './components/upgrade/UpgradePricingPage';
 import SetPasswordPage from './components/auth/SetPasswordPage';
 import EducationPortalPage from './components/education/EducationPortalPage';
+import EducationDashboardLanding from './components/education/EducationDashboardLanding';
 
 const ProtectedRoute = ({ children, role, skipFirstLoginCheck }) => {
   const { user } = useAuth();
@@ -20,7 +21,17 @@ const ProtectedRoute = ({ children, role, skipFirstLoginCheck }) => {
     return <Navigate to="/set-password" />;
   }
   
-  if (role && user.role !== role) return <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} />;
+  if (role && user.role !== role) {
+    if (user.role === 'admin') return <Navigate to="/admin" />;
+    return <Navigate to={user.userType === 'education' ? '/education-dashboard' : '/dashboard'} />;
+  }
+  
+  // If user is regular and on education dashboard or vice versa
+  const currentPath = window.location.pathname;
+  if (user.role === 'user') {
+    if (user.userType === 'education' && currentPath === '/dashboard') return <Navigate to="/education-dashboard" />;
+    if (user.userType !== 'education' && currentPath === '/education-dashboard') return <Navigate to="/dashboard" />;
+  }
   
   return children;
 };
@@ -33,7 +44,7 @@ function AppRoutes() {
       <Route path="/" element={<HomePage />} />
       <Route path="/pricing" element={<PricingPage />} />
       <Route path="/education-portal" element={<EducationPortalPage />} />
-      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} />} />
+      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={user.role === 'admin' ? '/admin' : (user.userType === 'education' ? '/education-dashboard' : '/dashboard')} />} />
       
       <Route 
         path="/admin" 
@@ -49,6 +60,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute role="user">
             <BolnaDashboard />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/education-dashboard" 
+        element={
+          <ProtectedRoute role="user">
+            <EducationDashboardLanding />
           </ProtectedRoute>
         } 
       />

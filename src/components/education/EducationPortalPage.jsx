@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SmokeBackground } from '../layout/SmokeBackground';
 import { 
-  Shield, LogIn, ArrowRight, Zap, BarChart3, Users 
+  Shield, LogIn, ArrowRight, Zap, BarChart3, Users, X, UserPlus
 } from 'lucide-react';
 import '../../styles/BolnaDashboard.css';
 
 export default function EducationPortalPage() {
   const navigate = useNavigate();
+  const [showChoice, setShowChoice] = useState(false);
 
   const educationFeatures = [
     {
@@ -80,7 +81,7 @@ export default function EducationPortalPage() {
           </p>
           
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-            <button onClick={() => navigate('/pricing')} className="btn-call" style={{ padding: '16px 40px', fontSize: '16px' }}>
+            <button onClick={() => setShowChoice(true)} className="btn-call" style={{ padding: '16px 40px', fontSize: '16px' }}>
               Join <ArrowRight size={20} style={{ marginLeft: '8px' }} />
             </button>
           </div>
@@ -97,6 +98,70 @@ export default function EducationPortalPage() {
           ))}
         </div>
       </main>
+      
+      {/* Choice Selection Modal */}
+      {showChoice && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 300,
+          background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div className="panel" style={{ width: '100%', maxWidth: '480px', padding: '32px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+              <div className="panel-label" style={{ marginBottom: 0 }}>
+                <div className="label-dot"></div>
+                Join Education Portal
+              </div>
+              <button onClick={() => setShowChoice(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <button 
+                onClick={() => navigate('/login')}
+                className="panel" 
+                style={{ 
+                  padding: '20px 24px', textAlign: 'left', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.05)',
+                  transition: 'all 0.2s', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', gap: '16px'
+                }}
+                onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
+                onMouseOut={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
+              >
+                <div className="logo-mark" style={{ width: '44px', height: '44px', background: 'rgba(255,255,255,0.05)', color: '#fff' }}>
+                  <LogIn size={20} />
+                </div>
+                <div>
+                  <h4 style={{ color: '#fff', fontSize: '17px', marginBottom: '2px', fontWeight: '600' }}>Already a User</h4>
+                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>Sign in to your existing account</p>
+                </div>
+                <ArrowRight size={18} style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.1)' }} />
+              </button>
+
+              <button 
+                onClick={() => navigate('/pricing')}
+                className="panel" 
+                style={{ 
+                  padding: '20px 24px', textAlign: 'left', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.05)',
+                  transition: 'all 0.2s', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', gap: '16px'
+                }}
+                onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
+                onMouseOut={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
+              >
+                <div className="logo-mark" style={{ width: '44px', height: '44px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>
+                  <UserPlus size={20} />
+                </div>
+                <div>
+                  <h4 style={{ color: '#fff', fontSize: '17px', marginBottom: '2px', fontWeight: '600' }}>New User</h4>
+                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>Start your onboarding journey</p>
+                </div>
+                <ArrowRight size={18} style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.1)' }} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

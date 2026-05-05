@@ -27,7 +27,8 @@ export default function AdminPortal() {
     email: '',
     bolnaApiKey: '',
     agents: [{ name: '', id: '' }],
-    credits: 0
+    credits: 0,
+    userType: 'regular'
   });
 
   const [editingUserId, setEditingUserId] = useState(null);
@@ -65,7 +66,8 @@ export default function AdminPortal() {
       email: req?.email || '',
       bolnaApiKey: '',
       agents: [{ name: '', id: '' }],
-      credits: parseCreditsFromRequest(req?.creditsSelected)
+      credits: parseCreditsFromRequest(req?.creditsSelected),
+      userType: req?.purposeType || 'regular'
     });
     setError('');
     setSuccess('');
@@ -96,7 +98,7 @@ export default function AdminPortal() {
   };
 
   const handleOpenAdd = () => {
-    setFormData({ userId: '', password: '', organization: '', email: '', bolnaApiKey: '', agents: [{ name: '', id: '' }], credits: 0 });
+    setFormData({ userId: '', password: '', organization: '', email: '', bolnaApiKey: '', agents: [{ name: '', id: '' }], credits: 0, userType: 'regular' });
     setError('');
     setSuccess('');
     setShowPassword(false);
@@ -126,7 +128,8 @@ export default function AdminPortal() {
       email: user.email || '',
       bolnaApiKey: user.bolnaApiKey || '',
       agents: parsedAgents,
-      credits: user.credits || 0
+      credits: user.credits || 0,
+      userType: user.userType || 'regular'
     });
     setEditingUserId(user.userId);
     setError('');
@@ -311,6 +314,7 @@ export default function AdminPortal() {
                     <th>Organization</th>
                     <th>Bolna API Key</th>
                     <th>Bolna Agent ID</th>
+                    <th>Type</th>
                     <th>Role</th>
                     <th style={{ textAlign: 'center' }}>Actions</th>
                   </tr>
@@ -324,6 +328,11 @@ export default function AdminPortal() {
                         {u.bolnaApiKey ? `••••${u.bolnaApiKey.slice(-4)}` : '-'}
                       </td>
                       <td className="td-phone" style={{ fontSize: '11px' }}>{renderAgentId(u.bolnaAgentId)}</td>
+                      <td>
+                        <span className={`spill ${u.userType === 'education' ? 's-blue' : 's-done'}`} style={{ textTransform: 'capitalize' }}>
+                          {u.userType || 'regular'}
+                        </span>
+                      </td>
                       <td>
                         <span className={`spill ${u.role === 'admin' ? 's-calling' : 's-pending'}`}>
                           {u.role}
@@ -372,6 +381,7 @@ export default function AdminPortal() {
                     <th>Name</th>
                     <th>Organization</th>
                     <th>Credits Selected</th>
+                    <th>Type</th>
                     <th>Status</th>
                     <th style={{ textAlign: 'center' }}>Actions</th>
                   </tr>
@@ -387,6 +397,11 @@ export default function AdminPortal() {
                         <td className="td-name">{r.name}</td>
                         <td>{r.organizationName}</td>
                         <td className="td-phone">{r.creditsSelected}</td>
+                        <td>
+                          <span className={`spill ${r.purposeType === 'education' ? 's-blue' : 's-done'}`} style={{ textTransform: 'capitalize' }}>
+                            {r.purposeType || 'regular'}
+                          </span>
+                        </td>
                         <td>
                           <span className={`spill ${r.status === 'pending' ? 's-pending' : 's-done'}`}>
                             {r.status || 'Pending'}
@@ -485,6 +500,12 @@ export default function AdminPortal() {
                     <label className="field-label">Credits Selected</label>
                     <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
                       {selectedRequest.creditsSelected}
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Purpose Type</label>
+                    <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)', textTransform: 'capitalize' }}>
+                      {selectedRequest.purposeType || 'regular'}
                     </div>
                   </div>
                 </div>
@@ -602,6 +623,19 @@ export default function AdminPortal() {
                     onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
                     placeholder="user@example.com"
                   />
+                </div>
+
+                <div className="field">
+                  <label className="field-label">User Type</label>
+                  <select
+                    className="field-input"
+                    value={formData.userType}
+                    onChange={e => setFormData(prev => ({ ...prev, userType: e.target.value }))}
+                    style={{ background: '#1a1a1a' }}
+                  >
+                    <option value="regular">Regular</option>
+                    <option value="education">Education</option>
+                  </select>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

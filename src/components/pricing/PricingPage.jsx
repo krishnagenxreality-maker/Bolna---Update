@@ -21,7 +21,7 @@ export default function PricingPage() {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
 
-  const [showForm, setShowForm] = useState(false);
+  const [onboardingView, setOnboardingView] = useState('plans'); // plans, purpose, regular-form, education-form
   const [success, setSuccess] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -58,7 +58,15 @@ export default function PricingPage() {
       creditsSelected: credits
     });
     setSuccess(false);
-    setShowForm(true);
+    setOnboardingView('purpose');
+  };
+
+  const handlePurposeSelect = (type) => {
+    if (type === 'regular') {
+      setOnboardingView('regular-form');
+    } else {
+      setOnboardingView('education-form');
+    }
   };
 
   const togglePurpose = (purpose) => {
@@ -83,16 +91,17 @@ export default function PricingPage() {
         name: formData.name,
         organizationName: formData.organizationName,
         email: formData.email,
-        purpose: finalPurpose,
-        callPurpose: formData.callPurpose,
-        scriptContent: finalScriptContent,
-        creditsSelected: formData.creditsSelected
+        purpose: onboardingView === 'education-form' ? 'Education Management / Student Engagement' : finalPurpose,
+        callPurpose: onboardingView === 'education-form' ? 'Education Outreach' : formData.callPurpose,
+        scriptContent: onboardingView === 'education-form' ? 'Automated Education Reminders' : finalScriptContent,
+        creditsSelected: formData.creditsSelected,
+        purposeType: onboardingView === 'education-form' ? 'education' : 'regular'
       };
 
       await axios.post(`${API_BASE_URL}/api/requests`, payload);
       setSuccess(true);
       setTimeout(() => {
-        setShowForm(false);
+        setOnboardingView('plans');
         setSuccess(false);
         setFormData({
           name: '',
@@ -264,8 +273,7 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Pricing Request Form Modal */}
-        {showForm && (
+        {onboardingView !== 'plans' && (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 300,
             background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
@@ -281,14 +289,70 @@ export default function PricingPage() {
                     Our team will review your request and get back to you shortly.
                   </p>
                 </div>
-              ) : (
+              ) : onboardingView === 'purpose' ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+                    <div className="panel-label" style={{ marginBottom: 0 }}>
+                      <div className="label-dot"></div>
+                      Select Your Purpose
+                    </div>
+                    <button onClick={() => setOnboardingView('plans')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
+                      <X size={20} />
+                    </button>
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <button 
+                      onClick={() => handlePurposeSelect('education')}
+                      className="panel" 
+                      style={{ 
+                        padding: '24px', textAlign: 'left', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.05)',
+                        transition: 'all 0.2s', background: 'rgba(255,255,255,0.02)'
+                      }}
+                      onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
+                      onMouseOut={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div className="logo-mark" style={{ width: '40px', height: '40px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>
+                          <Shield size={20} />
+                        </div>
+                        <div>
+                          <h4 style={{ color: '#fff', fontSize: '18px', marginBottom: '4px' }}>Education Purpose</h4>
+                          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>For schools, colleges, and educational monitoring</p>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button 
+                      onClick={() => handlePurposeSelect('regular')}
+                      className="panel" 
+                      style={{ 
+                        padding: '24px', textAlign: 'left', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.05)',
+                        transition: 'all 0.2s', background: 'rgba(255,255,255,0.02)'
+                      }}
+                      onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
+                      onMouseOut={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div className="logo-mark" style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.05)', color: '#fff' }}>
+                          <LogIn size={20} />
+                        </div>
+                        <div>
+                          <h4 style={{ color: '#fff', fontSize: '18px', marginBottom: '4px' }}>Regular Purpose</h4>
+                          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>For business, SaaS, and general communication</p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </>
+              ) : onboardingView === 'education-form' ? (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                     <div className="panel-label" style={{ marginBottom: 0 }}>
                       <div className="label-dot"></div>
-                      Request Pricing Plan
+                      Education Request Form
                     </div>
-                    <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
+                    <button onClick={() => setOnboardingView('purpose')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
                       <X size={20} />
                     </button>
                   </div>
@@ -299,6 +363,68 @@ export default function PricingPage() {
                       <input
                         type="text"
                         className="field-input"
+                        placeholder="Your full name"
+                        value={formData.name}
+                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="field">
+                      <label className="field-label">Education / Organization</label>
+                      <input
+                        type="text"
+                        className="field-input"
+                        placeholder="School/College name"
+                        value={formData.organizationName}
+                        onChange={e => setFormData({ ...formData, organizationName: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="field">
+                      <label className="field-label">Email Address</label>
+                      <input
+                        type="email"
+                        className="field-input"
+                        placeholder="work@example.com"
+                        value={formData.email}
+                        onChange={e => setFormData({ ...formData, email: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="field">
+                      <label className="field-label">Credits</label>
+                      <input
+                        type="text"
+                        className="field-input"
+                        value={formData.creditsSelected}
+                        disabled
+                        style={{ opacity: 0.7, background: 'rgba(255,255,255,0.02)' }}
+                      />
+                    </div>
+                    <button type="submit" className="btn-call" style={{ width: '100%', marginTop: '12px', justifyContent: 'center' }}>
+                      Submit Request
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                    <div className="panel-label" style={{ marginBottom: 0 }}>
+                      <div className="label-dot"></div>
+                      Request Pricing Plan
+                    </div>
+                    <button onClick={() => setOnboardingView('purpose')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSendRequest} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div className="field">
+                      <label className="field-label">Name</label>
+                      <input
+                        type="text"
+                        className="field-input"
+                        placeholder="Your full name"
                         value={formData.name}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
                         required
@@ -310,6 +436,7 @@ export default function PricingPage() {
                       <input
                         type="text"
                         className="field-input"
+                        placeholder="Company or project name"
                         value={formData.organizationName}
                         onChange={e => setFormData({ ...formData, organizationName: e.target.value })}
                         required
@@ -317,11 +444,11 @@ export default function PricingPage() {
                     </div>
 
                     <div className="field">
-                      <label className="field-label">Email ID</label>
+                      <label className="field-label">Email Address</label>
                       <input
                         type="email"
                         className="field-input"
-                        placeholder="yourname@example.com"
+                        placeholder="work@example.com"
                         value={formData.email}
                         onChange={e => setFormData({ ...formData, email: e.target.value })}
                         required
@@ -369,20 +496,18 @@ export default function PricingPage() {
                                   padding: '10px 12px', borderRadius: '8px', cursor: 'pointer',
                                   display: 'flex', alignItems: 'center', gap: '10px',
                                   background: formData.selectedPurposes.includes(tpl) ? 'rgba(255,255,255,0.05)' : 'transparent',
-                                  transition: 'background 0.2s'
+                                  transition: 'all 0.2s'
                                 }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = formData.selectedPurposes.includes(tpl) ? 'rgba(255,255,255,0.05)' : 'transparent'}
                               >
                                 <div style={{
-                                  width: '18px', height: '18px', borderRadius: '4px',
-                                  border: '1px solid rgba(255,255,255,0.2)',
+                                  width: '16px', height: '16px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  background: formData.selectedPurposes.includes(tpl) ? '#fff' : 'transparent'
+                                  background: formData.selectedPurposes.includes(tpl) ? '#fff' : 'transparent',
+                                  borderColor: formData.selectedPurposes.includes(tpl) ? '#fff' : 'rgba(255,255,255,0.2)'
                                 }}>
-                                  {formData.selectedPurposes.includes(tpl) && <Check size={12} color="#000" strokeWidth={3} />}
+                                  {formData.selectedPurposes.includes(tpl) && <Check size={12} color="#000" />}
                                 </div>
-                                <span style={{ color: '#fff', fontSize: '13px' }}>{tpl}</span>
+                                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>{tpl}</span>
                               </div>
                             ))}
                           </div>
@@ -391,50 +516,64 @@ export default function PricingPage() {
                     </div>
 
                     {isOtherSelected && (
-                      <>
-                        <div className="field">
-                          <label className="field-label">Who are you making calls to</label>
-                          <input
-                            type="text"
-                            className="field-input"
-                            value={formData.targetAudience}
-                            onChange={e => setFormData({ ...formData, targetAudience: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div className="field">
-                          <label className="field-label">Important points you want in the script</label>
-                          <textarea
-                            className="field-input"
-                            style={{ minHeight: '80px', resize: 'vertical' }}
-                            value={formData.scriptPoints}
-                            onChange={e => setFormData({ ...formData, scriptPoints: e.target.value })}
-                            required
-                          />
-                        </div>
-                      </>
+                      <div className="field">
+                        <label className="field-label">Specify Other Purpose</label>
+                        <input
+                          type="text"
+                          className="field-input"
+                          placeholder="Please describe..."
+                          value={formData.otherPurpose}
+                          onChange={e => setFormData({ ...formData, otherPurpose: e.target.value })}
+                          required
+                        />
+                      </div>
                     )}
 
                     <div className="field">
                       <label className="field-label">Purpose of the Call</label>
                       <textarea
                         className="field-input"
-                        style={{ minHeight: '80px', resize: 'vertical' }}
-                        placeholder="Briefly describe the purpose of the calls you intend to make"
+                        style={{ minHeight: '80px', padding: '12px', resize: 'none' }}
+                        placeholder="Briefly describe what the AI agent will say..."
                         value={formData.callPurpose}
                         onChange={e => setFormData({ ...formData, callPurpose: e.target.value })}
                         required
                       />
                     </div>
 
+                    <div className="config-grid">
+                      <div className="field">
+                        <label className="field-label">Target Audience</label>
+                        <input
+                          type="text"
+                          className="field-input"
+                          placeholder="e.g. Existing customers"
+                          value={formData.targetAudience}
+                          onChange={e => setFormData({ ...formData, targetAudience: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="field">
+                        <label className="field-label">Credits Requested</label>
+                        <input
+                          type="text"
+                          className="field-input"
+                          value={formData.creditsSelected}
+                          disabled
+                          style={{ opacity: 0.7, background: 'rgba(255,255,255,0.02)' }}
+                        />
+                      </div>
+                    </div>
+
                     <div className="field">
-                      <label className="field-label">Credits Selected</label>
-                      <input
-                        type="text"
+                      <label className="field-label">Key Points for Script</label>
+                      <textarea
                         className="field-input"
-                        value={formData.creditsSelected}
-                        readOnly
-                        style={{ color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.02)', cursor: 'not-allowed' }}
+                        style={{ minHeight: '100px', padding: '12px', resize: 'none' }}
+                        placeholder="Bullet points of information to include in the call..."
+                        value={formData.scriptPoints}
+                        onChange={e => setFormData({ ...formData, scriptPoints: e.target.value })}
+                        required
                       />
                     </div>
 
@@ -444,7 +583,7 @@ export default function PricingPage() {
                       style={{ width: '100%', marginTop: '12px', justifyContent: 'center' }}
                       disabled={formData.selectedPurposes.length === 0}
                     >
-                      Send Request
+                      Submit Request
                     </button>
                   </form>
                 </>
