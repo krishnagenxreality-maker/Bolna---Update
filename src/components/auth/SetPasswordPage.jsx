@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { SmokeBackground } from '../layout/SmokeBackground';
 import { Lock, AlertCircle, Shield, KeyRound } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../../config';
 import '../../styles/BolnaDashboard.css';
 
 export default function SetPasswordPage() {
@@ -36,7 +37,7 @@ export default function SetPasswordPage() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`http://localhost:5000/api/users/set-password/${user.userId}`, {
+      const response = await axios.post(`${API_BASE_URL}/api/users/set-password/${user.userId}`, {
         password: newPassword
       });
 

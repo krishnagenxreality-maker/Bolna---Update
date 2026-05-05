@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../../config';
 import { useAuth } from '../../context/AuthContext';
 import { SmokeBackground } from '../layout/SmokeBackground';
 import {
@@ -42,7 +43,7 @@ export default function AdminPortal() {
 
   const fetchRequests = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/requests');
+      const res = await axios.get(`${API_BASE_URL}/api/requests`);
       setRequests(res.data);
     } catch (err) {
       console.error('Failed to fetch requests', err);
@@ -78,7 +79,7 @@ export default function AdminPortal() {
   const handleDeleteRequest = async (requestId) => {
     if (!window.confirm('Are you sure you want to delete this request?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/requests/${requestId}`);
+      await axios.delete(`${API_BASE_URL}/api/requests/${requestId}`);
       fetchRequests();
     } catch (err) {
       alert('Failed to delete request');
@@ -87,7 +88,7 @@ export default function AdminPortal() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/users');
+      const res = await axios.get(`${API_BASE_URL}/api/users`);
       setUsers(res.data);
     } catch (err) {
       console.error('Failed to fetch users', err);
@@ -144,12 +145,12 @@ export default function AdminPortal() {
         ...rest,
         bolnaAgentId: JSON.stringify(agents)
       };
-      await axios.post('http://localhost:5000/api/users', payload);
+      await axios.post(`${API_BASE_URL}/api/users`, payload);
       setShowAddForm(false);
       fetchUsers();
 
       if (createdFromRequestId) {
-        await axios.delete(`http://localhost:5000/api/requests/${createdFromRequestId}`);
+        await axios.delete(`${API_BASE_URL}/api/requests/${createdFromRequestId}`);
         setCreatedFromRequestId(null);
         fetchRequests();
       }
@@ -167,7 +168,7 @@ export default function AdminPortal() {
         ...rest,
         bolnaAgentId: JSON.stringify(agents)
       };
-      await axios.put(`http://localhost:5000/api/users/${editingUserId}`, payload);
+      await axios.put(`${API_BASE_URL}/api/users/${editingUserId}`, payload);
       setShowEditForm(false);
       fetchUsers();
     } catch (err) {
@@ -216,7 +217,7 @@ export default function AdminPortal() {
     const userId = showDeleteConfirm;
     setIsDeleting(userId);
     try {
-      await axios.delete(`http://localhost:5000/api/users/${userId}`);
+      await axios.delete(`${API_BASE_URL}/api/users/${userId}`);
       setShowDeleteConfirm(null);
       fetchUsers();
     } catch (err) {

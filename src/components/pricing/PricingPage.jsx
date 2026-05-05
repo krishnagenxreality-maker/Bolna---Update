@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../../config';
 import { SmokeBackground } from '../layout/SmokeBackground';
 import { Shield, LogIn, CheckCircle2, X, ChevronDown, Check } from 'lucide-react';
 import '../../styles/BolnaDashboard.css';
@@ -13,18 +14,17 @@ const PURPOSE_TEMPLATES = [
   "Sales Offer",
   "Educational Course / Job-Oriented Training Promotion",
   "College Admission",
-  "College Fee Payment Reminder",
   "Other"
 ];
 
 export default function PricingPage() {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
-  
+
   const [showForm, setShowForm] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     organizationName: '',
@@ -52,7 +52,7 @@ export default function PricingPage() {
     if (plan === 'plan1') credits = '1000 credits';
     else if (plan === 'plan2') credits = '3000 credits';
     else if (plan === 'custom') credits = 'Custom / Contact Admin';
-    
+
     setFormData({
       ...formData,
       creditsSelected: credits
@@ -74,9 +74,9 @@ export default function PricingPage() {
     e.preventDefault();
     try {
       // Format data for backend
-      const finalPurpose = formData.selectedPurposes.join(', ') + 
+      const finalPurpose = formData.selectedPurposes.join(', ') +
         (formData.selectedPurposes.includes('Other') && formData.otherPurpose ? ` (${formData.otherPurpose})` : '');
-      
+
       const finalScriptContent = `Target Audience: ${formData.targetAudience}\nScript Points: ${formData.scriptPoints}`;
 
       const payload = {
@@ -89,7 +89,7 @@ export default function PricingPage() {
         creditsSelected: formData.creditsSelected
       };
 
-      await axios.post('http://localhost:5000/api/requests', payload);
+      await axios.post(`${API_BASE_URL}/api/requests`, payload);
       setSuccess(true);
       setTimeout(() => {
         setShowForm(false);
@@ -116,7 +116,7 @@ export default function PricingPage() {
   return (
     <div className="app">
       <SmokeBackground />
-      
+
       {/* Top Navigation */}
       <header className="hdr" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <div className="hdr-left" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
@@ -126,9 +126,10 @@ export default function PricingPage() {
           <span className="hdr-title">Calling <span className="hdr-accent">Gen</span></span>
           <div className="hdr-badge" style={{ marginLeft: '12px' }}>by GenxReality</div>
         </div>
-        
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
           <button onClick={() => navigate('/pricing')} className="nav-link" style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontFamily: 'Outfit', fontWeight: '600' }}>Pricing</button>
+          <button onClick={() => navigate('/education-portal')} className="nav-link-highlight">Education Portal</button>
           <button onClick={() => navigate('/login', { state: { from: '/pricing' } })} className="logout-btn" style={{
             background: 'rgba(255, 255, 255, 0.05)',
             color: '#fff',
@@ -167,7 +168,7 @@ export default function PricingPage() {
               <span style={{ fontSize: '42px', fontWeight: '700', color: '#fff' }}>₹10,000</span>
               <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '16px' }}>/ month</span>
             </div>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '40px', flex: 1, justifyContent: 'flex-start' }}>
               {[
                 "1000 credits / month",
@@ -181,10 +182,10 @@ export default function PricingPage() {
                 </div>
               ))}
             </div>
-            
-            <button 
+
+            <button
               onClick={() => handleSelectPlan('plan1')}
-              className="btn-call" 
+              className="btn-call"
               style={{ width: '100%', justifyContent: 'center', padding: '16px', marginTop: 'auto' }}
             >
               Select
@@ -196,39 +197,39 @@ export default function PricingPage() {
             <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: '#fff', color: '#000', padding: '4px 16px', borderRadius: '100px', fontSize: '11px', fontWeight: '800', letterSpacing: '1.5px', textTransform: 'uppercase', zIndex: 2, boxShadow: '0 4px 12px rgba(255,255,255,0.15)' }}>
               Most Popular
             </div>
-            <div className="panel" style={{ 
+            <div className="panel" style={{
               display: 'flex', flexDirection: 'column', padding: '40px 32px', height: '100%',
               border: '1px solid rgba(255,255,255,0.2)',
               background: 'rgba(255,255,255,0.04)',
               boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
             }}>
               <h3 style={{ fontSize: '24px', color: '#fff', marginBottom: '12px', fontWeight: '600', textAlign: 'center' }}>Professional</h3>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
-              <span style={{ fontSize: '42px', fontWeight: '700', color: '#fff' }}>₹20,000</span>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '16px' }}>/ month</span>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '40px', flex: 1, justifyContent: 'flex-start' }}>
-              {[
-                "3000 credits / month",
-                "1 call per credit (2K calls)",
-                "Detailed segregation",
-                "Lead generation"
-              ].map((feature, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <CheckCircle2 size={18} className="sn-green" />
-                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '15px' }}>{feature}</span>
-                </div>
-              ))}
-            </div>
-            
-            <button 
-              onClick={() => handleSelectPlan('plan2')}
-              className="btn-call" 
-              style={{ width: '100%', justifyContent: 'center', padding: '16px', background: 'rgba(255,255,255,0.1)', marginTop: 'auto' }}
-            >
-              Select
-            </button>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
+                <span style={{ fontSize: '42px', fontWeight: '700', color: '#fff' }}>₹20,000</span>
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '16px' }}>/ month</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '40px', flex: 1, justifyContent: 'flex-start' }}>
+                {[
+                  "3000 credits / month",
+                  "1 call per credit (2K calls)",
+                  "Detailed segregation",
+                  "Lead generation"
+                ].map((feature, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <CheckCircle2 size={18} className="sn-green" />
+                    <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '15px' }}>{feature}</span>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => handleSelectPlan('plan2')}
+                className="btn-call"
+                style={{ width: '100%', justifyContent: 'center', padding: '16px', background: 'rgba(255,255,255,0.1)', marginTop: 'auto' }}
+              >
+                Select
+              </button>
             </div>
           </div>
 
@@ -238,7 +239,7 @@ export default function PricingPage() {
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
               <span style={{ fontSize: '42px', fontWeight: '700', color: '#fff' }}>Custom</span>
             </div>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '40px', flex: 1, justifyContent: 'flex-start' }}>
               {[
                 "Unlimited credits",
@@ -252,10 +253,10 @@ export default function PricingPage() {
                 </div>
               ))}
             </div>
-            
-            <button 
+
+            <button
               onClick={() => handleSelectPlan('custom')}
-              className="btn-call" 
+              className="btn-call"
               style={{ width: '100%', justifyContent: 'center', padding: '16px', marginTop: 'auto' }}
             >
               Select
@@ -303,7 +304,7 @@ export default function PricingPage() {
                         required
                       />
                     </div>
-                    
+
                     <div className="field">
                       <label className="field-label">Organization Name</label>
                       <input
@@ -329,39 +330,39 @@ export default function PricingPage() {
 
                     <div className="field" style={{ position: 'relative' }} ref={dropdownRef}>
                       <label className="field-label">Purpose of Using This</label>
-                      <div 
+                      <div
                         onClick={() => setShowDropdown(!showDropdown)}
                         className="field-input"
-                        style={{ 
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                        style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                           cursor: 'pointer', minHeight: '44px', padding: '8px 16px'
                         }}
                       >
-                        <span style={{ 
+                        <span style={{
                           color: formData.selectedPurposes.length > 0 ? '#fff' : 'rgba(255,255,255,0.3)',
                           fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                         }}>
-                          {formData.selectedPurposes.length > 0 
-                            ? formData.selectedPurposes.join(', ') 
+                          {formData.selectedPurposes.length > 0
+                            ? formData.selectedPurposes.join(', ')
                             : 'Select purpose(s)'}
                         </span>
-                        <ChevronDown size={16} style={{ 
+                        <ChevronDown size={16} style={{
                           transform: showDropdown ? 'rotate(180deg)' : 'none',
                           transition: 'transform 0.2s',
                           color: 'rgba(255,255,255,0.3)'
                         }} />
                       </div>
-                      
+
                       {showDropdown && (
                         <div style={{
                           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
-                          marginTop: '8px', background: '#1a1a1a', 
+                          marginTop: '8px', background: '#1a1a1a',
                           border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
                           boxShadow: '0 10px 30px rgba(0,0,0,0.5)', overflow: 'hidden'
                         }}>
                           <div style={{ maxHeight: '240px', overflowY: 'auto', padding: '8px' }}>
                             {PURPOSE_TEMPLATES.map((tpl) => (
-                              <div 
+                              <div
                                 key={tpl}
                                 onClick={() => togglePurpose(tpl)}
                                 style={{
@@ -437,9 +438,9 @@ export default function PricingPage() {
                       />
                     </div>
 
-                    <button 
-                      type="submit" 
-                      className="btn-call" 
+                    <button
+                      type="submit"
+                      className="btn-call"
                       style={{ width: '100%', marginTop: '12px', justifyContent: 'center' }}
                       disabled={formData.selectedPurposes.length === 0}
                     >

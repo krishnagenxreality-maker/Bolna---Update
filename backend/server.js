@@ -13,7 +13,13 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-app.use(cors());
+const HOST = process.env.HOST || '0.0.0.0';
+
+app.use(cors({
+  origin: '*', // Allow all origins for development accessibility
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(bodyParser.json());
 
 // Helper to map DB row to API response (snake to camel)
@@ -480,6 +486,6 @@ app.delete('/api/cleanup-leads', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
 });

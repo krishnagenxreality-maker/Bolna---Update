@@ -6,6 +6,7 @@ import { parseContacts as parseContactsLogic } from "../services/fileService";
 import { DEEPSEEK_API_KEY } from "../utils/constants";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
+import { API_BASE_URL } from "../config";
 
 export function useBolnaDashboard() {
   const { user } = useAuth();
@@ -32,7 +33,7 @@ export function useBolnaDashboard() {
       if (user && user.userId) {
         try {
           // Fetch Config
-          const configRes = await axios.get(`http://localhost:5000/api/user-config/${user.userId}`);
+          const configRes = await axios.get(`${API_BASE_URL}/api/user-config/${user.userId}`);
           if (configRes.data.bolnaApiKey) setApiKey(configRes.data.bolnaApiKey);
           if (configRes.data.credits !== undefined) setCredits(configRes.data.credits);
           
@@ -66,7 +67,7 @@ export function useBolnaDashboard() {
           }
 
           // Fetch Contacts
-          const contactsRes = await axios.get(`http://localhost:5000/api/contacts/${user.userId}`);
+          const contactsRes = await axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`);
           if (contactsRes.data && contactsRes.data.length > 0) {
             const defaultAgentId = currentAgents.length > 0 ? `${currentAgents[0].name}::${currentAgents[0].id}` : '';
             
@@ -95,7 +96,7 @@ export function useBolnaDashboard() {
   const saveContactsToDB = useCallback(async (contactsToSave) => {
     if (!user || !user.userId || !contactsToSave.length) return;
     try {
-      await axios.post('http://localhost:5000/api/contacts', {
+      await axios.post(`${API_BASE_URL}/api/contacts`, {
         userId: user.userId,
         contacts: contactsToSave
       });
@@ -275,7 +276,7 @@ export function useBolnaDashboard() {
         // Deduct 1 credit per successful call dispatch
         if (user && user.userId) {
           try {
-            const creditRes = await axios.post(`http://localhost:5000/api/user-credits/deduct/${user.userId}`);
+            const creditRes = await axios.post(`${API_BASE_URL}/api/user-credits/deduct/${user.userId}`);
             if (creditRes.data.success) {
               setCredits(creditRes.data.credits);
             }

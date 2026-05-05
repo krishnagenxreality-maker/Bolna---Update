@@ -8,6 +8,7 @@ import HomePage from './components/home/HomePage';
 import PricingPage from './components/pricing/PricingPage';
 import UpgradePricingPage from './components/upgrade/UpgradePricingPage';
 import SetPasswordPage from './components/auth/SetPasswordPage';
+import EducationPortalPage from './components/education/EducationPortalPage';
 
 const ProtectedRoute = ({ children, role, skipFirstLoginCheck }) => {
   const { user } = useAuth();
@@ -31,6 +32,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/education-portal" element={<EducationPortalPage />} />
       <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} />} />
       
       <Route 

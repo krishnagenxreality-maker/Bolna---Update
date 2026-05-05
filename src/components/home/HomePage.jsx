@@ -53,7 +53,8 @@ export default function HomePage() {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          <button onClick={() => navigate('/login', { state: { from: '/' } })} className="nav-link" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'Outfit', fontWeight: '500' }}>Pricing</button>
+          <button onClick={() => navigate('/pricing')} className="nav-link" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'Outfit', fontWeight: '500' }}>Pricing</button>
+          <button onClick={() => navigate('/education-portal')} className="nav-link-highlight">Education Portal</button>
           <button onClick={() => navigate('/login', { state: { from: '/' } })} className="logout-btn" style={{
             background: 'rgba(255, 255, 255, 0.05)',
             color: '#fff',
