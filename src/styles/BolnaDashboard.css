@@ -403,6 +403,7 @@ body {
 .sn-green { color:#7dffb3; text-shadow:0 0 20px rgba(125,255,179,0.25); }
 .sn-blue  { color:rgba(255,255,255,0.65); text-shadow:0 0 20px rgba(255,255,255,0.1); }
 .sn-red   { color:#ff7070; text-shadow:0 0 20px rgba(255,100,100,0.25); }
+.sn-purple { color:#a855f7; text-shadow:0 0 20px rgba(168,85,247,0.25); }
 
 .stat-lbl {
   font-size: 10px;

@@ -10,6 +10,10 @@ import UpgradePricingPage from './components/upgrade/UpgradePricingPage';
 import SetPasswordPage from './components/auth/SetPasswordPage';
 import EducationPortalPage from './components/education/EducationPortalPage';
 import EducationDashboardLanding from './components/education/EducationDashboardLanding';
+import EducationDashboard from './components/education/dashboard/EducationDashboard';
+import StudentsManager from './components/education/students/StudentsManager';
+import StudentAttendance from './components/education/students/StudentAttendance';
+import { EducationLayout } from './components/education/layout/EducationLayout';
 
 const ProtectedRoute = ({ children, role, skipFirstLoginCheck }) => {
   const { user } = useAuth();
@@ -69,6 +73,39 @@ function AppRoutes() {
         element={
           <ProtectedRoute role="user">
             <EducationDashboardLanding />
+          </ProtectedRoute>
+        } 
+      />
+      
+      <Route 
+        path="/education/dashboard" 
+        element={
+          <ProtectedRoute role="user">
+            <EducationLayout>
+              <EducationDashboard />
+            </EducationLayout>
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/education/students" 
+        element={
+          <ProtectedRoute role="user">
+            <EducationLayout>
+              <StudentsManager />
+            </EducationLayout>
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/education/attendance" 
+        element={
+          <ProtectedRoute role="user">
+            <EducationLayout>
+              <StudentAttendance />
+            </EducationLayout>
           </ProtectedRoute>
         } 
       />

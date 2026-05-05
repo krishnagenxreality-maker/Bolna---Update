@@ -496,6 +496,255 @@ app.delete('/api/cleanup-leads', async (req, res) => {
   }
 });
 
+// --- EDUCATION DASHBOARD ---
+
+app.get('/api/education/dashboard-data/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const today = new Date().toISOString().split('T')[0];
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+  try {
+    // 1. Total Calls Made
+    // 0. Get user's students for filtering
+    const { data: userStudents } = await supabase.from('students').select('id').eq('created_by', userId);
+    const studentIds = (userStudents || []).map(s => s.id);
+
+    // 1. Total Calls Made (User specific)
+    const { count: totalCalls } = await supabase
+      .from('calls')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    
+    // 2. Number of Leads (Linked via students)
+    let totalLeads = 0;
+    if (studentIds.length > 0) {
+      const { count } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .in('student_id', studentIds);
+      totalLeads = count || 0;
+    }
+
+    // 3. Students Present/Absent Today (Linked via students)
+    let presentCount = 0;
+    let absentCount = 0;
+    if (studentIds.length > 0) {
+      const { data: attendanceData } = await supabase
+        .from('attendance')
+        .select('status')
+        .eq('date', today)
+        .in('student_id', studentIds);
+      
+      presentCount = attendanceData ? attendanceData.filter(a => a.status === 'present').length : 0;
+      absentCount = attendanceData ? attendanceData.filter(a => a.status === 'absent').length : 0;
+    }
+
+    // 4. Call Volume Graph (Last 7 Days)
+    const { data: volumeData } = await supabase
+      .from('calls')
+      .select('created_at')
+      .eq('user_id', userId)
+      .gte('created_at', sevenDaysAgoStr)
+      .order('created_at', { ascending: true });
+
+    // Group by date
+    const volumeByDay = {};
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      volumeByDay[d.toISOString().split('T')[0]] = 0;
+    }
+    
+    if (volumeData) {
+      volumeData.forEach(call => {
+        const date = call.created_at.split('T')[0];
+        if (volumeByDay[date] !== undefined) {
+          volumeByDay[date]++;
+        }
+      });
+    }
+
+    const callVolume = Object.entries(volumeByDay)
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    // 5. Recent Activity (User specific)
+    const [callsRes, leadsRes, apptsRes] = await Promise.all([
+      supabase.from('calls').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(5),
+      studentIds.length > 0
+        ? supabase.from('leads').select('*').in('student_id', studentIds).order('created_at', { ascending: false }).limit(5)
+        : Promise.resolve({ data: [] }),
+      studentIds.length > 0 
+        ? supabase.from('appointments').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(5)
+        : Promise.resolve({ data: [] })
+    ]);
+
+    const recentActivity = [
+      ...(callsRes.data || []).map(c => ({ type: 'call', date: c.created_at, description: `${c.status} - ${c.classification || 'N/A'}` })),
+      ...(leadsRes.data || []).map(l => ({ type: 'lead', date: l.created_at, description: `Lead: ${l.classification || 'N/A'}` })),
+      ...(apptsRes.data || []).map(a => ({ type: 'appointment', date: `${a.date}T${a.time || '00:00:00'}`, description: `Appt: ${a.student_name} (${a.status})` }))
+    ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
+
+    res.json({
+      success: true,
+      data: {
+        totalCalls: totalCalls || 0,
+        totalLeads: totalLeads || 0,
+        presentCount,
+        absentCount,
+        callVolume,
+        recentActivity
+      }
+    });
+
+  } catch (err) {
+    console.error('Education dashboard data error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// --- STUDENTS MANAGEMENT ---
+
+app.get('/api/education/students/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('created_by', userId)
+      .order('student_name', { ascending: true });
+
+    if (error) throw error;
+    res.json({ success: true, students: data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/education/students/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { students } = req.body;
+  
+  if (!Array.isArray(students)) return res.status(400).json({ success: false, message: 'Invalid data' });
+
+  try {
+    const toInsert = students.map(s => ({
+      student_name: s.name,
+      parent_name: s.parentName,
+      parent_phone: s.phone,
+      created_by: userId
+    }));
+
+    // For simplicity, we delete existing students for this user and insert new ones
+    // Or we could use upsert if we had a unique constraint on phone/name/user
+    await supabase.from('students').delete().eq('created_by', userId);
+    
+    const { data, error } = await supabase
+      .from('students')
+      .insert(toInsert)
+      .select();
+
+    if (error) throw error;
+    res.json({ success: true, count: data.length });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/api/education/daily-stats/:userId/:date', async (req, res) => {
+  const { userId, date } = req.params;
+  try {
+    // 1. Attendance stats for this user's students
+    const { data: students } = await supabase.from('students').select('id').eq('created_by', userId);
+    const studentIds = (students || []).map(s => s.id);
+
+    if (studentIds.length === 0) {
+      return res.json({ success: true, stats: { totalCalls: 0, present: 0, absent: 0, callsMade: 0 } });
+    }
+
+    const { data: attendance, error: attError } = await supabase
+      .from('attendance')
+      .select('status')
+      .eq('date', date)
+      .in('student_id', studentIds);
+
+    const present = attendance ? attendance.filter(a => a.status === 'present').length : 0;
+    const absent = attendance ? attendance.filter(a => a.status === 'absent').length : 0;
+
+    // 2. Call stats
+    const { count: callsCount, error: callsError } = await supabase
+      .from('calls')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .filter('created_at', 'gte', `${date}T00:00:00`)
+      .filter('created_at', 'lte', `${date}T23:59:59`);
+
+    res.json({
+      success: true,
+      stats: {
+        totalCalls: callsCount || 0,
+        present,
+        absent,
+        callsMade: callsCount || 0
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// --- ATTENDANCE MANAGEMENT ---
+
+app.get('/api/education/attendance/:userId/:date', async (req, res) => {
+  const { userId, date } = req.params;
+  try {
+    const { data: students } = await supabase.from('students').select('id').eq('created_by', userId);
+    const studentIds = (students || []).map(s => s.id);
+
+    if (studentIds.length === 0) return res.json({ success: true, attendance: [] });
+
+    const { data, error } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('date', date)
+      .in('student_id', studentIds);
+
+    if (error) throw error;
+    res.json({ success: true, attendance: data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/education/attendance/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { date, attendance } = req.body; // attendance is [{ student_id, status }]
+
+  if (!Array.isArray(attendance)) return res.status(400).json({ success: false, message: 'Invalid data' });
+
+  try {
+    const toUpsert = attendance.map(a => ({
+      student_id: a.student_id,
+      date: date,
+      status: a.status
+    }));
+
+    // Perform upsert based on student_id and date
+    // Note: This requires a unique constraint in the DB on (student_id, date)
+    const { data, error } = await supabase
+      .from('attendance')
+      .upsert(toUpsert, { onConflict: 'student_id,date' })
+      .select();
+
+    if (error) throw error;
+    res.json({ success: true, count: data.length });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.listen(PORT, HOST, () => {
   console.log(`Server running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
 });

@@ -86,7 +86,9 @@ export default function EducationDashboardLanding() {
             Manage student interactions, automated reminders, and engagement analytics in one centralized location.
           </p>
 
-          <button className="btn-call" style={{ 
+          <button 
+            onClick={() => navigate('/education/dashboard')}
+            className="btn-call" style={{ 
             width: '100%', 
             padding: '16px', 
             fontSize: '16px',
