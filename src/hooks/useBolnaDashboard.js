@@ -15,6 +15,7 @@ export function useBolnaDashboard() {
   const [availableAgents, setAvailableAgents] = useState([]); // List of {name, id}
   const [contacts, setContacts]     = useState([]);
   const [logs, setLogs]             = useState([]);
+  const [sessionContacts, setSessionContacts] = useState([]);
   const [isCalling, setIsCalling]   = useState(false);
   const [showProgress, setShowProgress] = useState(false);
   const [showDone, setShowDone]     = useState(false);
@@ -145,6 +146,11 @@ export function useBolnaDashboard() {
     setContacts(updated);
     contactsRef.current = updated;
     
+    // Update session contacts for the current batch view
+    setSessionContacts(prev => prev.map(c => 
+      c.id === id ? { ...c, status, response, leadCategory, summary, date: now } : c
+    ));
+    
     // Persist to DB
     const contact = updated.find(c => c.id === id);
     if (contact) saveContactsToDB([contact]);
@@ -155,6 +161,8 @@ export function useBolnaDashboard() {
     
     setContacts(updated);
     contactsRef.current = updated;
+    
+    setSessionContacts(prev => prev.map(c => c.id === id ? { ...c, executionId } : c));
 
     // Persist to DB
     const contact = updated.find(c => c.id === id);
@@ -175,9 +183,13 @@ export function useBolnaDashboard() {
           id: agentId ? `${agentId}::${c.id}` : c.id,
           agentId 
         }));
+        
         if (!parsed.length) { alert("No valid contacts found."); return; }
         
-        // Append new contacts to the existing list instead of replacing
+        // Populate session contacts for Call Manager view
+        setSessionContacts(parsed);
+        
+        // Append new contacts to the master list for other views
         const updatedContacts = [...contactsRef.current, ...parsed];
         contactsRef.current = updatedContacts;
         setContacts(updatedContacts);
@@ -208,6 +220,7 @@ export function useBolnaDashboard() {
         pollRef.current = null;
       }
       setShowDone(true);
+      setSessionContacts([]); // Clear the Call Manager UI list after session completion
       setDoneSummary(`${doneCount} call(s) completed successfully${failedCount > 0 ? `, ${failedCount} failed` : ""}.`);
       setIsCalling(false);
       addLog(`All done. ${doneCount} called, ${failedCount} failed.`, "ok");
@@ -326,6 +339,7 @@ export function useBolnaDashboard() {
     apiKey, setApiKey,
     agentId, setAgentId,
     contacts: displayContacts, setContacts,
+    sessionContacts, setSessionContacts,
     logs, setLogs,
     isCalling, setIsCalling,
     showProgress, setShowProgress,

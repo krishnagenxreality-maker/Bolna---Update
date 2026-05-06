@@ -87,59 +87,61 @@ ${report.conclusion}
           </div>
         </PanelHead>
 
-        <div className="report-content">
-          {/* Stats Display */}
-          <div className="report-stats-grid">
-            <div className="report-stat-card">
-              <span className="stat-label">Total Calls</span>
-              <span className="stat-value">{total}</span>
+        <div className="panel-body">
+          <div className="report-content">
+            {/* Stats Display */}
+            <div className="report-stats-grid">
+              <div className="report-stat-card">
+                <span className="stat-label">Total Calls</span>
+                <span className="stat-value">{total}</span>
+              </div>
+              <div className="report-stat-card">
+                <span className="stat-label">Interested</span>
+                <span className="stat-value txt-green">{interested}</span>
+              </div>
+              <div className="report-stat-card">
+                <span className="stat-label">Not Interested</span>
+                <span className="stat-value txt-red">{notInterested}</span>
+              </div>
+              <div className="report-stat-card">
+                <span className="stat-label">Rescheduled</span>
+                <span className="stat-value txt-orange">{rescheduled}</span>
+              </div>
             </div>
-            <div className="report-stat-card">
-              <span className="stat-label">Interested</span>
-              <span className="stat-value txt-green">{interested}</span>
-            </div>
-            <div className="report-stat-card">
-              <span className="stat-label">Not Interested</span>
-              <span className="stat-value txt-red">{notInterested}</span>
-            </div>
-            <div className="report-stat-card">
-              <span className="stat-label">Rescheduled</span>
-              <span className="stat-value txt-orange">{rescheduled}</span>
-            </div>
-          </div>
 
-          {/* Actions */}
-          <div className="report-actions">
-            <button 
-              className={`btn-generate ${isGenerating ? 'loading' : ''}`}
-              onClick={handleGenerate}
-              disabled={isGenerating || total === 0}
-            >
-              {isGenerating ? <Loader2 className="spin-icon" size={16} /> : <Sparkles size={16} />}
-              {isGenerating ? 'Analyzing Data...' : 'Generate AI Report'}
-            </button>
-
-            {report && (
-              <button className="btn-download" onClick={handleDownload}>
-                <Download size={16} /> Download Report
+            {/* Actions */}
+            <div className="report-actions">
+              <button 
+                className={`btn-generate ${isGenerating ? 'loading' : ''}`}
+                onClick={handleGenerate}
+                disabled={isGenerating || total === 0}
+              >
+                {isGenerating ? <Loader2 className="spin-icon" size={16} /> : <Sparkles size={16} />}
+                {isGenerating ? 'Analyzing Data...' : 'Generate AI Report'}
               </button>
+
+              {report && (
+                <button className="btn-download" onClick={handleDownload}>
+                  <Download size={16} /> Download Report
+                </button>
+              )}
+            </div>
+
+            {/* Report Output */}
+            {report && (
+              <div className="report-output fade-in">
+                <div className="report-section">
+                  <h3>Summary Overview</h3>
+                  <p>{report.summary}</p>
+                </div>
+                
+                <div className="report-section">
+                  <h3>Insights & Conclusion</h3>
+                  <p>{report.conclusion}</p>
+                </div>
+              </div>
             )}
           </div>
-
-          {/* Report Output */}
-          {report && (
-            <div className="report-output fade-in">
-              <div className="report-section">
-                <h3>Summary Overview</h3>
-                <p>{report.summary}</p>
-              </div>
-              
-              <div className="report-section">
-                <h3>Insights & Conclusion</h3>
-                <p>{report.conclusion}</p>
-              </div>
-            </div>
-          )}
         </div>
       </Panel>
     </div>

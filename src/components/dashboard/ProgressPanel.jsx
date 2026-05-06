@@ -8,25 +8,20 @@ export const ProgressPanel = ({ showProgress, stats, logs }) => {
 
   return (
     <Panel label="Calling Progress">
-      <div className="prog-head">
-        <div className="panel-label" style={{marginBottom:0}}>
-          <span className="label-dot" />
-          Calling Progress
+      <div className="panel-body">
+        <div className="prog-track">
+          <div className="prog-fill" style={{width: stats.pct + "%"}} />
         </div>
-      </div>
 
-      <div className="prog-track">
-        <div className="prog-fill" style={{width: stats.pct + "%"}} />
-      </div>
+        <div className="stats-grid">
+          <StatBox num={stats.total}  label="Total"       cls="sn-white" />
+          <StatBox num={stats.done}   label="Completed"   cls="sn-green" />
+          <StatBox num={stats.active} label="In Progress" cls="sn-blue" />
+          <StatBox num={stats.failed} label="Failed"      cls="sn-red" />
+        </div>
 
-      <div className="stats-grid">
-        <StatBox num={stats.total}  label="Total"       cls="sn-white" />
-        <StatBox num={stats.done}   label="Completed"   cls="sn-green" />
-        <StatBox num={stats.active} label="In Progress" cls="sn-blue" />
-        <StatBox num={stats.failed} label="Failed"      cls="sn-red" />
+        <LogBox logs={logs} />
       </div>
-
-      <LogBox logs={logs} />
     </Panel>
   );
 };

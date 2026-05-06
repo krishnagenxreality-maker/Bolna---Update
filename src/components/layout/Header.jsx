@@ -24,44 +24,7 @@ export const Header = ({ activeView, setActiveView, credits }) => {
         </div>
         <span className="hdr-title">Calling<span className="hdr-accent"> Gen</span></span>
       </div>
-      <div className="hdr-nav">
-        <button
-          className={`nav-btn ${activeView === 'calendar' ? 'active' : ''}`}
-          onClick={() => setActiveView('calendar')}
-        >
-          Dashboard
-        </button>
-        <button
-          className={`nav-btn ${activeView === 'manager' ? 'active' : ''}`}
-          onClick={() => setActiveView('manager')}
-        >
-          Call Manager
-        </button>
-        <button
-          className={`nav-btn ${activeView === 'details' ? 'active' : ''}`}
-          onClick={() => setActiveView('details')}
-        >
-          View Call Details
-        </button>
-        <button
-          className={`nav-btn ${activeView === 'responses' ? 'active' : ''}`}
-          onClick={() => setActiveView('responses')}
-        >
-          Response Details
-        </button>
-        <button
-          className={`nav-btn ${activeView === 'leads' ? 'active' : ''}`}
-          onClick={() => setActiveView('leads')}
-        >
-          Leads
-        </button>
-        <button
-          className={`nav-btn ${activeView === 'report' ? 'active' : ''}`}
-          onClick={() => setActiveView('report')}
-        >
-          Report
-        </button>
-      </div>
+      <div style={{ flex: 1 }}></div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <div style={{

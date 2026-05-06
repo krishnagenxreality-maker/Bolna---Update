@@ -17,7 +17,7 @@ export const ContactsTable = ({ contacts }) => {
   };
 
   return (
-    <Panel className="panel-table">
+    <Panel>
       <PanelHead>
         <div className="panel-label" style={{ marginBottom: 0 }}>
           <span className="label-dot" />
@@ -27,31 +27,33 @@ export const ContactsTable = ({ contacts }) => {
           {startIndex + 1}-{Math.min(startIndex + ROWS_PER_PAGE, contacts.length)} of {contacts.length}
         </div>
       </PanelHead>
-      <div className="table-wrap">
-        <table className="ct">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Name</th>
-              <th>Phone Number</th>
-              <th>Status</th>
-              <th>Response</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleContacts.map((c, i) => (
-              <tr key={c.id}>
-                <td className="td-num">{startIndex + i + 1}</td>
-                <td className="td-name">{c.name}</td>
-                <td className="td-phone">{c.phone}</td>
-                <td>
-                  <StatusPill status={c.status} />
-                </td>
-                <td className="td-response">{c.response || "-"}</td>
+      <div className="panel-body">
+        <div className="table-wrap">
+          <table className="ct">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Phone Number</th>
+                <th>Status</th>
+                <th>Response</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {visibleContacts.map((c, i) => (
+                <tr key={c.id}>
+                  <td className="td-num">{startIndex + i + 1}</td>
+                  <td className="td-name">{c.name}</td>
+                  <td className="td-phone">{c.phone}</td>
+                  <td>
+                    <StatusPill status={c.status} />
+                  </td>
+                  <td className="td-response">{c.response || "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
       {totalPages > 1 && (
         <div className="pagination-footer" style={{ padding: '16px', display: 'flex', justifyContent: 'center', borderTop: '1px solid rgba(255,255,255,0.06)' }}>

@@ -391,13 +391,15 @@ app.delete('/api/requests/:id', async (req, res) => {
 
 const mapContact = (c) => {
   if (!c) return null;
-  const { lead_category, call_date, created_at, execution_id, user_id, ...rest } = c;
+  const { lead_category, call_date, created_at, execution_id, user_id, classification, ...rest } = c;
   return {
     ...rest,
-    leadCategory: lead_category,
+    leadCategory: lead_category || classification, // Support both field names
+    classification: classification,
     date: call_date,
     executionId: execution_id,
-    userId: user_id
+    userId: user_id,
+    createdAt: created_at
   };
 };
 
