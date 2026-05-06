@@ -4,6 +4,7 @@ import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 import { SmokeBackground } from '../layout/SmokeBackground';
 import { Shield, LogIn, CheckCircle2, X, ChevronDown, Check } from 'lucide-react';
+import FeatureInDevelopment from '../common/FeatureInDevelopment';
 import '../../styles/BolnaDashboard.css';
 
 const PURPOSE_TEMPLATES = [
@@ -24,6 +25,7 @@ export default function PricingPage() {
   const [onboardingView, setOnboardingView] = useState('plans'); // plans, purpose, regular-form, education-form
   const [success, setSuccess] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showDevModal, setShowDevModal] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -58,14 +60,14 @@ export default function PricingPage() {
       creditsSelected: credits
     });
     setSuccess(false);
-    setOnboardingView('purpose');
+    setOnboardingView('regular-form');
   };
 
   const handlePurposeSelect = (type) => {
     if (type === 'regular') {
       setOnboardingView('regular-form');
     } else {
-      setOnboardingView('education-form');
+      setShowDevModal(true);
     }
   };
 
@@ -125,6 +127,7 @@ export default function PricingPage() {
   return (
     <div className="app">
       <SmokeBackground />
+      {showDevModal && <FeatureInDevelopment type="modal" onClose={() => setShowDevModal(false)} />}
 
       {/* Top Navigation */}
       <header className="hdr" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -138,7 +141,7 @@ export default function PricingPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
           <button onClick={() => navigate('/pricing')} className="nav-link" style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontFamily: 'Outfit', fontWeight: '600' }}>Pricing</button>
-          <button onClick={() => navigate('/education-portal')} className="nav-link-highlight">Education Portal</button>
+          <button onClick={() => setShowDevModal(true)} className="nav-link-highlight">Education Portal</button>
           <button onClick={() => navigate('/login', { state: { from: '/pricing' } })} className="logout-btn" style={{
             background: 'rgba(255, 255, 255, 0.05)',
             color: '#fff',
@@ -413,7 +416,7 @@ export default function PricingPage() {
                       <div className="label-dot"></div>
                       Request Pricing Plan
                     </div>
-                    <button onClick={() => setOnboardingView('purpose')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
+                    <button onClick={() => setOnboardingView('plans')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
                       <X size={20} />
                     </button>
                   </div>

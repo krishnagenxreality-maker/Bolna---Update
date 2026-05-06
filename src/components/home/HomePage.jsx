@@ -5,6 +5,7 @@ import {
   Shield, LogIn, ArrowRight, CheckCircle2, 
   Users, BarChart3, Zap, X 
 } from 'lucide-react';
+import FeatureInDevelopment from '../common/FeatureInDevelopment';
 import '../../styles/BolnaDashboard.css';
 
 export default function HomePage() {
@@ -30,6 +31,8 @@ export default function HomePage() {
     }
   ];
 
+  const [showDevModal, setShowDevModal] = useState(false);
+
   const handleOpenJoin = () => {
     setSearchParams({ join: 'true' });
   };
@@ -41,6 +44,7 @@ export default function HomePage() {
   return (
     <div className="app">
       <SmokeBackground />
+      {showDevModal && <FeatureInDevelopment type="modal" onClose={() => setShowDevModal(false)} />}
       
       {/* Top Navigation */}
       <header className="hdr" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -54,7 +58,7 @@ export default function HomePage() {
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
           <button onClick={() => navigate('/pricing')} className="nav-link" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'Outfit', fontWeight: '500' }}>Pricing</button>
-          <button onClick={() => navigate('/education-portal')} className="nav-link-highlight">Education Portal</button>
+          <button onClick={() => setShowDevModal(true)} className="nav-link-highlight">Education Portal</button>
           <button onClick={() => navigate('/login', { state: { from: '/' } })} className="logout-btn" style={{
             background: 'rgba(255, 255, 255, 0.05)',
             color: '#fff',

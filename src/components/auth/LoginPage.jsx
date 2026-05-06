@@ -10,7 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from || -1;
@@ -23,13 +23,20 @@ export default function LoginPage() {
     const result = await login(userId, password);
     
     if (result.success) {
+      if (result.userType === 'education') {
+        logout();
+        setError('Education portal is in development');
+        setIsLoading(false);
+        return;
+      }
+
       if (result.isFirstLogin && result.role === 'user') {
         navigate('/set-password');
       } else {
         if (result.role === 'admin') {
           navigate('/admin');
         } else {
-          navigate(result.userType === 'education' ? '/education-dashboard' : '/dashboard');
+          navigate('/dashboard');
         }
       }
     } else {

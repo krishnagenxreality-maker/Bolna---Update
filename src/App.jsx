@@ -14,6 +14,7 @@ import EducationDashboard from './components/education/dashboard/EducationDashbo
 import StudentsManager from './components/education/students/StudentsManager';
 import StudentAttendance from './components/education/students/StudentAttendance';
 import { EducationLayout } from './components/education/layout/EducationLayout';
+import FeatureInDevelopment from './components/common/FeatureInDevelopment';
 
 const ProtectedRoute = ({ children, role, skipFirstLoginCheck }) => {
   const { user } = useAuth();
@@ -34,7 +35,7 @@ const ProtectedRoute = ({ children, role, skipFirstLoginCheck }) => {
   const currentPath = window.location.pathname;
   if (user.role === 'user') {
     if (user.userType === 'education' && currentPath === '/dashboard') return <Navigate to="/education-dashboard" />;
-    if (user.userType !== 'education' && currentPath === '/education-dashboard') return <Navigate to="/dashboard" />;
+    // Removed redirect for non-education users to allow FeatureInDevelopment to show
   }
   
   return children;
@@ -47,7 +48,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/pricing" element={<PricingPage />} />
-      <Route path="/education-portal" element={<EducationPortalPage />} />
+      <Route path="/education-portal" element={<FeatureInDevelopment type="page" />} />
       <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={user.role === 'admin' ? '/admin' : (user.userType === 'education' ? '/education-dashboard' : '/dashboard')} />} />
       
       <Route 
@@ -72,7 +73,7 @@ function AppRoutes() {
         path="/education-dashboard" 
         element={
           <ProtectedRoute role="user">
-            <EducationDashboardLanding />
+            {user?.userType === 'education' ? <EducationDashboardLanding /> : <FeatureInDevelopment type="page" />}
           </ProtectedRoute>
         } 
       />
@@ -81,9 +82,11 @@ function AppRoutes() {
         path="/education/dashboard" 
         element={
           <ProtectedRoute role="user">
-            <EducationLayout>
-              <EducationDashboard />
-            </EducationLayout>
+            {user?.userType === 'education' ? (
+              <EducationLayout>
+                <EducationDashboard />
+              </EducationLayout>
+            ) : <FeatureInDevelopment type="page" />}
           </ProtectedRoute>
         } 
       />
@@ -92,9 +95,11 @@ function AppRoutes() {
         path="/education/students" 
         element={
           <ProtectedRoute role="user">
-            <EducationLayout>
-              <StudentsManager />
-            </EducationLayout>
+            {user?.userType === 'education' ? (
+              <EducationLayout>
+                <StudentsManager />
+              </EducationLayout>
+            ) : <FeatureInDevelopment type="page" />}
           </ProtectedRoute>
         } 
       />
@@ -103,9 +108,11 @@ function AppRoutes() {
         path="/education/attendance" 
         element={
           <ProtectedRoute role="user">
-            <EducationLayout>
-              <StudentAttendance />
-            </EducationLayout>
+            {user?.userType === 'education' ? (
+              <EducationLayout>
+                <StudentAttendance />
+              </EducationLayout>
+            ) : <FeatureInDevelopment type="page" />}
           </ProtectedRoute>
         } 
       />
