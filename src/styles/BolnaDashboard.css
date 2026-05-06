@@ -965,42 +965,35 @@ body {
   flex-direction: column;
   gap: 32px;
   width: 100%;
-  max-width: 1200px;
+  max-width: 1300px;
   margin: 0 auto;
-  padding: 0 10px;
+  padding: 0 20px;
 }
 
-.manager-header-row {
+.manager-top-grid {
   display: grid;
-  grid-template-columns: 400px 1fr;
-  gap: 24px;
-  align-items: stretch;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: start;
 }
 
-.manager-main-actions {
+.manager-left-col, .manager-right-col {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
-.manager-main-actions .panel {
-  margin: 0;
-  height: 100%;
-}
-
-.manager-main-actions .action-bar {
+.manager-right-col .action-bar {
   margin: 0;
   padding: 0;
   background: none;
   border: none;
   box-shadow: none;
-  display: block;
 }
 
-.manager-main-actions .btn-call {
+.manager-right-col .btn-call {
   width: 100%;
-  height: 100%;
-  min-height: 80px;
+  min-height: 70px;
   border-radius: 16px;
   font-size: 18px;
   display: flex;
@@ -1009,13 +1002,13 @@ body {
   gap: 12px;
 }
 
-.manager-flow-section,
-.manager-table-section {
+.manager-flow-section {
   width: 100%;
+  margin: 10px 0;
   animation: fadeIn 0.5s ease-out;
 }
 
-.manager-feedback-section {
+.manager-bottom-section {
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -1027,7 +1020,7 @@ body {
 }
 
 @media (max-width: 1024px) {
-  .manager-header-row {
+  .manager-top-grid {
     grid-template-columns: 1fr;
   }
 }

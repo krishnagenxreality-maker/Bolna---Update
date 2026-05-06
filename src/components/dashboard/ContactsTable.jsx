@@ -6,11 +6,10 @@ export const ContactsTable = ({ contacts }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const ROWS_PER_PAGE = 5;
 
-  if (contacts.length === 0) return null;
-
-  const totalPages = Math.ceil(contacts.length / ROWS_PER_PAGE);
+  const isEmpty = contacts.length === 0;
+  const totalPages = isEmpty ? 0 : Math.ceil(contacts.length / ROWS_PER_PAGE);
   const startIndex = currentPage * ROWS_PER_PAGE;
-  const visibleContacts = contacts.slice(startIndex, startIndex + ROWS_PER_PAGE);
+  const visibleContacts = isEmpty ? [] : contacts.slice(startIndex, startIndex + ROWS_PER_PAGE);
 
   const handleNext = () => {
     setCurrentPage((prev) => (prev + 1) % totalPages);
@@ -40,17 +39,25 @@ export const ContactsTable = ({ contacts }) => {
               </tr>
             </thead>
             <tbody>
-              {visibleContacts.map((c, i) => (
-                <tr key={c.id}>
-                  <td className="td-num">{startIndex + i + 1}</td>
-                  <td className="td-name">{c.name}</td>
-                  <td className="td-phone">{c.phone}</td>
-                  <td>
-                    <StatusPill status={c.status} />
+              {isEmpty ? (
+                <tr>
+                  <td colSpan="5" className="no-data" style={{ padding: '40px', background: 'transparent' }}>
+                    No contacts uploaded yet. Please upload a sheet to begin.
                   </td>
-                  <td className="td-response">{c.response || "-"}</td>
                 </tr>
-              ))}
+              ) : (
+                visibleContacts.map((c, i) => (
+                  <tr key={c.id}>
+                    <td className="td-num">{startIndex + i + 1}</td>
+                    <td className="td-name">{c.name}</td>
+                    <td className="td-phone">{c.phone}</td>
+                    <td>
+                      <StatusPill status={c.status} />
+                    </td>
+                    <td className="td-response">{c.response || "-"}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

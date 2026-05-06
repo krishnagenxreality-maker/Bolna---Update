@@ -72,16 +72,19 @@ export default function BolnaDashboard() {
 
             {activeView === 'manager' && (
               <div className="manager-container">
-                <div className="manager-header-row">
-                  <ConfigPanel 
-                    apiKey={apiKey} 
-                    agentId={agentId} 
-                    setAgentId={setAgentId}
-                    availableAgents={availableAgents}
-                  />
-                  
-                  <div className="manager-main-actions">
+                <div className="manager-top-grid">
+                  <div className="manager-left-col">
+                    <ConfigPanel 
+                      apiKey={apiKey} 
+                      agentId={agentId} 
+                      setAgentId={setAgentId}
+                      availableAgents={availableAgents}
+                    />
                     <UploadPanel handleFile={handleFile} />
+                  </div>
+                  
+                  <div className="manager-right-col">
+                    <ContactsTable contacts={sessionContacts} />
                     <ActionBar 
                       isCalling={isCalling} 
                       startCalling={startCalling} 
@@ -90,17 +93,11 @@ export default function BolnaDashboard() {
                   </div>
                 </div>
                 
-                {(isCalling || showProgress || showDone) && (
-                  <div className="manager-flow-section">
-                    <CallFlowVisualization contacts={sessionContacts} agentId={agentId} isCalling={isCalling} />
-                  </div>
-                )}
-
-                <div className="manager-table-section">
-                  <ContactsTable contacts={sessionContacts} />
+                <div className="manager-flow-section">
+                  <CallFlowVisualization contacts={sessionContacts} agentId={agentId} isCalling={isCalling} />
                 </div>
 
-                <div className="manager-feedback-section">
+                <div className="manager-bottom-section">
                   <ProgressPanel 
                     showProgress={showProgress} 
                     stats={stats} 

@@ -4,7 +4,7 @@ import { StatBox } from '../ui/StatBox';
 import { LogBox } from '../ui/LogBox';
 
 export const ProgressPanel = ({ showProgress, stats, logs }) => {
-  if (!showProgress) return null;
+  // Always show panel for layout consistency
 
   return (
     <Panel label="Calling Progress">
