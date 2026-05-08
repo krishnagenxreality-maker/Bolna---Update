@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Panel, PanelHead } from '../ui/Panel';
 import { StatusPill } from '../ui/StatusPill';
 import { DatePicker } from '../ui/DatePicker';
@@ -6,7 +6,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell 
 } from 'recharts';
 import { 
-  CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList 
+  CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight 
 } from 'lucide-react';
 
 export const CallDetailsView = ({ 
@@ -19,6 +19,14 @@ export const CallDetailsView = ({
   activeView,
   setActiveView
 }) => {
+  const [currentPage, setCurrentPage] = useState(0);
+  const ROWS_PER_PAGE = 4;
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [searchDate, detailsStatusTab]);
+
   const filteredData = useMemo(() => {
     return contacts.filter(c => {
       const statusMatch = detailsStatusTab === 'all' || c.status === detailsStatusTab;
@@ -26,6 +34,11 @@ export const CallDetailsView = ({
       return statusMatch && dateMatch;
     });
   }, [contacts, detailsStatusTab, searchDate]);
+
+  const totalPages = Math.ceil(filteredData.length / ROWS_PER_PAGE);
+  const currentRows = useMemo(() => {
+    return filteredData.slice(currentPage * ROWS_PER_PAGE, (currentPage + 1) * ROWS_PER_PAGE);
+  }, [filteredData, currentPage]);
 
   const trendData = useMemo(() => {
     const counts = {};
@@ -67,120 +80,219 @@ export const CallDetailsView = ({
   ];
 
   return (
-    <div className="details-layout-wrapper">
+    <div className="details-page-container">
       
-      {/* LEFT COLUMN: 2x3 Navigation Grid */}
-      <div className="details-left-column">
-        <div className="details-nav-matrix">
-          {navItems.map((item) => (
-            <div 
-              key={item.id}
-              className={`nav-matrix-item ${activeView === item.id ? 'active' : ''}`}
-              onClick={() => setActiveView(item.id)}
-            >
-              <div className="nav-matrix-icon">{item.icon}</div>
-              <span className="nav-matrix-label">{item.label}</span>
+      {/* Page Heading Section */}
+      <div className="details-header-section">
+        <h1 className="details-main-heading">Call Details Section</h1>
+        <p className="details-sub-heading">
+          Monitor call records, track call activity trends, analyze statuses, and review detailed call information.
+        </p>
+      </div>
+
+      <div className="details-layout-wrapper">
+        
+        {/* LEFT COLUMN: Navigation Grid */}
+        <div className="details-left-column">
+          <div className="details-nav-matrix">
+            {navItems.map((item) => (
+              <div 
+                key={item.id}
+                className={`nav-matrix-item ${activeView === item.id ? 'active' : ''}`}
+                onClick={() => setActiveView(item.id)}
+              >
+                <div className="nav-matrix-icon">{item.icon}</div>
+                <span className="nav-matrix-label">{item.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* 2x2 Metrics Snapshot Section */}
+          <div className="details-metrics-grid">
+            <div className="mini-metric-card">
+              <div className="metric-icon-wrap" style={{ color: '#6366f1' }}>
+                <PhoneCall size={14} />
+              </div>
+              <div className="metric-info">
+                <div className="metric-value">{stats?.totalCalls || contacts.length}</div>
+                <div className="metric-label">Total Calls</div>
+              </div>
             </div>
-          ))}
+
+            <div className="mini-metric-card">
+              <div className="metric-icon-wrap" style={{ color: '#10b981' }}>
+                <PhoneCall size={14} />
+              </div>
+              <div className="metric-info">
+                <div className="metric-value">{stats?.connected || contacts.filter(c => c.status === 'called').length}</div>
+                <div className="metric-label">Connected</div>
+              </div>
+            </div>
+
+            <div className="mini-metric-card">
+              <div className="metric-icon-wrap" style={{ color: '#f43f5e' }}>
+                <PhoneCall size={14} />
+              </div>
+              <div className="metric-info">
+                <div className="metric-value">{stats?.failed || contacts.filter(c => c.status === 'failed').length}</div>
+                <div className="metric-label">Failed</div>
+              </div>
+            </div>
+
+            <div className="mini-metric-card">
+              <div className="metric-icon-wrap" style={{ color: '#8b5cf6' }}>
+                <Users size={14} />
+              </div>
+              <div className="metric-info">
+                <div className="metric-value">{stats?.leadsCount || 0}</div>
+                <div className="metric-label">Leads</div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* CENTER COLUMN: Analytics */}
-      <div className="details-center-column">
-        <Panel label="Calling Activity Trend">
-          <div className="panel-body" style={{ height: '240px', paddingTop: '20px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} vertical={false} />
-                <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} />
-                <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip {...chartTheme.tooltip} />
-                <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, fill: '#6366f1' }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Panel>
-
-        <Panel label="Status Breakdown">
-          <div className="panel-body" style={{ height: '240px', paddingTop: '20px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={statusData}>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} vertical={false} />
-                <XAxis dataKey="status" stroke={chartTheme.text} fontSize={10} tickLine={false} />
-                <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip {...chartTheme.tooltip} />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {statusData.map((entry, index) => (
-                    <Cell key={index} fill={index % 2 === 0 ? '#8b5cf6' : '#ec4899'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Panel>
-      </div>
-
-      {/* RIGHT COLUMN: Search Table */}
-      <div className="details-right-column">
-        <Panel>
-          <PanelHead>
-            <div className="panel-label" style={{marginBottom:0}}>
-              <span className="label-dot" />
-              Call Details Search
+        {/* CENTER COLUMN: Analytics */}
+        <div className="details-center-column">
+          <Panel label="Calling Activity Trend">
+            <div className="panel-body" style={{ height: '200px', paddingTop: '20px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} vertical={false} />
+                  <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} />
+                  <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} />
+                  <Tooltip {...chartTheme.tooltip} />
+                  <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, fill: '#6366f1' }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-            <DatePicker value={searchDate} onChange={setSearchDate} />
-          </PanelHead>
+          </Panel>
 
-          <div className="panel-body">
-            <div className="details-tabs">
-              {['all', 'called', 'failed'].map(tab => (
-                <button
-                  key={tab}
-                  className={`tab-btn ${detailsStatusTab === tab ? 'active' : ''}`}
-                  onClick={() => setDetailsStatusTab(tab)}
-                >
-                  {tab === 'all' ? 'All Records' : tab === 'called' ? 'Called' : 'Failed'}
-                </button>
-              ))}
+          <Panel label="Status Breakdown">
+            <div className="panel-body" style={{ height: '200px', paddingTop: '20px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={statusData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} vertical={false} />
+                  <XAxis dataKey="status" stroke={chartTheme.text} fontSize={10} tickLine={false} />
+                  <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} />
+                  <Tooltip {...chartTheme.tooltip} />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                    {statusData.map((entry, index) => (
+                      <Cell key={index} fill={index % 2 === 0 ? '#8b5cf6' : '#ec4899'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
+          </Panel>
+        </div>
 
-            <div className="table-wrap">
-              <table className="ct">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Name</th>
-                    <th>Phone</th>
-                    <th>Status</th>
-                    <th>Response</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredData.map((c, i) => (
-                    <tr key={c.id}>
-                      <td className="td-num">{i + 1}</td>
-                      <td className="td-name">{c.name}</td>
-                      <td className="td-phone">{c.phone}</td>
-                      <td>
-                        <StatusPill status={c.status} />
-                      </td>
-                      <td className="td-response">{c.response || "-"}</td>
-                      <td className="td-phone" style={{ fontSize: '11px' }}>{c.date}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {filteredData.length === 0 && (
-                <div className="no-data" style={{ padding: '40px', textAlign: 'center', opacity: 0.5 }}>
-                  No records found for the selected criteria.
+        {/* RIGHT COLUMN: Search Table */}
+        <div className="details-right-column">
+          <Panel>
+            <PanelHead>
+              <div className="panel-label" style={{marginBottom:0}}>
+                <span className="label-dot" />
+                Call Details Search
+              </div>
+              <DatePicker value={searchDate} onChange={setSearchDate} />
+            </PanelHead>
+
+            <div className="panel-body">
+              <div className="details-tabs">
+                {['all', 'called', 'failed'].map(tab => (
+                  <button
+                    key={tab}
+                    className={`tab-btn ${detailsStatusTab === tab ? 'active' : ''}`}
+                    onClick={() => setDetailsStatusTab(tab)}
+                  >
+                    {tab === 'all' ? 'All Records' : tab === 'called' ? 'Called' : 'Failed'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="details-table-scroll-container" style={{ flex: '0 0 auto', maxHeight: 'none' }}>
+                <div className="table-wrap">
+                  <table className="ct">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>Response</th>
+                        <th>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentRows.map((c, i) => (
+                        <tr key={c.id}>
+                          <td className="td-num">{currentPage * ROWS_PER_PAGE + i + 1}</td>
+                          <td className="td-name">{c.name}</td>
+                          <td className="td-phone">{c.phone}</td>
+                          <td>
+                            <StatusPill status={c.status} />
+                          </td>
+                          <td className="td-response">{c.response || "-"}</td>
+                          <td className="td-phone" style={{ fontSize: '11px' }}>{c.date}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {filteredData.length === 0 && (
+                    <div className="no-data" style={{ padding: '40px', textAlign: 'center', opacity: 0.5 }}>
+                      No records found for the selected criteria.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Pagination Controls - Brought Upward */}
+              {totalPages > 1 && (
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between', 
+                  marginTop: '12px',
+                  padding: '0 4px 12px'
+                }}>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono' }}>
+                    Showing {currentPage * ROWS_PER_PAGE + 1}-{Math.min((currentPage + 1) * ROWS_PER_PAGE, filteredData.length)} of {filteredData.length}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                      disabled={currentPage === 0}
+                      className="nav-btn"
+                      style={{ 
+                        padding: '6px', 
+                        borderRadius: '6px', 
+                        opacity: currentPage === 0 ? 0.3 : 1,
+                        cursor: currentPage === 0 ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                      disabled={currentPage === totalPages - 1}
+                      className="nav-btn"
+                      style={{ 
+                        padding: '6px', 
+                        borderRadius: '6px', 
+                        opacity: currentPage === totalPages - 1 ? 0.3 : 1,
+                        cursor: currentPage === totalPages - 1 ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-          </div>
-        </Panel>
-      </div>
+          </Panel>
+        </div>
 
+      </div>
     </div>
   );
 };

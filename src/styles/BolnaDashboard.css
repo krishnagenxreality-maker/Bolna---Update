@@ -1367,61 +1367,231 @@ body {
   }
 }
 
-/* Call Details 3-Column Layout */
-.details-layout-wrapper {
+/* Call Details, Responses, Leads & Report Page Container */
+.details-page-container,
+.responses-page-container,
+.leads-page-container,
+.report-page-container {
+  padding: 0 40px 60px;
+  animation: fadeIn 0.8s ease-out;
+}
+
+.details-header-section,
+.responses-header-section,
+.leads-header-section,
+.report-header-section {
+  margin-bottom: 40px;
+  padding-top: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 24px;
+}
+
+.details-main-heading,
+.responses-main-heading,
+.leads-main-heading,
+.report-main-heading {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: #fff;
+  margin-bottom: 8px;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+}
+
+.details-sub-heading,
+.responses-sub-heading,
+.leads-sub-heading,
+.report-sub-heading {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 400;
+  letter-spacing: 0.2px;
+  max-width: 800px;
+  line-height: 1.6;
+}
+
+/* Call Details, Responses, Leads & Report Layouts - FORCED FIXED HEIGHT FOR ALIGNMENT */
+.details-layout-wrapper,
+.responses-layout-wrapper,
+.leads-layout-wrapper {
   display: grid;
-  grid-template-columns: 280px 1fr 1fr;
+  grid-template-columns: 280px 420px 1fr;
   gap: 24px;
-  align-items: start;
-  animation: fadeIn 0.6s ease-out;
+  height: 620px; /* Locked height to match compact graphs */
+  align-items: stretch;
+  margin-bottom: 40px;
+  overflow: hidden; /* Prevent grid growth */
 }
 
-.details-left-column {
-  position: sticky;
-  top: 80px;
+.report-layout-wrapper {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  height: 620px;
+  align-items: stretch;
+  margin-bottom: 40px;
+  overflow: hidden;
 }
 
-.details-center-column {
+.details-left-column,
+.responses-left-column,
+.leads-left-column,
+.report-left-column,
+.details-center-column,
+.responses-center-column,
+.leads-center-column,
+.details-right-column,
+.responses-right-column,
+.leads-right-column,
+.report-right-column {
+  height: 100% !important;
+  max-height: 620px !important;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden !important; /* Force no expansion */
+}
+
+.details-left-column,
+.responses-left-column,
+.leads-left-column,
+.report-left-column {
+  position: sticky;
+  top: 80px; /* Moved upward from 100px */
+}
+
+.details-center-column,
+.responses-center-column,
+.leads-center-column {
   gap: 20px;
+  min-width: 0;
 }
 
-.details-right-column {
-  min-width: 0; /* Prevents table from breaking grid */
+.details-right-column,
+.responses-right-column,
+.leads-right-column,
+.report-right-column {
+  min-width: 0;
 }
 
-/* 2x3 Navigation Grid */
+.details-right-column .panel,
+.responses-right-column .panel,
+.leads-right-column .panel {
+  width: 100%;
+  height: auto; /* Fit tightly around 4 rows */
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0 !important;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+/* 6x1 Navigation Vertical List - Compact & Refined */
 .details-nav-matrix {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  height: auto; /* Fit tightly around items */
+  gap: 12px; /* Reduced gap */
+  margin: 0;
+  padding: 0;
 }
 
 .nav-matrix-item {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  padding: 16px 12px;
+  border-radius: 10px;
+  padding: 0 16px;
+  height: 46px; /* Reduced height for compactness */
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
+  justify-content: flex-start;
+  gap: 12px;
   color: rgba(255, 255, 255, 0.4);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  text-align: center;
+  text-align: left;
   backdrop-filter: blur(10px);
+  width: 100%;
+}
+
+/* 2x2 Metrics Snapshot Section */
+.details-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: 1fr; /* Ensures all rows have identical height */
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.mini-metric-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  min-width: 0; /* Prevents expansion beyond grid cell */
+  height: 100%; /* Fills grid cell height */
+}
+
+.mini-metric-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.metric-icon-wrap {
+  width: 36px; /* Increased from 28px */
+  height: 36px; /* Increased from 28px */
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.metric-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.metric-value {
+  color: #fff;
+  font-size: 20px; /* Slightly larger for prominence */
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.metric-label {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 9px; /* Slightly smaller to fit long words like CONNECTED */
+  font-weight: 600;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-matrix-item:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.15);
   color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  transform: translateX(4px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .nav-matrix-item.active {
@@ -1440,6 +1610,7 @@ body {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.03);
   transition: all 0.3s ease;
+  flex-shrink: 0;
 }
 
 .nav-matrix-item:hover .nav-matrix-icon {
@@ -1448,13 +1619,49 @@ body {
 }
 
 .nav-matrix-label {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.5px;
 }
 
-/* Analytics adjustment for 3-column */
-.details-center-column .panel {
+/* Internal Table Scroll */
+.details-right-column .panel-body,
+.responses-right-column .panel-body,
+.leads-right-column .panel-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Crucial for nested flex scroll */
+}
+
+.details-table-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 12px;
+  padding-right: 4px;
+  min-height: 0; 
+}
+
+/* Custom Scrollbar */
+.details-table-scroll-container::-webkit-scrollbar {
+  width: 4px;
+}
+.details-table-scroll-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+.details-table-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+}
+.details-table-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Analytics adjustment */
+.details-center-column .panel,
+.responses-center-column .panel,
+.leads-center-column .panel {
   margin-bottom: 0;
 }
 
@@ -1464,6 +1671,10 @@ body {
   }
   .details-right-column {
     grid-column: span 2;
+    margin-top: 20px;
+  }
+  .details-right-column .panel {
+    height: 500px; /* Fixed height for tablet stack */
   }
 }
 
@@ -1475,7 +1686,10 @@ body {
     grid-column: auto;
   }
   .details-nav-matrix {
+    display: grid;
     grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(2, 1fr);
+  }
+  .details-page-container {
+    padding: 0 20px 40px;
   }
 }

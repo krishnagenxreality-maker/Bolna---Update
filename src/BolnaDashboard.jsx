@@ -97,7 +97,7 @@ export default function BolnaDashboard() {
     { id: 'report', label: 'Report', icon: <ClipboardList size={20} />, color: '#a855f7' }
   ];
 
-  const isFullWidthView = activeView === 'calendar' || activeView === 'manager' || activeView === 'details';
+  const isFullWidthView = activeView === 'calendar' || activeView === 'manager' || activeView === 'details' || activeView === 'responses' || activeView === 'leads' || activeView === 'report';
 
   return (
     <div className="app-container" style={{ flexDirection: 'column', gap: 0, paddingRight: 0 }}>
@@ -291,6 +291,9 @@ export default function BolnaDashboard() {
                 setResponseTab={setResponseTab}
                 searchDate={searchDate}
                 setSearchDate={setSearchDate}
+                stats={stats}
+                activeView={activeView}
+                setActiveView={setActiveView}
               />
             )}
             {activeView === 'leads' && (
@@ -300,6 +303,9 @@ export default function BolnaDashboard() {
                 setLeadsStatusTab={setLeadsStatusTab}
                 searchDate={searchDate}
                 setSearchDate={setSearchDate}
+                stats={stats}
+                activeView={activeView}
+                setActiveView={setActiveView}
               />
             )}
             {activeView === 'report' && (
@@ -308,6 +314,9 @@ export default function BolnaDashboard() {
                 agentId={agentId}
                 searchDate={searchDate}
                 setSearchDate={setSearchDate}
+                stats={stats}
+                activeView={activeView}
+                setActiveView={setActiveView}
               />
             )}
           </main>
