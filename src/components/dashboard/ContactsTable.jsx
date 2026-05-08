@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { Panel, PanelHead } from '../ui/Panel';
 import { StatusPill } from '../ui/StatusPill';
 
-export const ContactsTable = ({ contacts }) => {
+export const ContactsTable = ({ contacts, previewMode = false, isCalling = false, stopCalling }) => {
   const [currentPage, setCurrentPage] = useState(0);
-  const ROWS_PER_PAGE = 5;
+  const ROWS_PER_PAGE = previewMode ? 2 : 5;
 
   const isEmpty = contacts.length === 0;
   const totalPages = isEmpty ? 0 : Math.ceil(contacts.length / ROWS_PER_PAGE);
-  const startIndex = currentPage * ROWS_PER_PAGE;
+  const startIndex = previewMode ? 0 : currentPage * ROWS_PER_PAGE;
   const visibleContacts = isEmpty ? [] : contacts.slice(startIndex, startIndex + ROWS_PER_PAGE);
 
   const handleNext = () => {
@@ -22,8 +22,25 @@ export const ContactsTable = ({ contacts }) => {
           <span className="label-dot" />
           Contacts
         </div>
-        <div className="count-chip">
-          {startIndex + 1}-{Math.min(startIndex + ROWS_PER_PAGE, contacts.length)} of {contacts.length}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {contacts.length > 0 && (
+            <button 
+              className="btn-stop" 
+              onClick={stopCalling}
+              disabled={!isCalling}
+              style={{ 
+                opacity: isCalling ? 1 : 0.5, 
+                cursor: isCalling ? 'pointer' : 'not-allowed',
+                display: 'inline-block' 
+              }}
+              title={isCalling ? "Stop current calling session" : "No active session to stop"}
+            >
+              Stop Calls
+            </button>
+          )}
+          <div className="count-chip">
+            {startIndex + 1}-{Math.min(startIndex + ROWS_PER_PAGE, contacts.length)} of {contacts.length}
+          </div>
         </div>
       </PanelHead>
       <div className="panel-body">
@@ -62,7 +79,7 @@ export const ContactsTable = ({ contacts }) => {
           </table>
         </div>
       </div>
-      {totalPages > 1 && (
+      {!previewMode && totalPages > 1 && (
         <div className="pagination-footer" style={{ padding: '16px', display: 'flex', justifyContent: 'center', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <button 
             className="nav-btn active" 

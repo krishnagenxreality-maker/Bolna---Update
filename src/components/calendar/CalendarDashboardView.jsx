@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Phone, TrendingUp, CheckCircle, XCircle, Users, Award, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Phone, TrendingUp, CheckCircle, XCircle, Users, Award, Star, ListTodo, BarChart, ClipboardList, ArrowRight } from 'lucide-react';
 import { Dropdown } from '../ui/Dropdown';
 import { DatePicker } from '../ui/DatePicker';
 import { VisualAnalytics } from './VisualAnalytics';
@@ -14,7 +14,6 @@ export const CalendarDashboardView = ({
   setActiveView 
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [hoveredDate, setHoveredDate] = useState(null);
   const [dateFilterType, setDateFilterType] = useState('all');
   const [specificDate, setSpecificDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -130,10 +129,8 @@ export const CalendarDashboardView = ({
       cells.push(
         <div 
           key={`d-${i}`} 
-          className={`cdv-cell ${stats ? 'has-data' : ''} ${isToday ? 'today' : ''} ${isFuture ? 'disabled' : ''} ${hoveredDate === i ? 'hovered' : ''}`}
+          className={`cdv-cell ${stats ? 'has-data' : ''} ${isToday ? 'today' : ''} ${isFuture ? 'disabled' : ''}`}
           onClick={() => !isFuture && handleDayClick(i)}
-          onMouseEnter={() => !isFuture && setHoveredDate(i)}
-          onMouseLeave={() => setHoveredDate(null)}
         >
           <div className="cdv-cell-header">
             <span className="cdv-day-num">{i}</span>
@@ -149,10 +146,18 @@ export const CalendarDashboardView = ({
     return cells;
   };
 
-  const hoveredStats = hoveredDate ? getDayStats(hoveredDate) : null;
+
+  // Quick Navigation items
+  const quickNavItems = [
+    { id: 'details', label: 'Call Details', icon: <ListTodo size={22} />, color: '#3b82f6' },
+    { id: 'responses', label: 'Responses', icon: <BarChart size={22} />, color: '#7dffb3' },
+    { id: 'leads', label: 'Leads', icon: <Users size={22} />, color: '#f5c842' },
+    { id: 'report', label: 'Report', icon: <ClipboardList size={22} />, color: '#a855f7' }
+  ];
 
   return (
     <div className="calendar-view-enhanced">
+      {/* === TOP BAR === */}
       <div className="dashboard-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div>
@@ -194,116 +199,130 @@ export const CalendarDashboardView = ({
             </div>
           </div>
         </div>
-
-        <div className="engagement-banner" style={{ marginBottom: '32px' }}>
-          <div className="motivational-tag">
-            <Award size={15} />
-            <span>You are one of the top users using the platform</span>
-          </div>
-          <div className="motivational-tag blue">
-            <TrendingUp size={15} />
-            <span>Great job! Your engagement is increasing</span>
-          </div>
-          <div className="motivational-tag">
-            <Star size={15} />
-            <span>High performance this week</span>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '48px' }}>
-          <button 
-            className="cta-start-calling"
-            onClick={() => setActiveView('manager')}
-          >
-            Click here to start your calling right now
-            <Phone size={20} />
-          </button>
-        </div>
-
-        <div className="metrics-grid">
-          <div className="metric-card m-purple">
-            <span className="metric-label">Total Calls Made</span>
-            <span className="metric-value highlight">{totalCalls}</span>
-            <div className="metric-sub">Across selected agent</div>
-          </div>
-          <div className="metric-card m-green">
-            <span className="metric-label">Calls Completed</span>
-            <span className="metric-value highlight" style={{ color: '#7dffb3' }}>{completedCalls}</span>
-            <div className="metric-sub">Successfully connected</div>
-          </div>
-          <div className="metric-card m-red">
-            <span className="metric-label">Calls Failed</span>
-            <span className="metric-value highlight" style={{ color: '#ff7070' }}>{failedCalls}</span>
-            <div className="metric-sub">No response or errors</div>
-          </div>
-          <div className="metric-card m-blue">
-            <span className="metric-label">Success Rate</span>
-            <span className="metric-value highlight" style={{ color: '#3b82f6' }}>{successRate}%</span>
-            <div className="metric-sub">Completion percentage</div>
-          </div>
-          <div className="metric-card m-blue">
-            <span className="metric-label">Total Leads</span>
-            <span className="metric-value highlight">{totalLeadsCount}</span>
-            <div className="metric-sub">Prospects identified</div>
-          </div>
-          <div className="metric-card m-green">
-            <span className="metric-label">Interested</span>
-            <span className="metric-value highlight" style={{ color: '#7dffb3' }}>{interestedLeads}</span>
-            <div className="metric-sub">Potential conversions</div>
-          </div>
-          <div className="metric-card m-yellow">
-            <span className="metric-label">Rescheduled</span>
-            <span className="metric-value highlight" style={{ color: '#f5c842' }}>{rescheduledLeads}</span>
-            <div className="metric-sub">Follow-ups required</div>
-          </div>
-          <div className="metric-card m-purple">
-            <span className="metric-label">Active Agents</span>
-            <span className="metric-value highlight">{agentId ? '1' : availableAgents.length}</span>
-            <div className="metric-sub">Currently monitored</div>
-          </div>
-        </div>
-
-        <VisualAnalytics contacts={activeContacts} />
       </div>
 
-      <div className="cdv-layout" style={{ marginTop: '20px', gap: '32px' }}>
-        <div className="cdv-side-panel" style={{ height: 'auto', minWidth: '300px' }}>
-          <h3 className="cdv-side-title">Daily Summary</h3>
-          {hoveredStats ? (
-            <div className="cdv-side-content fade-in">
-              <div className="cdv-side-date">{formatDateString(hoveredDate)}</div>
-              <div className="cdv-side-grid" style={{ gap: '16px' }}>
-                <div className="cdv-side-item"><span>Total Calls:</span> <strong>{hoveredStats.total}</strong></div>
-                <div className="cdv-side-item"><span>Completed:</span> <strong>{hoveredStats.completed}</strong></div>
-                <div className="cdv-side-item"><span>Interested:</span> <strong className="txt-green">{hoveredStats.interested}</strong></div>
-                <div className="cdv-side-item"><span>Not Interested:</span> <strong className="txt-red">{hoveredStats.notInterested}</strong></div>
-                <div className="cdv-side-item"><span>Busy:</span> <strong>{hoveredStats.busy}</strong></div>
-                <div className="cdv-side-item"><span>Rescheduled:</span> <strong>{hoveredStats.rescheduled}</strong></div>
+      {/* === MAIN 3-COLUMN LAYOUT === */}
+      <div className="dashboard-main-grid">
+        
+        {/* LEFT COLUMN: Metric Cards (4×2) */}
+        <div className="metrics-column">
+          <div className="metrics-grid-compact">
+            <div className="metric-card m-purple">
+              <span className="metric-label">Total Calls Made</span>
+              <span className="metric-value highlight">{totalCalls}</span>
+              <div className="metric-sub">Across selected agent</div>
+            </div>
+            <div className="metric-card m-green">
+              <span className="metric-label">Calls Completed</span>
+              <span className="metric-value highlight" style={{ color: '#7dffb3' }}>{completedCalls}</span>
+              <div className="metric-sub">Successfully connected</div>
+            </div>
+            <div className="metric-card m-red">
+              <span className="metric-label">Calls Failed</span>
+              <span className="metric-value highlight" style={{ color: '#ff7070' }}>{failedCalls}</span>
+              <div className="metric-sub">No response or errors</div>
+            </div>
+            <div className="metric-card m-blue">
+              <span className="metric-label">Success Rate</span>
+              <span className="metric-value highlight" style={{ color: '#3b82f6' }}>{successRate}%</span>
+              <div className="metric-sub">Completion percentage</div>
+            </div>
+            <div className="metric-card m-blue">
+              <span className="metric-label">Total Leads</span>
+              <span className="metric-value highlight">{totalLeadsCount}</span>
+              <div className="metric-sub">Prospects identified</div>
+            </div>
+            <div className="metric-card m-green">
+              <span className="metric-label">Interested</span>
+              <span className="metric-value highlight" style={{ color: '#7dffb3' }}>{interestedLeads}</span>
+              <div className="metric-sub">Potential conversions</div>
+            </div>
+            <div className="metric-card m-yellow">
+              <span className="metric-label">Rescheduled</span>
+              <span className="metric-value highlight" style={{ color: '#f5c842' }}>{rescheduledLeads}</span>
+              <div className="metric-sub">Follow-ups required</div>
+            </div>
+            <div className="metric-card m-purple">
+              <span className="metric-label">Active Agents</span>
+              <span className="metric-value highlight">{agentId ? '1' : availableAgents.length}</span>
+              <div className="metric-sub">Currently monitored</div>
+            </div>
+          </div>
+        </div>
+
+        {/* CENTER COLUMN: Calendar + CTA Button */}
+        <div className="calendar-column">
+          <div className="cdv-container">
+            <div className="cdv-header">
+              <div className="cdv-month-nav">
+                <button className="cdv-nav-btn" onClick={handlePrevMonth}><ChevronLeft size={20} /></button>
+                <h2 className="cdv-month-title">
+                  {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </h2>
+                <button className="cdv-nav-btn" onClick={handleNextMonth}><ChevronRight size={20} /></button>
+              </div>
+              <button 
+                className="cta-start-calling-compact"
+                onClick={() => setActiveView('manager')}
+              >
+                <Phone size={14} />
+                Start Calling
+              </button>
+            </div>
+
+            <div className="cdv-grid">
+              {renderCells()}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Quick Navigation + Daily Summary */}
+        <div className="quick-nav-column">
+          <div className="quick-nav-container">
+            <h3 className="quick-nav-title">Quick Navigation</h3>
+            <div className="quick-nav-grid">
+              {quickNavItems.map((item) => (
+                <button
+                  key={item.id}
+                  className="quick-nav-item"
+                  onClick={() => setActiveView(item.id)}
+                  style={{ '--nav-accent': item.color }}
+                >
+                  <div className="quick-nav-icon">{item.icon}</div>
+                  <span className="quick-nav-label">{item.label}</span>
+                  <ArrowRight size={14} className="quick-nav-arrow" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Daily Summary */}
+          <div className="daily-summary-compact">
+            <h3 className="daily-summary-title">Daily Summary</h3>
+            <div className="daily-summary-grid">
+              <div className="daily-summary-item">
+                <span className="daily-summary-value">{totalCalls}</span>
+                <span className="daily-summary-label">Calls Made</span>
+              </div>
+              <div className="daily-summary-item">
+                <span className="daily-summary-value" style={{ color: '#7dffb3' }}>{completedCalls}</span>
+                <span className="daily-summary-label">Connected</span>
+              </div>
+              <div className="daily-summary-item">
+                <span className="daily-summary-value" style={{ color: '#3b82f6' }}>{totalLeadsCount}</span>
+                <span className="daily-summary-label">Responses</span>
+              </div>
+              <div className="daily-summary-item">
+                <span className="daily-summary-value" style={{ color: '#f5c842' }}>{interestedLeads}</span>
+                <span className="daily-summary-label">Leads</span>
               </div>
             </div>
-          ) : (
-            <div className="cdv-side-empty" style={{ padding: '40px 20px' }}>
-              Hover over a date to view detailed activity.
-            </div>
-          )}
-        </div>
-
-        <div className="cdv-container" style={{ flex: 1 }}>
-          <div className="cdv-header" style={{ marginBottom: '24px' }}>
-            <div className="cdv-month-nav">
-              <button className="cdv-nav-btn" onClick={handlePrevMonth}><ChevronLeft size={20} /></button>
-              <h2 className="cdv-month-title">
-                {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-              </h2>
-              <button className="cdv-nav-btn" onClick={handleNextMonth}><ChevronRight size={20} /></button>
-            </div>
-          </div>
-
-          <div className="cdv-grid">
-            {renderCells()}
           </div>
         </div>
       </div>
+
+      {/* === GRAPHS SECTION (compact, expandable) === */}
+      <VisualAnalytics contacts={activeContacts} />
     </div>
   );
 };

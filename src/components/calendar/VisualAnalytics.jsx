@@ -1,32 +1,57 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const PIE_COLORS = ['#7dffb3', '#ff7070', '#f5c842', '#3b82f6'];
 
-const ChartCard = ({ title, children, fullWidth }) => (
-  <div style={{ 
-    background: 'rgba(255, 255, 255, 0.02)', 
-    border: '1px solid rgba(255, 255, 255, 0.06)', 
-    borderRadius: '20px', 
-    padding: '24px',
-    backdropFilter: 'blur(10px)',
-    gridColumn: fullWidth ? '1 / -1' : 'auto',
-    position: 'relative'
-  }}>
+const ChartCard = ({ title, children, fullWidth, isExpanded, onClick }) => (
+  <div 
+    className={`chart-card-expandable ${isExpanded ? 'expanded' : 'compact'}`}
+    style={{ 
+      background: 'rgba(255, 255, 255, 0.02)', 
+      border: '1px solid rgba(255, 255, 255, 0.06)', 
+      borderRadius: '20px', 
+      padding: '20px',
+      backdropFilter: 'blur(10px)',
+      gridColumn: fullWidth ? '1 / -1' : 'auto',
+      position: 'relative',
+      cursor: 'pointer',
+      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+      overflow: 'hidden'
+    }}
+    onClick={onClick}
+  >
     <h4 style={{ 
-      fontSize: '13px', 
+      fontSize: '12px', 
       fontWeight: '600', 
       color: 'rgba(255,255,255,0.4)', 
       textTransform: 'uppercase', 
       letterSpacing: '1.5px', 
-      marginBottom: '20px',
+      marginBottom: isExpanded ? '16px' : '10px',
       display: 'flex',
       alignItems: 'center',
-      gap: '8px'
+      justifyContent: 'space-between',
+      gap: '8px',
+      transition: 'margin-bottom 0.3s ease'
     }}>
-      <span style={{ width: '4px', height: '14px', background: '#3b82f6', borderRadius: '2px' }} />
-      {title}
+      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ width: '4px', height: '14px', background: '#3b82f6', borderRadius: '2px' }} />
+        {title}
+      </span>
+      <span style={{ 
+        fontSize: '10px', 
+        color: 'rgba(255,255,255,0.2)', 
+        fontWeight: '400',
+        letterSpacing: '0.5px'
+      }}>
+        {isExpanded ? 'Click to collapse' : 'Click to expand'}
+      </span>
     </h4>
-    {children}
+    <div style={{
+      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+      maxHeight: isExpanded ? '400px' : '160px',
+      overflow: 'hidden'
+    }}>
+      {children}
+    </div>
   </div>
 );
 
@@ -112,6 +137,12 @@ const renderLineChart = (data) => {
 };
 
 export const VisualAnalytics = ({ contacts }) => {
+  const [expandedChart, setExpandedChart] = useState(null);
+
+  const toggleChart = (chartId) => {
+    setExpandedChart(prev => prev === chartId ? null : chartId);
+  };
+
   // 1. Call Performance Data
   const perfData = {
     Completed: contacts.filter(c => c.status === 'completed' || c.status === 'called').length,
@@ -140,18 +171,22 @@ export const VisualAnalytics = ({ contacts }) => {
     .slice(-7); // Last 7 days
 
   return (
-    <div className="visual-analytics-section" style={{ marginTop: '40px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
+    <div className="visual-analytics-section" style={{ marginTop: '32px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
       
       {/* Bar Chart: Call Performance */}
-      <ChartCard title="Call Performance">
-        <div style={{ height: '240px', display: 'flex', alignItems: 'flex-end', gap: '20px', padding: '20px 10px 40px', position: 'relative' }}>
+      <ChartCard 
+        title="Call Performance" 
+        isExpanded={expandedChart === 'perf'}
+        onClick={() => toggleChart('perf')}
+      >
+        <div style={{ height: expandedChart === 'perf' ? '280px' : '140px', display: 'flex', alignItems: 'flex-end', gap: '16px', padding: '10px 10px 30px', position: 'relative', transition: 'height 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }}>
           {Object.entries(perfData).map(([label, value]) => {
             const max = Math.max(...Object.values(perfData), 1);
             const height = (value / max) * 100;
             const color = label === 'Completed' ? '#7dffb3' : label === 'Failed' ? '#ff7070' : label === 'Busy' ? '#f5c842' : '#3b82f6';
             return (
-              <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', height: '100%', justifyContent: 'flex-end' }}>
-                <div style={{ fontSize: '12px', color: '#fff', fontWeight: '700' }}>{value}</div>
+              <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', height: '100%', justifyContent: 'flex-end' }}>
+                <div style={{ fontSize: '11px', color: '#fff', fontWeight: '700' }}>{value}</div>
                 <div style={{ 
                   width: '100%', 
                   height: `${height}%`, 
@@ -160,7 +195,7 @@ export const VisualAnalytics = ({ contacts }) => {
                   boxShadow: `0 0 15px ${color}22`,
                   transition: 'height 1s ease-out'
                 }} />
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '10px' }}>{label}</div>
+                <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '6px' }}>{label}</div>
               </div>
             );
           })}
@@ -168,22 +203,26 @@ export const VisualAnalytics = ({ contacts }) => {
       </ChartCard>
 
       {/* Pie Chart: Lead Classification */}
-      <ChartCard title="Lead Classification">
-        <div style={{ height: '240px', display: 'flex', alignItems: 'center', gap: '30px', padding: '20px' }}>
-          <div style={{ position: 'relative', width: '160px', height: '160px' }}>
+      <ChartCard 
+        title="Lead Classification"
+        isExpanded={expandedChart === 'leads'}
+        onClick={() => toggleChart('leads')}
+      >
+        <div style={{ height: expandedChart === 'leads' ? '280px' : '140px', display: 'flex', alignItems: 'center', gap: '24px', padding: '10px', transition: 'height 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+          <div style={{ position: 'relative', width: expandedChart === 'leads' ? '160px' : '100px', height: expandedChart === 'leads' ? '160px' : '100px', transition: 'all 0.4s ease', flexShrink: 0 }}>
              <svg viewBox="0 0 32 32" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
                 {renderPieSlices(leadData)}
              </svg>
              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-                <span style={{ fontSize: '20px', fontWeight: '800', color: '#fff' }}>{Object.values(leadData).reduce((a,b)=>a+b,0)}</span>
-                <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Leads</span>
+                <span style={{ fontSize: expandedChart === 'leads' ? '18px' : '14px', fontWeight: '800', color: '#fff', transition: 'font-size 0.3s ease' }}>{Object.values(leadData).reduce((a,b)=>a+b,0)}</span>
+                <span style={{ fontSize: '8px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Leads</span>
              </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {Object.entries(leadData).map(([label, value], i) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: PIE_COLORS[i] }} />
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>{label}: <strong>{value}</strong></span>
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>{label}: <strong>{value}</strong></span>
               </div>
             ))}
           </div>
@@ -191,8 +230,13 @@ export const VisualAnalytics = ({ contacts }) => {
       </ChartCard>
 
       {/* Line Chart: Call Trend */}
-      <ChartCard title="Call Trend (Last 7 Days)" fullWidth>
-        <div style={{ height: '260px', padding: '20px 40px 40px' }}>
+      <ChartCard 
+        title="Call Trend (Last 7 Days)" 
+        fullWidth
+        isExpanded={expandedChart === 'trend'}
+        onClick={() => toggleChart('trend')}
+      >
+        <div style={{ height: expandedChart === 'trend' ? '280px' : '140px', padding: '10px 30px 30px', transition: 'height 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }}>
           <svg viewBox="0 0 800 200" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
             {renderLineChart(trendData)}
           </svg>

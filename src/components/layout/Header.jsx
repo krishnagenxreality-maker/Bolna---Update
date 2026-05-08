@@ -22,7 +22,20 @@ export const Header = ({ activeView, setActiveView, credits }) => {
             </defs>
           </svg>
         </div>
-        <span className="hdr-title">Calling<span className="hdr-accent"> Gen</span></span>
+        <span className="hdr-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>Calling<span className="hdr-accent"> Gen</span></span>
+        
+        {/* Dashboard Nav Button */}
+        {activeView !== 'calendar' && (
+          <button 
+            className="btn-dashboard-nav"
+            onClick={() => {
+              setActiveView('calendar');
+              navigate('/dashboard');
+            }}
+          >
+            Dashboard
+          </button>
+        )}
       </div>
       <div style={{ flex: 1 }}></div>
 

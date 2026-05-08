@@ -325,6 +325,22 @@ export function useBolnaDashboard() {
     await dispatchNextBatch(apiKey, agentId);
   };
 
+  const stopCalling = () => {
+    if (!isCalling) return;
+    
+    // Clear the polling interval
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    
+    // Clear the upcoming queue
+    callQueueRef.current = [];
+    
+    setIsCalling(false);
+    addLog("Calling process stopped by user. Upcoming queued calls cancelled.", "info");
+  };
+
   const displayContacts = agentId 
     ? contacts.filter(c => c.agentId === agentId)
     : contacts;
@@ -353,6 +369,7 @@ export function useBolnaDashboard() {
     searchDate, setSearchDate,
     handleFile,
     startCalling,
+    stopCalling,
     availableAgents,
     stats: { total, done, active, failed, pct },
     credits
