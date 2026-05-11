@@ -7,6 +7,7 @@ export const AgentScriptPanel = ({ agentId, apiKey, availableAgents = [] }) => {
   const [agentName, setAgentName] = useState('');
 
   useEffect(() => {
+    console.log("SCRIPT_RETRIEVAL_INIT", { agentId, hasApiKey: !!apiKey });
     if (!agentId || !apiKey) {
       setScript('');
       setAgentName('');
@@ -17,9 +18,16 @@ export const AgentScriptPanel = ({ agentId, apiKey, availableAgents = [] }) => {
     const displayName = agentId.includes('::') ? agentId.split('::')[0] : 'Agent';
     setAgentName(displayName);
 
+    console.log("SCRIPT_RETRIEVAL_MAPPING", { 
+      originalId: agentId, 
+      mappedBolnaId: actualBolnaId, 
+      displayName 
+    });
+
     // Check if we already have the script in availableAgents (for custom agents)
     const localAgent = availableAgents.find(a => a.id === actualBolnaId);
     if (localAgent && localAgent.script) {
+      console.log("SCRIPT_RETRIEVAL_SOURCE", "Matched in local availableAgents", { scriptLength: localAgent.script.length });
       setScript(localAgent.script);
       setLoading(false);
       return;
@@ -27,16 +35,24 @@ export const AgentScriptPanel = ({ agentId, apiKey, availableAgents = [] }) => {
 
     const fetchScript = async () => {
       setLoading(true);
+      console.log("SCRIPT_RETRIEVAL_FETCH_START", { url: `https://api.bolna.ai/v2/agent/${actualBolnaId}` });
       try {
         const res = await fetch(`https://api.bolna.ai/v2/agent/${actualBolnaId}`, {
           headers: { 'Authorization': `Bearer ${apiKey}` }
         });
+        
+        console.log("SCRIPT_RETRIEVAL_FETCH_STATUS", res.status);
+        
         if (!res.ok) {
+          const errText = await res.text();
+          console.error("SCRIPT_RETRIEVAL_FETCH_ERROR", errText);
           setScript('Unable to fetch agent script.');
           setLoading(false);
           return;
         }
+        
         const data = await res.json();
+        console.log("SCRIPT_RETRIEVAL_FETCH_SUCCESS", { dataKeys: Object.keys(data) });
         
         // Extract prompt from agent_prompts
         let prompt = '';
@@ -44,13 +60,26 @@ export const AgentScriptPanel = ({ agentId, apiKey, availableAgents = [] }) => {
           const keys = Object.keys(data.agent_prompts);
           if (keys.length > 0) {
             prompt = data.agent_prompts[keys[0]]?.prompt || '';
+            if (prompt) console.log("SCRIPT_RETRIEVAL_FOUND", "In agent_prompts");
           }
         }
         
-        // Fallback: check welcome message
+        // Fallback 1: check agent_config.tasks
+        if (!prompt && data.agent_config?.tasks) {
+          const conversationTask = data.agent_config.tasks.find(t => t.task_type === 'conversation');
+          if (conversationTask?.tools_config?.llm_agent?.prompt) {
+            prompt = conversationTask.tools_config.llm_agent.prompt;
+            if (prompt) console.log("SCRIPT_RETRIEVAL_FOUND", "In agent_config.tasks");
+          }
+        }
+        
+        // Fallback 2: check welcome message
         if (!prompt && data.agent_config?.agent_welcome_message) {
           prompt = `Welcome Message: ${data.agent_config.agent_welcome_message}`;
+          if (prompt) console.log("SCRIPT_RETRIEVAL_FOUND", "In welcome_message fallback");
         }
+
+        if (!prompt) console.warn("SCRIPT_RETRIEVAL_NOT_FOUND", "No prompt found in any expected field");
 
         setScript(prompt || 'No script found for this agent.');
       } catch (err) {

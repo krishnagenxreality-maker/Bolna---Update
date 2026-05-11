@@ -361,6 +361,7 @@ export function useBolnaDashboard() {
           // Fetch custom agents and merge
           try {
             const customRes = await axios.get(`${API_BASE_URL}/api/custom-agents/${user.userId}`);
+            console.log("FETCH_CUSTOM_AGENTS", { count: customRes.data.agents?.length });
             if (customRes.data.success && customRes.data.agents) {
               const customAgents = customRes.data.agents.map(a => ({
                 name: a.agent_name,
@@ -371,11 +372,16 @@ export function useBolnaDashboard() {
               }));
               currentAgents = [...currentAgents, ...customAgents];
             }
-          } catch (e) { /* custom agents table may not exist yet */ }
+          } catch (e) { 
+            console.error("FETCH_CUSTOM_AGENTS_ERROR", e);
+          }
 
+          console.log("AVAILABLE_AGENTS_FINAL", currentAgents.map(a => ({ name: a.name, id: a.id, hasScript: !!a.script })));
           setAvailableAgents(currentAgents);
           if (currentAgents.length > 0 && !agentId) {
-            setAgentId(`${currentAgents[0].name}::${currentAgents[0].id}`);
+            const defaultId = `${currentAgents[0].name}::${currentAgents[0].id}`;
+            console.log("AUTO_SELECT_AGENT", defaultId);
+            setAgentId(defaultId);
           }
 
           const contactsRes = await axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`);
@@ -464,20 +470,26 @@ export function useBolnaDashboard() {
   // --- CUSTOM AGENT CREATION (Feature 3/4) ---
   const addCustomAgent = async (agentData) => {
     if (!user || !user.userId) return;
+    console.log("SYNC_CUSTOM_AGENT_START", agentData);
     try {
       const res = await axios.post(`${API_BASE_URL}/api/custom-agents`, {
         userId: user.userId,
         ...agentData
       });
+      console.log("SYNC_CUSTOM_AGENT_RESPONSE", res.data);
       if (res.data.success) {
         const newAgent = {
           name: agentData.agentName,
           id: agentData.bolnaAgentId,
           isCustom: true,
-          scriptType: agentData.scriptType
+          scriptType: agentData.scriptType,
+          script: agentData.script
         };
+        console.log("SYNC_CUSTOM_AGENT_SUCCESS", newAgent);
         setAvailableAgents(prev => [...prev, newAgent]);
-        setAgentId(`${newAgent.name}::${newAgent.id}`);
+        const selectionId = `${newAgent.name}::${newAgent.id}`;
+        console.log("SELECTING_NEW_AGENT", selectionId);
+        setAgentId(selectionId);
       }
     } catch (err) {
       console.error('Failed to save custom agent:', err);

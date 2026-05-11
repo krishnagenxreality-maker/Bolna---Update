@@ -88,52 +88,85 @@ export const CreateAgentModal = ({ isOpen, onClose, apiKey, onAgentCreated }) =>
     setIsCreating(true);
     setError('');
 
+    const payload = {
+      agent_config: {
+        agent_name: agentName.trim(),
+        agent_welcome_message: "Hello! How are you doing today?",
+        agent_type: "other",
+        tasks: [
+          {
+            task_type: "conversation",
+            task_id: "task_0",
+            toolchain: {
+              execution: "parallel",
+              pipelines: [["transcriber", "llm", "synthesizer"]]
+            },
+            tools_config: {
+              llm_agent: {
+                model: "gpt-3.5-turbo",
+                max_tokens: 100,
+                family: "openai"
+              },
+              synthesizer: {
+                model: "elevenlabs",
+                voice: "Rachel",
+                voice_id: "21m00Tcm4TlvDq8ikWAM"
+              },
+              transcriber: {
+                model: "deepgram",
+                language: "en"
+              }
+            },
+            task_config: {
+              hangup_after_silence: 10,
+              incremental_delay: 400,
+              number_of_words_for_interruption: 2
+            }
+          }
+        ]
+      },
+      agent_prompts: {
+        task_0: {
+          prompt: script
+        }
+      }
+    };
+
+    console.log("CREATE_AGENT_REQUEST", {
+      endpoint: 'https://api.bolna.ai/v2/agent',
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey.slice(0, 8)}...` },
+      payload: payload
+    });
+
     try {
-      // Create agent via Bolna API v2
       const bolnaRes = await fetch('https://api.bolna.ai/v2/agent', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          agent_config: {
-            agent_name: agentName.trim(),
-            agent_welcome_message: "Hello! How are you doing today?",
-            agent_type: "other",
-            tasks: [
-              {
-                task_type: "conversation",
-                task_id: "task_0",
-                task_config: {
-                  hangup_after_silence: 10,
-                  incremental_delay: 400,
-                  number_of_words_for_interruption: 2
-                }
-              }
-            ]
-          },
-          agent_prompts: {
-            task_0: {
-              prompt: script
-            }
-          }
-        })
+        body: JSON.stringify(payload)
       });
 
+      console.log("CREATE_AGENT_RESPONSE_STATUS", bolnaRes.status);
+      
+      const resText = await bolnaRes.text();
+      console.log("CREATE_AGENT_RESPONSE_BODY", resText);
+
       if (!bolnaRes.ok) {
-        const errText = await bolnaRes.text();
-        throw new Error(`Bolna API error: ${errText.slice(0, 200)}`);
+        throw new Error(`Bolna API error: ${resText.slice(0, 500)}`);
       }
 
-      const bolnaData = await bolnaRes.json();
+      const bolnaData = JSON.parse(resText);
       const bolnaAgentId = bolnaData.agent_id || bolnaData.id;
+
+      console.log("CREATE_AGENT_SUCCESS", { bolnaAgentId });
 
       if (!bolnaAgentId) {
         throw new Error('No agent ID returned from Bolna API');
       }
 
-      // Callback to parent with agent data
       await onAgentCreated({
         agentName: agentName.trim(),
         script: script,
