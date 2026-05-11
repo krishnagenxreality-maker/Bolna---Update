@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { SmokeBackground } from '../layout/SmokeBackground';
 import {
   Shield, LogIn, ArrowRight, CheckCircle2,
   Users, BarChart3, Zap, X, PhoneCall, TrendingUp,
@@ -38,21 +37,6 @@ const SCROLL_STYLES = `
   .scroll-reveal-right { animation: fadeSlideRight 0.6s cubic-bezier(0.16,1,0.3,1) both; }
   .scroll-scale { animation: scaleIn 0.55s cubic-bezier(0.16,1,0.3,1) both; }
   .sector-tab-active { position: relative; }
-  /* ── Animated BG ── */
-  @keyframes phoneRing    { 0%,100%{ transform:rotate(-8deg) scale(1);   } 50%{ transform:rotate(8deg) scale(1.04); } }
-  @keyframes signalPulse  { 0%{ transform:scale(1); opacity:0.7; } 100%{ transform:scale(2.8); opacity:0; } }
-  @keyframes dataFloat    { 0%{ transform:translateY(0px) rotate(0deg); opacity:0.7; } 100%{ transform:translateY(-110vh) rotate(360deg); opacity:0; } }
-  @keyframes lineGrow     { 0%{ stroke-dashoffset:600; opacity:0; } 100%{ stroke-dashoffset:0; opacity:0.18; } }
-  @keyframes dotPing      { 0%{ transform:scale(1); opacity:1; } 100%{ transform:scale(3); opacity:0; } }
-  @keyframes callFlash    { 0%,100%{ opacity:0.06; } 50%{ opacity:0.13; } }
-  @keyframes orbitSpin    { from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
-  @keyframes waveRing     { 0%{ transform:translate(-50%,-50%) scale(0.8); opacity:0.5; } 100%{ transform:translate(-50%,-50%) scale(2.2); opacity:0; } }
-  @keyframes textReveal   { from{ opacity:0; transform:translateX(12px); } to{ opacity:1; transform:translateX(0); } }
-  @keyframes barPulse     { 0%,100%{ height:6px; } 50%{ height:28px; } }
-  @keyframes cardFloat    { 0%,100%{ transform:translateY(0px) rotate(-1deg); } 50%{ transform:translateY(-12px) rotate(1deg); } }
-  @keyframes networkPulse { 0%,100%{ opacity:0.03; } 50%{ opacity:0.09; } }
-  @keyframes scrollScene  { 0%{ opacity:1; } 100%{ opacity:0; } }
-
   .sector-tab-active::after {
     content: '';
     position: absolute;
@@ -64,265 +48,6 @@ const SCROLL_STYLES = `
   }
 `;
 
-
-/* ─────────────────────────────────────────
-   ANIMATED CALLING BACKGROUND — scroll-driven
-───────────────────────────────────────── */
-function AnimatedCallingBG({ scrollProgress }) {
-  const canvasRef = useRef(null);
-  const animRef   = useRef(null);
-  const timeRef   = useRef(0);
-
-  // Scroll-driven "scene" index: 0=hero,1=features,2=agents,3=workflow,4=cta
-  const scene = Math.min(4, Math.floor(scrollProgress / 20));
-  const sceneProgress = (scrollProgress % 20) / 20; // 0-1 within each scene
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-
-    const resize = () => {
-      canvas.width  = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resize();
-    window.addEventListener('resize', resize);
-
-    // ── Particle pool ──
-    const PARTICLE_COUNT = 55;
-    const particles = Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      vx: (Math.random() - 0.5) * 0.35,
-      vy: -Math.random() * 0.6 - 0.2,
-      size: Math.random() * 2.5 + 0.5,
-      opacity: Math.random() * 0.35 + 0.05,
-      life: Math.random(),
-      maxLife: Math.random() * 200 + 80,
-      color: ['#a78bfa','#34d399','#60a5fa','#fbbf24','#f87171','#2dd4bf'][i % 6],
-      shape: i % 3, // 0=circle, 1=square, 2=ring
-    }));
-
-    // ── Call card seeds ──
-    const CARDS = [
-      { x: 0.12, y: 0.28, label: 'Student Enrolled', sub: 'Admissions Agent', col: '#a78bfa', icon: '🎓' },
-      { x: 0.78, y: 0.18, label: 'EMI Confirmed',    sub: 'BFSI Agent',       col: '#fbbf24', icon: '🏦' },
-      { x: 0.08, y: 0.62, label: 'Site Visit Booked',sub: 'Real Estate Agent', col: '#fb923c', icon: '🏠' },
-      { x: 0.82, y: 0.58, label: 'Order Recovered',  sub: 'Ecommerce Agent',  col: '#34d399', icon: '🛒' },
-      { x: 0.50, y: 0.82, label: 'Appt Confirmed',   sub: 'HealthTech Agent', col: '#38bdf8', icon: '💊' },
-      { x: 0.30, y: 0.46, label: 'Booking Done',     sub: 'Hospitality Agent',col: '#f87171', icon: '🏨' },
-    ];
-
-    // ── Waveform state ──
-    const wfBars = Array.from({ length: 38 }, () => ({ h: Math.random(), target: Math.random(), spd: 0.05 + Math.random()*0.05 }));
-
-    // ── Network nodes ──
-    const NODES = Array.from({ length: 7 }, (_, i) => ({
-      x: (0.1 + (i % 3) * 0.38 + Math.random()*0.12) * window.innerWidth,
-      y: (0.15 + Math.floor(i / 3) * 0.35 + Math.random()*0.15) * window.innerHeight,
-      vx: (Math.random()-0.5)*0.25,
-      vy: (Math.random()-0.5)*0.25,
-      r: 2.5 + Math.random()*2,
-    }));
-
-    const draw = (ts) => {
-      timeRef.current = ts * 0.001;
-      const t = timeRef.current;
-      const W = canvas.width;
-      const H = canvas.height;
-      const sp = scrollProgress / 100; // 0-1 overall
-
-      ctx.clearRect(0, 0, W, H);
-
-      // ── base vignette ──
-      const vg = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W*0.75);
-      vg.addColorStop(0, 'rgba(0,0,0,0)');
-      vg.addColorStop(1, 'rgba(0,0,0,0.55)');
-      ctx.fillStyle = vg;
-      ctx.fillRect(0, 0, W, H);
-
-      // ── Network graph (nodes + edges) ──
-      NODES.forEach(n => {
-        n.x += n.vx; n.y += n.vy;
-        if (n.x < 0 || n.x > W) n.vx *= -1;
-        if (n.y < 0 || n.y > H) n.vy *= -1;
-      });
-      ctx.save();
-      ctx.globalAlpha = 0.07 + sp * 0.04;
-      NODES.forEach((a, i) => {
-        NODES.forEach((b, j) => {
-          if (j <= i) return;
-          const d = Math.hypot(a.x-b.x, a.y-b.y);
-          if (d > W * 0.38) return;
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.strokeStyle = `rgba(255,255,255,${0.06*(1-d/(W*0.38))})`;
-          ctx.lineWidth = 0.7;
-          ctx.stroke();
-        });
-        ctx.beginPath();
-        ctx.arc(a.x, a.y, a.r, 0, Math.PI*2);
-        ctx.fillStyle = 'rgba(255,255,255,0.15)';
-        ctx.fill();
-      });
-      ctx.restore();
-
-      // ── Particles ──
-      particles.forEach(p => {
-        p.life++;
-        p.x += p.vx + Math.sin(t * 0.5 + p.life * 0.01) * 0.2;
-        p.y += p.vy;
-        if (p.life > p.maxLife || p.y < -20) {
-          p.x = Math.random() * W;
-          p.y = H + 10;
-          p.life = 0;
-          p.maxLife = Math.random() * 200 + 80;
-          p.opacity = Math.random() * 0.35 + 0.05;
-        }
-        const lifeRatio = p.life / p.maxLife;
-        const alpha = p.opacity * (lifeRatio < 0.1 ? lifeRatio*10 : lifeRatio > 0.8 ? (1-lifeRatio)*5 : 1);
-        ctx.save();
-        ctx.globalAlpha = alpha * 0.7;
-        ctx.fillStyle = p.color;
-        if (p.shape === 0) {
-          ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
-        } else if (p.shape === 1) {
-          ctx.fillRect(p.x - p.size, p.y - p.size, p.size*2, p.size*2);
-        } else {
-          ctx.beginPath(); ctx.arc(p.x, p.y, p.size*1.4, 0, Math.PI*2);
-          ctx.strokeStyle = p.color; ctx.lineWidth = 0.8; ctx.stroke();
-        }
-        ctx.restore();
-      });
-
-      // ── Waveform bar ribbon (horizontal center) ──
-      ctx.save();
-      const wfW = W * 0.4;
-      const wfX = (W - wfW) / 2;
-      const wfY = H * 0.5;
-      const barW = wfW / (wfBars.length * 1.7);
-      wfBars.forEach((bar, i) => {
-        bar.target = 0.15 + Math.abs(Math.sin(t * 2.2 + i * 0.45)) * 0.85;
-        bar.h += (bar.target - bar.h) * bar.spd;
-        const bh = bar.h * 32 + 4;
-        const bx = wfX + i * (barW + 3);
-        const gradient = ctx.createLinearGradient(0, wfY - bh, 0, wfY + bh);
-        gradient.addColorStop(0, 'rgba(167,139,250,0.35)');
-        gradient.addColorStop(0.5, 'rgba(52,211,153,0.5)');
-        gradient.addColorStop(1, 'rgba(167,139,250,0.35)');
-        ctx.globalAlpha = 0.18 + sp * 0.12;
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.roundRect(bx, wfY - bh/2, barW, bh, 2);
-        ctx.fill();
-      });
-      ctx.restore();
-
-      // ── Signal pulse rings (center) ──
-      [0, 0.33, 0.66].forEach((offset, i) => {
-        const phase = ((t * 0.4 + offset) % 1);
-        const radius = phase * Math.min(W, H) * 0.36;
-        ctx.save();
-        ctx.globalAlpha = (1 - phase) * 0.07;
-        ctx.beginPath();
-        ctx.arc(W/2, H/2, radius, 0, Math.PI*2);
-        ctx.strokeStyle = 'rgba(167,139,250,1)';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.restore();
-      });
-
-      // ── Floating call result "notification" cards (subtle, ghost-like) ──
-      CARDS.forEach((card, ci) => {
-        const floatY2 = Math.sin(t * 0.45 + ci * 1.1) * 7;
-        const floatX2 = Math.cos(t * 0.3 + ci * 0.8) * 4;
-        const cx2 = card.x * W + floatX2;
-        const cy2 = card.y * H + floatY2;
-        const cardW = 168, cardH = 44;
-        const alpha = 0.055 + Math.abs(Math.sin(t * 0.2 + ci)) * 0.04;
-
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.shadowColor = card.col;
-        ctx.shadowBlur = 12;
-
-        // card bg
-        ctx.beginPath();
-        ctx.roundRect(cx2 - cardW/2, cy2 - cardH/2, cardW, cardH, 10);
-        ctx.fillStyle = 'rgba(15,15,20,0.9)';
-        ctx.fill();
-        ctx.strokeStyle = card.col + '55';
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-
-        ctx.globalAlpha = alpha * 2.5;
-        ctx.shadowBlur = 0;
-
-        // dot
-        ctx.beginPath();
-        ctx.arc(cx2 - cardW/2 + 14, cy2, 4, 0, Math.PI*2);
-        ctx.fillStyle = card.col;
-        ctx.fill();
-
-        // text
-        ctx.font = 'bold 10px Outfit, sans-serif';
-        ctx.fillStyle = '#fff';
-        ctx.fillText(card.label, cx2 - cardW/2 + 24, cy2 - 4);
-        ctx.font = '8.5px Outfit, sans-serif';
-        ctx.fillStyle = card.col;
-        ctx.fillText(card.sub, cx2 - cardW/2 + 24, cy2 + 8);
-
-        ctx.restore();
-      });
-
-      // ── Scroll-driven scene overlay text (very subtle) ──
-      const sceneLabels = [
-        { text: 'AI is calling...', sub: 'Intelligent outreach, 24/7' },
-        { text: 'Qualifying leads...', sub: 'Real-time intent scoring' },
-        { text: 'Agents deployed', sub: '6 industries covered' },
-        { text: 'Workflows running', sub: 'Zero manual effort' },
-        { text: 'Revenue growing', sub: 'Scale without limits' },
-      ];
-      const sl = sceneLabels[scene] || sceneLabels[0];
-      const textAlpha = Math.min(1, Math.sin(sceneProgress * Math.PI)) * 0.07;
-      ctx.save();
-      ctx.globalAlpha = textAlpha;
-      ctx.font = `bold ${Math.min(W * 0.065, 72)}px Outfit, sans-serif`;
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center';
-      ctx.fillText(sl.text, W/2, H * 0.92);
-      ctx.font = `${Math.min(W * 0.022, 22)}px Outfit, sans-serif`;
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
-      ctx.fillText(sl.sub, W/2, H * 0.92 + 30);
-      ctx.restore();
-
-      animRef.current = requestAnimationFrame(draw);
-    };
-
-    animRef.current = requestAnimationFrame(draw);
-    return () => {
-      cancelAnimationFrame(animRef.current);
-      window.removeEventListener('resize', resize);
-    };
-  }, [scrollProgress, scene]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 0,
-        pointerEvents: 'none',
-        width: '100%',
-        height: '100%',
-        opacity: 0.9,
-      }}
-    />
-  );
-}
 
 /* ─────────────────────────────────────────
    HOOKS
@@ -340,21 +65,6 @@ function useInView(options = {}) {
     return () => obs.disconnect();
   }, []);
   return [ref, inView];
-}
-
-function useScrollProgress() {
-  const [progress, setProgress] = useState(0);
-  useEffect(() => {
-    const onScroll = () => {
-      const el = document.documentElement;
-      const scrolled = el.scrollTop;
-      const total = el.scrollHeight - el.clientHeight;
-      setProgress(total > 0 ? (scrolled / total) * 100 : 0);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-  return progress;
 }
 
 function useParallax(speed = 0.3) {
@@ -725,7 +435,6 @@ export default function HomePage() {
   const [heroVisible, setHeroVisible] = useState(false);
 
   /* scroll + parallax + spotlight */
-  const scrollProgress = useScrollProgress();
   const heroParallax = useParallax(0.18);
   const { pos: spotPos, active: spotActive } = useMouseSpotlight();
 
@@ -800,11 +509,6 @@ export default function HomePage() {
     <div className="app" style={{ overflowX: 'hidden' }}>
       <style dangerouslySetInnerHTML={{ __html: SCROLL_STYLES }} />
 
-      {/* ── Scroll progress bar ── */}
-      <div style={{ position: 'fixed', top: 0, left: 0, zIndex: 999, height: '2px', width: `${scrollProgress}%`, background: 'linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.5), rgba(255,255,255,0.15))', transition: 'width 0.1s linear', boxShadow: '0 0 8px rgba(255,255,255,0.3)', pointerEvents: 'none' }} />
-
-      <div style={{ position:"fixed", inset:0, zIndex:0, pointerEvents:"none" }}><SmokeBackground /></div>
-      <AnimatedCallingBG scrollProgress={scrollProgress} />
       {showDemoModal && <RequestDemoModal onClose={() => setShowDemoModal(false)} />}
 
       {/* ── Mouse spotlight ── */}
@@ -820,7 +524,41 @@ export default function HomePage() {
           <div className="hdr-badge" style={{ marginLeft: '12px' }}>by GenxReality</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          <button onClick={() => navigate('/pricing')} className="nav-link" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'Outfit', fontWeight: '500' }}>Pricing</button>
+          <button
+              onClick={() => navigate('/pricing')}
+              className="nav-link"
+              style={{
+                background: 'linear-gradient(135deg, rgba(167,139,250,0.15), rgba(52,211,153,0.15))',
+                border: '1px solid rgba(167,139,250,0.45)',
+                color: '#c4b5fd',
+                cursor: 'pointer',
+                fontFamily: 'Outfit',
+                fontWeight: '600',
+                fontSize: '14px',
+                padding: '7px 18px',
+                borderRadius: '8px',
+                letterSpacing: '0.02em',
+                boxShadow: '0 0 16px rgba(167,139,250,0.25), inset 0 1px 0 rgba(255,255,255,0.08)',
+                transition: 'all 0.25s ease',
+                position: 'relative',
+                overflow: 'hidden',
+                animation: 'glowPulse 3s ease-in-out infinite',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(167,139,250,0.28), rgba(52,211,153,0.22))';
+                e.currentTarget.style.boxShadow = '0 0 28px rgba(167,139,250,0.45), inset 0 1px 0 rgba(255,255,255,0.12)';
+                e.currentTarget.style.borderColor = 'rgba(167,139,250,0.7)';
+                e.currentTarget.style.color = '#ddd6fe';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(167,139,250,0.15), rgba(52,211,153,0.15))';
+                e.currentTarget.style.boxShadow = '0 0 16px rgba(167,139,250,0.25), inset 0 1px 0 rgba(255,255,255,0.08)';
+                e.currentTarget.style.borderColor = 'rgba(167,139,250,0.45)';
+                e.currentTarget.style.color = '#c4b5fd';
+              }}
+            >
+              ✦ Pricing
+            </button>
           <button onClick={() => navigate('/login', { state: { from: '/' } })} className="logout-btn" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 20px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontFamily: 'Outfit, sans-serif', fontSize: '14px', fontWeight: '500', transition: 'all 0.2s' }}>
             <LogIn size={16} /> Login
           </button>
