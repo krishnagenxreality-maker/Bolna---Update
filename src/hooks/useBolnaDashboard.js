@@ -30,6 +30,7 @@ export function useBolnaDashboard() {
   const [searchDate, setSearchDate] = useState(new Date().toISOString().split('T')[0]);
   const [credits, setCredits] = useState(0);
   const [scheduledJobs, setScheduledJobs] = useState([]);
+  const [callStartTime, setCallStartTime] = useState(null);
 
   // --- REFS ---
   const contactsRef  = useRef([]);
@@ -93,6 +94,7 @@ export function useBolnaDashboard() {
       setSessionContacts([]); 
       setDoneSummary(`${doneCount} call(s) completed successfully${failedCount > 0 ? `, ${failedCount} failed` : ""}.`);
       setIsCalling(false);
+      setCallStartTime(null);
       addLog(`All done. ${doneCount} called, ${failedCount} failed.`, "ok");
       
       if (user && user.userId) {
@@ -269,6 +271,7 @@ export function useBolnaDashboard() {
     setIsCalling(true);
     setShowProgress(true);
     setShowDone(false);
+    setCallStartTime(new Date());
     
     const activeContacts = contactsRef.current.filter(c => c.agentId === agentId);
     callQueueRef.current = activeContacts.filter(c => c.status === "pending" || c.status === "failed").map(c => c.id);
@@ -285,6 +288,7 @@ export function useBolnaDashboard() {
     }
     callQueueRef.current = [];
     setIsCalling(false);
+    setCallStartTime(null);
     addLog("Calling process stopped by user. Upcoming queued calls cancelled.", "info");
   };
 
@@ -343,23 +347,33 @@ export function useBolnaDashboard() {
               if (typeof raw === 'string' && (raw.startsWith('[') || raw.startsWith('{'))) {
                 const parsed = JSON.parse(raw);
                 currentAgents = Array.isArray(parsed) ? parsed : [parsed];
-                setAvailableAgents(currentAgents);
-                if (currentAgents.length > 0) setAgentId(`${currentAgents[0].name}::${currentAgents[0].id}`);
               } else {
                 const legacyAgent = { name: 'Default Agent', id: raw };
                 currentAgents = [legacyAgent];
-                setAvailableAgents(currentAgents);
-                setAgentId(`Default Agent::${raw}`);
               }
             } catch (e) {
               const legacyAgent = { name: 'Default Agent', id: raw };
               currentAgents = [legacyAgent];
-              setAvailableAgents(currentAgents);
-              setAgentId(`Default Agent::${raw}`);
             }
-          } else {
-             setAvailableAgents([]);
-             setAgentId('');
+          }
+
+          // Fetch custom agents and merge
+          try {
+            const customRes = await axios.get(`${API_BASE_URL}/api/custom-agents/${user.userId}`);
+            if (customRes.data.success && customRes.data.agents) {
+              const customAgents = customRes.data.agents.map(a => ({
+                name: a.agent_name,
+                id: a.bolna_agent_id,
+                isCustom: true,
+                scriptType: a.script_type
+              }));
+              currentAgents = [...currentAgents, ...customAgents];
+            }
+          } catch (e) { /* custom agents table may not exist yet */ }
+
+          setAvailableAgents(currentAgents);
+          if (currentAgents.length > 0 && !agentId) {
+            setAgentId(`${currentAgents[0].name}::${currentAgents[0].id}`);
           }
 
           const contactsRes = await axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`);
@@ -445,6 +459,54 @@ export function useBolnaDashboard() {
   const failed  = displayContacts.filter(c => c.status === "failed").length;
   const pct     = total > 0 ? Math.round(((done + failed) / total) * 100) : 0;
 
+  // --- CUSTOM AGENT CREATION (Feature 3/4) ---
+  const addCustomAgent = async (agentData) => {
+    if (!user || !user.userId) return;
+    try {
+      const res = await axios.post(`${API_BASE_URL}/api/custom-agents`, {
+        userId: user.userId,
+        ...agentData
+      });
+      if (res.data.success) {
+        const newAgent = {
+          name: agentData.agentName,
+          id: agentData.bolnaAgentId,
+          isCustom: true,
+          scriptType: agentData.scriptType
+        };
+        setAvailableAgents(prev => [...prev, newAgent]);
+        setAgentId(`${newAgent.name}::${newAgent.id}`);
+      }
+    } catch (err) {
+      console.error('Failed to save custom agent:', err);
+      throw err;
+    }
+  };
+
+  // --- RETRY CALLS (Feature 6) ---
+  const retryCalls = async (contactIds) => {
+    if (!apiKey || !agentId || isCalling) return;
+    
+    // Reset selected contacts to pending
+    const updated = contactsRef.current.map(c =>
+      contactIds.includes(c.id) ? { ...c, status: 'pending', response: '', leadCategory: '', summary: '' } : c
+    );
+    contactsRef.current = updated;
+    setContacts(updated);
+    
+    const retryContacts = updated.filter(c => contactIds.includes(c.id));
+    setSessionContacts(retryContacts);
+    
+    setIsCalling(true);
+    setShowProgress(true);
+    setShowDone(false);
+    setCallStartTime(new Date());
+    
+    callQueueRef.current = contactIds;
+    addLog(`Retrying ${contactIds.length} call(s)...`, 'info');
+    await dispatchNextBatch(apiKey, agentId);
+  };
+
   return {
     apiKey, setApiKey,
     agentId, setAgentId,
@@ -464,11 +526,14 @@ export function useBolnaDashboard() {
     handleFile,
     startCalling,
     stopCalling,
-    availableAgents,
+    availableAgents, setAvailableAgents,
     stats: { total, done, active, failed, pct },
     credits,
     scheduledJobs,
     deleteScheduledJob,
-    fetchScheduledJobs
+    fetchScheduledJobs,
+    callStartTime,
+    addCustomAgent,
+    retryCalls
   };
 }

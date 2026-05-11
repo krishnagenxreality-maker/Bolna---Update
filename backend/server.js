@@ -751,101 +751,200 @@ app.post('/api/education/attendance/:userId', async (req, res) => {
 
 // --- SCHEDULED CALLS ---
 
-const JOBS_FILE = path.join(__dirname, 'scheduled_jobs.json');
-
-const loadJobs = () => {
-  if (!fs.existsSync(JOBS_FILE)) return [];
-  try {
-    return JSON.parse(fs.readFileSync(JOBS_FILE, 'utf8'));
-  } catch (e) {
-    return [];
-  }
+// Helper to map DB row to API response (snake to camel) for jobs
+const mapJob = (job) => {
+  if (!job) return null;
+  const { user_id, campaign_title, agent_id, agent_name, scheduled_at, api_key, created_at, ...rest } = job;
+  return {
+    ...rest,
+    userId: user_id,
+    campaignTitle: campaign_title,
+    agentId: agent_id,
+    agentName: agent_name,
+    scheduledAt: scheduled_at,
+    apiKey: api_key,
+    createdAt: created_at
+  };
 };
 
-const saveJobs = (jobs) => {
-  fs.writeFileSync(JOBS_FILE, JSON.stringify(jobs, null, 2));
-};
-
-app.get('/api/schedule/:userId', (req, res) => {
+app.get('/api/schedule/:userId', async (req, res) => {
   const { userId } = req.params;
-  const jobs = loadJobs().filter(j => j.userId === userId);
-  res.json({ success: true, jobs });
+  try {
+    const { data: jobs, error } = await supabase
+      .from('scheduled_jobs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, jobs: jobs.map(mapJob) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
-app.post('/api/schedule', (req, res) => {
+app.post('/api/schedule', async (req, res) => {
   const { userId, campaignTitle, agentId, agentName, contacts, scheduledAt, apiKey } = req.body;
   
   if (!userId || !agentId || !contacts || !scheduledAt || !apiKey) {
     return res.status(400).json({ success: false, message: 'Missing required fields' });
   }
 
-  const jobs = loadJobs();
-  const newJob = {
+  const newJobToInsert = {
     id: Date.now().toString(),
-    userId,
-    campaignTitle: campaignTitle || 'Untitled Campaign',
-    agentId,
-    agentName: agentName || 'Default Agent',
-    contacts,
-    scheduledAt, // ISO format
-    apiKey,
+    user_id: userId,
+    campaign_title: campaignTitle || 'Untitled Campaign',
+    agent_id: agentId,
+    agent_name: agentName || 'Default Agent',
+    contacts: contacts,
+    scheduled_at: scheduledAt,
+    api_key: apiKey,
     status: 'Scheduled',
-    createdAt: new Date().toISOString()
+    created_at: new Date().toISOString()
   };
 
-  jobs.push(newJob);
-  saveJobs(jobs);
-  res.json({ success: true, job: newJob });
+  try {
+    const { data, error } = await supabase
+      .from('scheduled_jobs')
+      .insert([newJobToInsert])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, job: mapJob(data) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
-app.delete('/api/schedule/:id', (req, res) => {
+app.delete('/api/schedule/:id', async (req, res) => {
   const { id } = req.params;
-  let jobs = loadJobs();
-  const initialCount = jobs.length;
-  jobs = jobs.filter(j => j.id !== id);
-  
-  if (jobs.length === initialCount) {
-    return res.status(404).json({ success: false, message: 'Job not found' });
+  try {
+    const { error } = await supabase
+      .from('scheduled_jobs')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    res.json({ success: true, message: 'Job deleted' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-  
-  saveJobs(jobs);
-  res.json({ success: true, message: 'Job deleted' });
 });
 
 // Background Watcher Engine
 const startScheduler = () => {
   setInterval(async () => {
-    const jobs = loadJobs();
-    const now = new Date();
-    let changed = false;
+    try {
+      const now = new Date().toISOString();
+      
+      const { data: jobsToRun, error: fetchError } = await supabase
+        .from('scheduled_jobs')
+        .select('*')
+        .eq('status', 'Scheduled')
+        .lte('scheduled_at', now);
 
-    for (let job of jobs) {
-      if (job.status === 'Scheduled' && new Date(job.scheduledAt) <= now) {
-        job.status = 'Running';
-        changed = true;
-        saveJobs(jobs); // Save immediate status change
+      if (fetchError) throw fetchError;
 
-        console.log(`[Scheduler] Job ${job.id} (${job.campaignTitle}) triggered for user ${job.userId}. Frontend will handle execution.`);
+      if (jobsToRun && jobsToRun.length > 0) {
+        const jobIds = jobsToRun.map(j => j.id);
+        
+        const { error: updateError } = await supabase
+          .from('scheduled_jobs')
+          .update({ status: 'Running' })
+          .in('id', jobIds);
+
+        if (updateError) throw updateError;
+
+        for (let job of jobsToRun) {
+          console.log(`[Scheduler] Job ${job.id} (${job.campaign_title}) triggered for user ${job.user_id}. Frontend will handle execution.`);
+        }
       }
+    } catch (err) {
+      console.error('[Scheduler Error]:', err.message);
     }
-
-    if (changed) saveJobs(jobs);
   }, 30000); // Check every 30 seconds
 };
 
 startScheduler();
 
 // Update Job Status
-app.post('/api/schedule/status', (req, res) => {
+app.post('/api/schedule/status', async (req, res) => {
   const { jobId, status } = req.body;
-  const jobs = loadJobs();
-  const job = jobs.find(j => j.id === jobId);
-  if (job) {
-    job.status = status;
-    saveJobs(jobs);
-    res.json({ success: true, status: job.status });
-  } else {
-    res.status(404).json({ success: false, message: 'Job not found' });
+  try {
+    const { data, error } = await supabase
+      .from('scheduled_jobs')
+      .update({ status })
+      .eq('id', jobId)
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+    
+    res.json({ success: true, status: data.status });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+// --- CUSTOM AGENTS ---
+
+app.get('/api/custom-agents/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('custom_agents')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, agents: data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/custom-agents', async (req, res) => {
+  const { userId, agentName, script, scriptType, bolnaAgentId } = req.body;
+  
+  if (!userId || !agentName || !script || !bolnaAgentId) {
+    return res.status(400).json({ success: false, message: 'Missing required fields' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('custom_agents')
+      .insert([{
+        user_id: userId,
+        agent_name: agentName,
+        script: script,
+        script_type: scriptType || 'manual',
+        bolna_agent_id: bolnaAgentId
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, agent: data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin: Get all custom agents across all users
+app.get('/api/custom-agents-all', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('custom_agents')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, agents: data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

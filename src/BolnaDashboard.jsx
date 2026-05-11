@@ -17,6 +17,8 @@ import { ActionBar } from './components/dashboard/ActionBar';
 import { ProgressPanel } from './components/dashboard/ProgressPanel';
 import { DoneBanner } from './components/dashboard/DoneBanner';
 import { CompletionModal } from './components/dashboard/CompletionModal';
+import { AgentScriptPanel } from './components/dashboard/AgentScriptPanel';
+import { CreateAgentModal } from './components/dashboard/CreateAgentModal';
 
 // Other Views
 import { CallDetailsView } from './components/details/CallDetailsView';
@@ -52,11 +54,16 @@ export default function BolnaDashboard() {
     stats,
     credits,
     scheduledJobs,
-    deleteScheduledJob
+    deleteScheduledJob,
+    callStartTime,
+    addCustomAgent,
+    retryCalls,
+    setAvailableAgents
   } = useBolnaDashboard();
 
   // Local state for Call Manager scheduling UI
   const [campaignTitle, setCampaignTitle] = useState('');
+  const [showCreateAgentModal, setShowCreateAgentModal] = useState(false);
   const [scheduleDate, setScheduleDate] = useState(searchDate || new Date().toISOString().split('T')[0]);
   const [scheduleTime, setScheduleTime] = useState(() => {
     const now = new Date();
@@ -154,14 +161,23 @@ export default function BolnaDashboard() {
                         <Users size={14} />
                         Select Agent
                       </label>
-                      {availableAgents.length > 1 ? (
+                      {availableAgents.length > 0 ? (
                         <Dropdown
                           value={agentId}
-                          onChange={(val) => setAgentId(val)}
-                          options={availableAgents.map(agent => ({
-                            label: agent.name,
-                            value: `${agent.name}::${agent.id}`
-                          }))}
+                          onChange={(val) => {
+                            if (val === '__other__') {
+                              setShowCreateAgentModal(true);
+                            } else {
+                              setAgentId(val);
+                            }
+                          }}
+                          options={[
+                            ...availableAgents.map(agent => ({
+                              label: agent.name,
+                              value: `${agent.name}::${agent.id}`
+                            })),
+                            { label: '＋ Other (Create Agent)', value: '__other__' }
+                          ]}
                         />
                       ) : (
                         <div className="field-input read-only" style={{ 
@@ -209,6 +225,9 @@ export default function BolnaDashboard() {
                     <div className="mgr-section">
                       <UploadPanel handleFile={handleFileWithTracking} />
                     </div>
+
+                    {/* Agent Script Panel */}
+                    <AgentScriptPanel agentId={agentId} apiKey={apiKey} />
 
                     {/* Uploaded Sheets Info */}
                     {uploadCount > 0 && (
@@ -264,7 +283,7 @@ export default function BolnaDashboard() {
                       </div>
                     </div>
 
-                    <CallFlowVisualization contacts={sessionContacts} agentId={agentId} isCalling={isCalling} />
+                    <CallFlowVisualization contacts={sessionContacts} agentId={agentId} isCalling={isCalling} callStartTime={callStartTime} />
                   </div>
                 </div>
 
@@ -328,6 +347,8 @@ export default function BolnaDashboard() {
                 doneSummary={doneSummary}
                 activeView={activeView}
                 setActiveView={setActiveView}
+                onRetryCalls={retryCalls}
+                isCalling={isCalling}
               />
             )}
 
@@ -369,6 +390,14 @@ export default function BolnaDashboard() {
           </main>
         </div>
       </div>
+
+      {/* Create Agent Modal */}
+      <CreateAgentModal
+        isOpen={showCreateAgentModal}
+        onClose={() => setShowCreateAgentModal(false)}
+        apiKey={apiKey}
+        onAgentCreated={addCustomAgent}
+      />
     </div>
   );
 }
