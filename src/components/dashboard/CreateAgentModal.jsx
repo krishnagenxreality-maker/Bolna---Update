@@ -70,10 +70,14 @@ export const CreateAgentModal = ({ isOpen, onClose, apiKey, onAgentCreated }) =>
   };
 
   const handleCreate = async () => {
+    setIsCreating(true);
+    setError('');
+
     const script = scriptMode === 'manual' ? manualScript : aiGeneratedScript;
 
     if (!agentName.trim()) {
-      setError('Please enter an agent name.');
+      setError('Please provide an Agent Name.');
+      setIsCreating(false);
       return;
     }
     if (!script.trim()) {
@@ -82,11 +86,21 @@ export const CreateAgentModal = ({ isOpen, onClose, apiKey, onAgentCreated }) =>
     }
     if (!apiKey) {
       setError('No Bolna API key found. Please contact admin.');
+      setIsCreating(false);
       return;
     }
 
-    setIsCreating(true);
-    setError('');
+    // Frontend Validation
+    if (!agentName.trim()) {
+      setError('Please provide an Agent Name.');
+      setIsCreating(false);
+      return;
+    }
+    if (!script.trim()) {
+      setError('Please provide or generate a script first.');
+      setIsCreating(false);
+      return;
+    }
 
     const payload = {
       agent_config: {
@@ -99,18 +113,24 @@ export const CreateAgentModal = ({ isOpen, onClose, apiKey, onAgentCreated }) =>
             task_id: "task_0",
             toolchain: {
               execution: "parallel",
-              pipelines: [["transcriber", "llm", "synthesizer"]]
+              pipelines: [["transcriber", "llm", "voice"]]
             },
             tools_config: {
               llm_agent: {
-                model: "gpt-3.5-turbo",
-                max_tokens: 100,
-                family: "openai"
+                agent_flow_type: "streaming",
+                agent_type: "conversation",
+                llm_config: {
+                  model: "gpt-3.5-turbo",
+                  max_tokens: 100,
+                  family: "openai"
+                }
               },
-              synthesizer: {
-                model: "elevenlabs",
-                voice: "Rachel",
-                voice_id: "21m00Tcm4TlvDq8ikWAM"
+              voice: {
+                provider: "elevenlabs",
+                provider_config: {
+                  voice: "Rachel",
+                  voice_id: "21m00Tcm4TlvDq8ikWAM"
+                }
               },
               transcriber: {
                 model: "deepgram",
@@ -155,7 +175,18 @@ export const CreateAgentModal = ({ isOpen, onClose, apiKey, onAgentCreated }) =>
       console.log("CREATE_AGENT_RESPONSE_BODY", resText);
 
       if (!bolnaRes.ok) {
-        throw new Error(`Bolna API error: ${resText.slice(0, 500)}`);
+        let errorMessage = 'Failed to create agent.';
+        try {
+          const errData = JSON.parse(resText);
+          if (errData.message && errData.message.includes('Validation failed')) {
+            errorMessage = 'Validation Error: Some required configuration fields are missing or invalid. Please check your script and settings.';
+          } else {
+            errorMessage = errData.message || errorMessage;
+          }
+        } catch (e) {
+          errorMessage = `Bolna API error: ${resText.slice(0, 100)}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const bolnaData = JSON.parse(resText);
@@ -164,7 +195,7 @@ export const CreateAgentModal = ({ isOpen, onClose, apiKey, onAgentCreated }) =>
       console.log("CREATE_AGENT_SUCCESS", { bolnaAgentId });
 
       if (!bolnaAgentId) {
-        throw new Error('No agent ID returned from Bolna API');
+        throw new Error('Agent created but no ID was returned from Bolna.');
       }
 
       await onAgentCreated({
