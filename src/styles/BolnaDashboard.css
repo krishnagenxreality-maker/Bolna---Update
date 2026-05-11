@@ -50,7 +50,7 @@ body {
 .hdr {
   position: sticky;
   top: 0;
-  z-index: 1000; /* Higher than sidebar */
+  z-index: 1000; /* Higher than sideba */
   display: flex;
   align-items: center;
   justify-content: space-between;
