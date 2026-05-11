@@ -15,7 +15,7 @@ export const DoneBanner = ({ showDone, doneSummary }) => {
         {showDone ? 'All Calls Completed' : 'Session Mission Control'}
       </div>
       <div className="done-sub" style={{ opacity: showDone ? 1 : 0.4 }}>
-        {showDone ? doneSummary : 'Ready to begin calling session. Upload a sheet and click "Make Calls" to start.'}
+        {showDone ? doneSummary : 'Ready to begin calling sessions. Upload a sheet and click "Make Calls" to start.'}
       </div>
     </div>
   );
