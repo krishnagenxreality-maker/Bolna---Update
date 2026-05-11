@@ -105,59 +105,71 @@ export const CreateAgentModal = ({ isOpen, onClose, apiKey, onAgentCreated }) =>
     const payload = {
       agent_config: {
         agent_name: agentName.trim(),
-        agent_welcome_message: "Hello! How are you doing today?",
+        agent_welcome_message: "Hello! How can I help you today?",
         agent_type: "other",
         tasks: [
           {
             task_type: "conversation",
-            task_id: "task_0",
+            task_id: "task_1",
             toolchain: {
               execution: "parallel",
-              pipelines: [["transcriber", "llm", "voice"]]
+              pipelines: [["transcriber", "llm", "synthesizer"]]
             },
             tools_config: {
               llm_agent: {
                 agent_flow_type: "streaming",
-                agent_type: "conversation",
+                agent_type: "simple_llm_agent",
                 llm_config: {
-                  model: "gpt-3.5-turbo",
+                  provider: "openai",
+                  model: "gpt-4o-mini",
+                  temperature: 0.3,
                   max_tokens: 100,
                   family: "openai"
                 }
               },
-              voice: {
+              synthesizer: {
                 provider: "elevenlabs",
+                stream: true,
                 provider_config: {
                   voice: "Rachel",
-                  voice_id: "21m00Tcm4TlvDq8ikWAM"
+                  voice_id: "21m00Tcm4TlvDq8ikWAM",
+                  model: "eleven_turbo_v2_5"
                 }
               },
               transcriber: {
-                model: "deepgram",
-                language: "en"
+                provider: "deepgram",
+                model: "nova-2",
+                language: "en",
+                stream: true
+              },
+              input: {
+                provider: "twilio",
+                format: "wav"
+              },
+              output: {
+                provider: "twilio",
+                format: "wav"
               }
             },
             task_config: {
               hangup_after_silence: 10,
               incremental_delay: 400,
               number_of_words_for_interruption: 2
+            },
+            metadata: {
+              purpose: "custom_agent_creation"
             }
           }
         ]
       },
       agent_prompts: {
-        task_0: {
-          prompt: script
+        task_1: {
+          system_prompt: script.trim()
         }
       }
     };
 
-    console.log("CREATE_AGENT_REQUEST", {
-      endpoint: 'https://api.bolna.ai/v2/agent',
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey.slice(0, 8)}...` },
-      payload: payload
-    });
+    console.log("CREATE_AGENT_PAYLOAD", payload);
 
     try {
       const bolnaRes = await fetch('https://api.bolna.ai/v2/agent', {
@@ -172,19 +184,20 @@ export const CreateAgentModal = ({ isOpen, onClose, apiKey, onAgentCreated }) =>
       console.log("CREATE_AGENT_RESPONSE_STATUS", bolnaRes.status);
       
       const resText = await bolnaRes.text();
-      console.log("CREATE_AGENT_RESPONSE_BODY", resText);
+      console.log("BOLNA_RESPONSE", resText);
 
       if (!bolnaRes.ok) {
         let errorMessage = 'Failed to create agent.';
         try {
           const errData = JSON.parse(resText);
-          if (errData.message && errData.message.includes('Validation failed')) {
-            errorMessage = 'Validation Error: Some required configuration fields are missing or invalid. Please check your script and settings.';
-          } else {
-            errorMessage = errData.message || errorMessage;
+          // Requirement 6: Show real API error message
+          if (errData.message) {
+            errorMessage = `Bolna API Error: ${errData.message}`;
+          } else if (errData.detail) {
+            errorMessage = `Bolna API Detail: ${JSON.stringify(errData.detail)}`;
           }
         } catch (e) {
-          errorMessage = `Bolna API error: ${resText.slice(0, 100)}`;
+          errorMessage = `Bolna API error (${bolnaRes.status}): ${resText.slice(0, 150)}`;
         }
         throw new Error(errorMessage);
       }
