@@ -157,8 +157,9 @@ export function useBolnaDashboard() {
             category = await analyzeSummaryWithDeepSeek(DEEPSEEK_API_KEY, data.summary);
             console.log("RESPONSES UPDATED");
           }
-          updateContactStatus(contact.id, "called", sl, category, data.summary || ""); 
-          addLog(`✓ Called: ${contact.name}${category ? ` (${category})` : ""}`, "ok"); 
+          const finalStatus = sl === "completed" ? "called" : sl;
+          updateContactStatus(contact.id, finalStatus, sl, category, data.summary || ""); 
+          addLog(`✓ ${sl.toUpperCase()}: ${contact.name}${category ? ` (${category})` : ""}`, "ok"); 
         }
         else if (["failed","error","cancelled"].includes(sl)) { 
           updateContactStatus(contact.id, "failed", sl); 
@@ -365,7 +366,8 @@ export function useBolnaDashboard() {
                 name: a.agent_name,
                 id: a.bolna_agent_id,
                 isCustom: true,
-                scriptType: a.script_type
+                scriptType: a.script_type,
+                script: a.script
               }));
               currentAgents = [...currentAgents, ...customAgents];
             }

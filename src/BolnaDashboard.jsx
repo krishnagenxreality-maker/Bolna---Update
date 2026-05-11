@@ -227,7 +227,7 @@ export default function BolnaDashboard() {
                     </div>
 
                     {/* Agent Script Panel */}
-                    <AgentScriptPanel agentId={agentId} apiKey={apiKey} />
+                    <AgentScriptPanel agentId={agentId} apiKey={apiKey} availableAgents={availableAgents} />
 
                     {/* Uploaded Sheets Info */}
                     {uploadCount > 0 && (

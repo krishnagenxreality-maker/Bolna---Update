@@ -101,10 +101,10 @@ export const CreateAgentModal = ({ isOpen, onClose, apiKey, onAgentCreated }) =>
             agent_name: agentName.trim(),
             agent_welcome_message: "Hello! How are you doing today?",
             agent_type: "other",
-            webhook_url: "https://example.com/webhook",
             tasks: [
               {
                 task_type: "conversation",
+                task_id: "task_0",
                 task_config: {
                   hangup_after_silence: 10,
                   incremental_delay: 400,

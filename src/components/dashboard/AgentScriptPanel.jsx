@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Loader } from 'lucide-react';
 
-export const AgentScriptPanel = ({ agentId, apiKey }) => {
+export const AgentScriptPanel = ({ agentId, apiKey, availableAgents = [] }) => {
   const [script, setScript] = useState('');
   const [loading, setLoading] = useState(false);
   const [agentName, setAgentName] = useState('');
@@ -16,6 +16,14 @@ export const AgentScriptPanel = ({ agentId, apiKey }) => {
     const actualBolnaId = agentId.includes('::') ? agentId.split('::')[1] : agentId;
     const displayName = agentId.includes('::') ? agentId.split('::')[0] : 'Agent';
     setAgentName(displayName);
+
+    // Check if we already have the script in availableAgents (for custom agents)
+    const localAgent = availableAgents.find(a => a.id === actualBolnaId);
+    if (localAgent && localAgent.script) {
+      setScript(localAgent.script);
+      setLoading(false);
+      return;
+    }
 
     const fetchScript = async () => {
       setLoading(true);
@@ -53,7 +61,7 @@ export const AgentScriptPanel = ({ agentId, apiKey }) => {
     };
 
     fetchScript();
-  }, [agentId, apiKey]);
+  }, [agentId, apiKey, availableAgents]);
 
   if (!agentId || !apiKey) return null;
 
