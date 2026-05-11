@@ -129,8 +129,8 @@ export const CalendarDashboardView = ({
       cells.push(
         <div 
           key={`d-${i}`} 
-          className={`cdv-cell ${stats ? 'has-data' : ''} ${isToday ? 'today' : ''} ${isFuture ? 'disabled' : ''}`}
-          onClick={() => !isFuture && handleDayClick(i)}
+          className={`cdv-cell ${stats ? 'has-data' : ''} ${isToday ? 'today' : ''} ${isFuture ? 'future' : ''}`}
+          onClick={() => handleDayClick(i)}
         >
           <div className="cdv-cell-header">
             <span className="cdv-day-num">{i}</span>

@@ -1,7 +1,7 @@
-import React from 'react';
-import { Phone, Users, CheckCircle, Clock, Zap, Target, XCircle, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Phone, Users, CheckCircle, Clock, Zap, Target, XCircle, HelpCircle, Timer } from 'lucide-react';
 
-export const CallFlowVisualization = ({ contacts, agentId, isCalling }) => {
+export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartTime }) => {
   const selectedAgentId = agentId?.split('::')[1];
   const activeContacts = selectedAgentId 
     ? contacts.filter(c => c.agentId === selectedAgentId || c.id?.includes(selectedAgentId))
@@ -17,6 +17,48 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling }) => {
     noAnswer: activeContacts.filter(c => c.response?.toLowerCase().includes('no answer') || c.response?.toLowerCase().includes('busy')).length
   };
 
+  // ETA calculation
+  const [etaText, setEtaText] = useState('');
+  
+  useEffect(() => {
+    if (!isCalling || !callStartTime) {
+      setEtaText('');
+      return;
+    }
+
+    const BATCH_SIZE = 10;
+    const BATCH_DELAY_S = 10 * 60; // 10 minutes in seconds
+    const CALL_TIME_S = 30; // ~30s per call
+
+    const computeEta = () => {
+      const remaining = stats.uploaded - stats.completed - stats.inProgress;
+      if (remaining <= 0) {
+        setEtaText('Completing...');
+        return;
+      }
+      
+      const batchesRemaining = Math.ceil(remaining / BATCH_SIZE);
+      const callTimeRemaining = remaining * CALL_TIME_S;
+      const batchDelays = Math.max(0, batchesRemaining - 1) * BATCH_DELAY_S;
+      const totalSeconds = callTimeRemaining + batchDelays;
+      
+      if (totalSeconds < 60) {
+        setEtaText(`~${totalSeconds}s remaining`);
+      } else if (totalSeconds < 3600) {
+        const mins = Math.ceil(totalSeconds / 60);
+        setEtaText(`~${mins}m remaining`);
+      } else {
+        const hrs = Math.floor(totalSeconds / 3600);
+        const mins = Math.ceil((totalSeconds % 3600) / 60);
+        setEtaText(`~${hrs}h ${mins}m remaining`);
+      }
+    };
+
+    computeEta();
+    const interval = setInterval(computeEta, 1000);
+    return () => clearInterval(interval);
+  }, [isCalling, callStartTime, stats.uploaded, stats.completed, stats.inProgress]);
+
   return (
     <div className="gaming-flow-panel">
       <div className="flow-header">
@@ -24,7 +66,24 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling }) => {
           <div className="live-dot" />
           LIVE JOURNEY
         </div>
-        <div className="flow-title">Mission Control / Call Flow</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {isCalling && etaText && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              background: 'rgba(59, 130, 246, 0.1)',
+              border: '1px solid rgba(59, 130, 246, 0.2)',
+              color: '#60a5fa',
+              fontSize: '10px', fontWeight: 700,
+              padding: '4px 12px', borderRadius: '100px',
+              letterSpacing: '0.3px',
+              animation: 'fadeInEta 0.3s ease'
+            }}>
+              <Timer size={11} />
+              {etaText}
+            </div>
+          )}
+          <div className="flow-title">Mission Control / Call Flow</div>
+        </div>
       </div>
       
       <div className="flow-content">
@@ -285,6 +344,10 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling }) => {
           0% { box-shadow: 0 0 0 0 var(--pulse-color); }
           70% { box-shadow: 0 0 0 20px rgba(0,0,0,0); }
           100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
+        }
+        @keyframes fadeInEta {
+          from { opacity: 0; transform: translateX(10px); }
+          to { opacity: 1; transform: translateX(0); }
         }
       ` }} />
     </div>

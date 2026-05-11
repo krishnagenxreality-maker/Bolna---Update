@@ -6,7 +6,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell 
 } from 'recharts';
 import { 
-  CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight 
+  CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, RotateCcw 
 } from 'lucide-react';
 
 export const CallDetailsView = ({ 
@@ -17,14 +17,18 @@ export const CallDetailsView = ({
   setDetailsStatusTab,
   stats,
   activeView,
-  setActiveView
+  setActiveView,
+  onRetryCalls,
+  isCalling
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
+  const [selectedForRetry, setSelectedForRetry] = useState([]);
   const ROWS_PER_PAGE = 4;
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(0);
+    setSelectedForRetry([]);
   }, [searchDate, detailsStatusTab]);
 
   const filteredData = useMemo(() => {
@@ -34,6 +38,40 @@ export const CallDetailsView = ({
       return statusMatch && dateMatch;
     });
   }, [contacts, detailsStatusTab, searchDate]);
+
+  // Contacts eligible for retry (busy or no answer)
+  const retryEligible = useMemo(() => {
+    return filteredData.filter(c => {
+      const resp = (c.response || '').toLowerCase();
+      return resp.includes('no answer') || resp.includes('no_answer') || resp.includes('busy');
+    });
+  }, [filteredData]);
+
+  const isRetryEligible = (contact) => {
+    const resp = (contact.response || '').toLowerCase();
+    return resp.includes('no answer') || resp.includes('no_answer') || resp.includes('busy');
+  };
+
+  const toggleRetrySelect = (id) => {
+    setSelectedForRetry(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedForRetry.length === retryEligible.length) {
+      setSelectedForRetry([]);
+    } else {
+      setSelectedForRetry(retryEligible.map(c => c.id));
+    }
+  };
+
+  const handleRetryCalls = () => {
+    if (selectedForRetry.length > 0 && onRetryCalls) {
+      onRetryCalls(selectedForRetry);
+      setSelectedForRetry([]);
+    }
+  };
 
   const totalPages = Math.ceil(filteredData.length / ROWS_PER_PAGE);
   const currentRows = useMemo(() => {
@@ -210,11 +248,57 @@ export const CallDetailsView = ({
                 ))}
               </div>
 
+              {/* Retry Controls */}
+              {retryEligible.length > 0 && onRetryCalls && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 12px', marginBottom: '8px',
+                  background: 'rgba(59, 130, 246, 0.05)',
+                  border: '1px solid rgba(59, 130, 246, 0.1)',
+                  borderRadius: '8px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedForRetry.length === retryEligible.length && retryEligible.length > 0}
+                      onChange={toggleSelectAll}
+                      style={{ accentColor: '#3b82f6', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
+                      {selectedForRetry.length > 0 
+                        ? `${selectedForRetry.length} selected` 
+                        : `${retryEligible.length} retry-eligible (Busy/No Answer)`}
+                    </span>
+                  </div>
+                  {selectedForRetry.length > 0 && (
+                    <button
+                      onClick={handleRetryCalls}
+                      disabled={isCalling}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        padding: '6px 14px', borderRadius: '6px',
+                        background: isCalling ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2))',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        color: isCalling ? 'rgba(255,255,255,0.3)' : '#60a5fa',
+                        cursor: isCalling ? 'not-allowed' : 'pointer',
+                        fontFamily: "'Outfit', sans-serif",
+                        fontSize: '11px', fontWeight: 700,
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <RotateCcw size={12} />
+                      Make Calls ({selectedForRetry.length})
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="details-table-scroll-container" style={{ flex: '0 0 auto', maxHeight: 'none' }}>
                 <div className="table-wrap">
                   <table className="ct">
                     <thead>
                       <tr>
+                        {retryEligible.length > 0 && <th style={{ width: '30px' }}></th>}
                         <th>#</th>
                         <th>Name</th>
                         <th>Phone</th>
@@ -226,6 +310,18 @@ export const CallDetailsView = ({
                     <tbody>
                       {currentRows.map((c, i) => (
                         <tr key={c.id}>
+                          {retryEligible.length > 0 && (
+                            <td style={{ textAlign: 'center' }}>
+                              {isRetryEligible(c) && (
+                                <input
+                                  type="checkbox"
+                                  checked={selectedForRetry.includes(c.id)}
+                                  onChange={() => toggleRetrySelect(c.id)}
+                                  style={{ accentColor: '#3b82f6', cursor: 'pointer' }}
+                                />
+                              )}
+                            </td>
+                          )}
                           <td className="td-num">{currentPage * ROWS_PER_PAGE + i + 1}</td>
                           <td className="td-name">{c.name}</td>
                           <td className="td-phone">{c.phone}</td>
@@ -246,7 +342,7 @@ export const CallDetailsView = ({
                 </div>
               </div>
 
-              {/* Pagination Controls - Brought Upward */}
+              {/* Pagination Controls */}
               {totalPages > 1 && (
                 <div style={{ 
                   display: 'flex', 

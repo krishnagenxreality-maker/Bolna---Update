@@ -24,16 +24,16 @@ export const ContactsTable = ({ contacts, previewMode = false, isCalling = false
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {contacts.length > 0 && (
-            <button 
-              className="btn-stop" 
+            <button
+              className="btn-stop"
               onClick={stopCalling}
               disabled={!isCalling}
-              style={{ 
-                opacity: isCalling ? 1 : 0.5, 
+              style={{
+                opacity: isCalling ? 1 : 0.5,
                 cursor: isCalling ? 'pointer' : 'not-allowed',
-                display: 'inline-block' 
+                display: 'inline-block'
               }}
-              title={isCalling ? "Stop current calling session" : "No active session to stop"}
+              title={isCalling ? "Stops current calling session" : "No active session to stop"}
             >
               Stop Calls
             </button>
@@ -81,8 +81,8 @@ export const ContactsTable = ({ contacts, previewMode = false, isCalling = false
       </div>
       {!previewMode && totalPages > 1 && (
         <div className="pagination-footer" style={{ padding: '16px', display: 'flex', justifyContent: 'center', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <button 
-            className="nav-btn active" 
+          <button
+            className="nav-btn active"
             onClick={handleNext}
             style={{ padding: '8px 24px', fontSize: '13px', fontWeight: '600' }}
           >

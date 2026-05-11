@@ -2,7 +2,7 @@ export const BATCH_SIZE = 10;
 export const BATCH_DELAY_MS = 10 * 60 * 1000;
 export const POLL_INTERVAL_MS = 10000;
 
-export const DEEPSEEK_API_KEY = "sk-0608511b49be469993cf680b995d18f4";
+export const DEEPSEEK_API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY || "";
 
 export const STATUS_META = {
   pending:   { label: "Pending",    cls: "s-pending"   },
