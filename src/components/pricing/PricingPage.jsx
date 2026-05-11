@@ -1,600 +1,369 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 import { SmokeBackground } from '../layout/SmokeBackground';
-import { Shield, LogIn, CheckCircle2, X, ChevronDown, Check } from 'lucide-react';
-import FeatureInDevelopment from '../common/FeatureInDevelopment';
+import { Shield, LogIn, CheckCircle2, X, Phone, Mic, Zap, Users, BarChart3, Globe, ArrowRight, Check } from 'lucide-react';
 import '../../styles/BolnaDashboard.css';
+import '../../styles/PricingPage.css';
 
-const PURPOSE_TEMPLATES = [
-  "Payment Reminder (Any service)",
-  "EMI / Loan Restructuring Offers",
-  "Credit Card Pre-approved Offers",
-  "Insurance Renewal (especially when near expiry)",
-  "Sales Offer",
-  "Educational Course / Job-Oriented Training Promotion",
-  "College Admission",
-  "Other"
+const PLANS = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    price: '₹4,999',
+    setup: '₹7,999',
+    cta: 'Get Started',
+    popular: false,
+    features: [
+      'Up to 2,000 AI calls / month',
+      'Telugu & English AI voice agents',
+      'AI call summaries',
+      'AI lead classification',
+      'Campaign analytics',
+      'CSV upload',
+      'Single workspace',
+      'Email support',
+    ],
+  },
+  {
+    id: 'growth',
+    name: 'Growth',
+    price: '₹11,999',
+    setup: '₹14,999',
+    cta: 'Scale With AI',
+    popular: true,
+    features: [
+      'Up to 6,000 AI calls / month',
+      'Multi-campaign AI calling',
+      'AI retry calling',
+      'Advanced analytics',
+      'AI conversation insights',
+      'Lead tracking',
+      'Faster processing',
+      '3 team members',
+    ],
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: '₹24,999',
+    setup: '₹29,999',
+    cta: 'Contact Sales',
+    popular: false,
+    features: [
+      'Up to 15,000 AI calls / month',
+      'Multi-agent AI calling',
+      'Custom AI voice',
+      'Dedicated infrastructure',
+      'Enterprise analytics',
+      'Priority queue',
+      'Dedicated onboarding',
+      'Team collaboration',
+    ],
+  },
 ];
+
+const CREDITS = [
+  { calls: '1,000 Calls', price: '₹2,499' },
+  { calls: '5,000 Calls', price: '₹9,999' },
+  { calls: '10,000 Calls', price: '₹17,999' },
+];
+
+const ENTERPRISE_FEATURES = [
+  { icon: <Globe size={18} />, text: 'Custom AI deployment' },
+  { icon: <Zap size={18} />, text: 'Dedicated infrastructure' },
+  { icon: <Mic size={18} />, text: 'Multilingual AI agents' },
+  { icon: <Phone size={18} />, text: 'Enterprise-scale AI calling' },
+  { icon: <Users size={18} />, text: 'Unlimited team members' },
+  { icon: <BarChart3 size={18} />, text: 'Priority support & SLA' },
+];
+
+// Simple waveform bars component
+function WaveformBars({ active }) {
+  return (
+    <div className="pp-wave" aria-hidden>
+      {[...Array(12)].map((_, i) => (
+        <div
+          key={i}
+          className={`pp-wave-bar${active ? ' pp-wave-bar--active' : ''}`}
+          style={{ animationDelay: `${i * 0.07}s` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Floating call indicator
+function CallIndicator({ label, top, left, delay }) {
+  return (
+    <div className="pp-call-indicator" style={{ top, left, animationDelay: delay }}>
+      <div className="pp-ci-dot" />
+      <span className="pp-ci-label">{label}</span>
+    </div>
+  );
+}
 
 export default function PricingPage() {
   const navigate = useNavigate();
-  const dropdownRef = useRef(null);
-
-  const [onboardingView, setOnboardingView] = useState('plans'); // plans, purpose, regular-form, education-form
-  const [success, setSuccess] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [showDevModal, setShowDevModal] = useState(false);
-
-  const [formData, setFormData] = useState({
-    name: '',
-    organizationName: '',
-    email: '',
-    selectedPurposes: [],
-    otherPurpose: '',
-    callPurpose: '',
-    targetAudience: '',
-    scriptPoints: '',
-    creditsSelected: ''
-  });
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({ name: '', org: '', email: '' });
+  const [submitted, setSubmitted] = useState(false);
+  const [waveActive, setWaveActive] = useState(false);
 
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const t = setInterval(() => setWaveActive(v => !v), 2200);
+    return () => clearInterval(t);
   }, []);
 
-  const handleSelectPlan = (plan) => {
-    let credits = '';
-    if (plan === 'plan1') credits = '1000 credits';
-    else if (plan === 'plan2') credits = '3000 credits';
-    else if (plan === 'custom') credits = 'Custom / Contact Admin';
-
-    setFormData({
-      ...formData,
-      creditsSelected: credits
-    });
-    setSuccess(false);
-    setOnboardingView('regular-form');
-  };
-
-  const handlePurposeSelect = (type) => {
-    if (type === 'regular') {
-      setOnboardingView('regular-form');
-    } else {
-      setShowDevModal(true);
+  const handlePlanClick = (plan) => {
+    if (plan.id === 'pro') {
+      window.location.href = 'mailto:sales@callinggen.ai';
+      return;
     }
+    setSelectedPlan(plan);
+    setShowModal(true);
   };
 
-  const togglePurpose = (purpose) => {
-    setFormData(prev => {
-      const selected = prev.selectedPurposes.includes(purpose)
-        ? prev.selectedPurposes.filter(p => p !== purpose)
-        : [...prev.selectedPurposes, purpose];
-      return { ...prev, selectedPurposes: selected };
-    });
-  };
-
-  const handleSendRequest = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Format data for backend
-      const finalPurpose = formData.selectedPurposes.join(', ') +
-        (formData.selectedPurposes.includes('Other') && formData.otherPurpose ? ` (${formData.otherPurpose})` : '');
-
-      const finalScriptContent = `Target Audience: ${formData.targetAudience}\nScript Points: ${formData.scriptPoints}`;
-
-      const payload = {
+      await axios.post(`${API_BASE_URL}/api/requests`, {
         name: formData.name,
-        organizationName: formData.organizationName,
+        organizationName: formData.org,
         email: formData.email,
-        purpose: onboardingView === 'education-form' ? 'Education Management / Student Engagement' : finalPurpose,
-        callPurpose: onboardingView === 'education-form' ? 'Education Outreach' : formData.callPurpose,
-        scriptContent: onboardingView === 'education-form' ? 'Automated Education Reminders' : finalScriptContent,
-        creditsSelected: formData.creditsSelected,
-        purposeType: onboardingView === 'education-form' ? 'education' : 'regular'
-      };
-
-      await axios.post(`${API_BASE_URL}/api/requests`, payload);
-      setSuccess(true);
+        creditsSelected: selectedPlan?.name,
+        purpose: 'AI Calling Plan Inquiry',
+        callPurpose: 'Plan selection',
+        scriptContent: '',
+        purposeType: 'regular',
+      });
+      setSubmitted(true);
       setTimeout(() => {
-        setOnboardingView('plans');
-        setSuccess(false);
-        setFormData({
-          name: '',
-          organizationName: '',
-          email: '',
-          selectedPurposes: [],
-          otherPurpose: '',
-          callPurpose: '',
-          targetAudience: '',
-          scriptPoints: '',
-          creditsSelected: ''
-        });
+        setShowModal(false);
+        setSubmitted(false);
+        setFormData({ name: '', org: '', email: '' });
       }, 3000);
-    } catch (error) {
-      alert('Failed to send request. Please try again.');
+    } catch {
+      alert('Failed to submit. Please try again.');
     }
   };
-
-  const isOtherSelected = formData.selectedPurposes.includes('Other');
 
   return (
     <div className="app">
       <SmokeBackground />
-      {showDevModal && <FeatureInDevelopment type="modal" onClose={() => setShowDevModal(false)} />}
 
-      {/* Top Navigation */}
+      {/* Ambient glow blobs */}
+      <div className="pp-glow pp-glow--1" />
+      <div className="pp-glow pp-glow--2" />
+
+      {/* Header */}
       <header className="hdr" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <div className="hdr-left" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
-          <div className="logo-mark">
-            <Shield size={20} />
-          </div>
+          <div className="logo-mark"><Shield size={20} /></div>
           <span className="hdr-title">Calling <span className="hdr-accent">Gen</span></span>
-          <div className="hdr-badge" style={{ marginLeft: '12px' }}>by GenxReality</div>
+          <div className="hdr-badge" style={{ marginLeft: 12 }}>by GenxReality</div>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          <button onClick={() => navigate('/pricing')} className="nav-link" style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontFamily: 'Outfit', fontWeight: '600' }}>Pricing</button>
-          <button onClick={() => setShowDevModal(true)} className="nav-link-highlight">Education Portal</button>
-          <button onClick={() => navigate('/login', { state: { from: '/pricing' } })} className="logout-btn" style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            color: '#fff',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            padding: '8px 20px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            cursor: 'pointer',
-            fontFamily: 'Outfit, sans-serif',
-            fontSize: '14px',
-            fontWeight: '500',
-            transition: 'all 0.2s'
-          }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+          <button onClick={() => navigate('/pricing')} className="nav-link" style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontFamily: 'Outfit', fontWeight: 600 }}>Pricing</button>
+          <button onClick={() => navigate('/login', { state: { from: '/pricing' } })} className="logout-btn" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 20px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Outfit, sans-serif', fontSize: 14, fontWeight: 500, transition: 'all 0.2s' }}>
             <LogIn size={16} /> Login
           </button>
         </div>
       </header>
 
-      <main className="main" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 40px', minHeight: 'calc(100vh - 80px)' }}>
-        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-          <h1 style={{ fontSize: '48px', fontWeight: '700', color: '#fff', marginBottom: '16px', letterSpacing: '-0.02em' }}>
-            Simple, transparent <span className="hdr-accent">pricing</span>
-          </h1>
-          <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.4)', fontFamily: 'Outfit' }}>
-            Choose the plan that best fits your outreach needs.
-          </p>
-        </div>
+      <main style={{ position: 'relative', zIndex: 1 }}>
 
-        <div className="stats-grid" style={{ width: '100%', maxWidth: '1100px', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px', alignItems: 'stretch' }}>
-          {/* Plan 1 */}
-          <div className="panel" style={{ display: 'flex', flexDirection: 'column', padding: '40px 32px', height: '100%' }}>
-            <h3 style={{ fontSize: '24px', color: '#fff', marginBottom: '12px', fontWeight: '600', textAlign: 'center' }}>Starter</h3>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
-              <span style={{ fontSize: '42px', fontWeight: '700', color: '#fff' }}>₹10,000</span>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '16px' }}>/ month</span>
+        {/* ── HERO ── */}
+        <section className="pp-hero">
+          {/* Floating indicators */}
+          <CallIndicator label="AI Call Active" top="18%" left="8%" delay="0s" />
+          <CallIndicator label="Agent Connected" top="32%" left="85%" delay="0.6s" />
+          <CallIndicator label="Processing Voice" top="72%" left="6%" delay="1.2s" />
+          <CallIndicator label="Lead Classified" top="60%" left="88%" delay="0.3s" />
+
+          <div className="pp-hero-inner">
+            <div className="pp-hero-badge">
+              <div className="pp-ci-dot" style={{ width: 7, height: 7 }} />
+              AI Voice Infrastructure
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '40px', flex: 1, justifyContent: 'flex-start' }}>
-              {[
-                "1000 credits / month",
-                "1 call per credit (1K calls)",
-                "Detailed segregation",
-                "Lead generation"
-              ].map((feature, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <CheckCircle2 size={18} className="sn-green" />
-                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '15px' }}>{feature}</span>
-                </div>
-              ))}
-            </div>
+            <h1 className="pp-hero-h1">
+              AI Calling Infrastructure<br />
+              <span className="pp-hero-accent">for Modern Outreach</span>
+            </h1>
 
-            <button
-              onClick={() => handleSelectPlan('plan1')}
-              className="btn-call"
-              style={{ width: '100%', justifyContent: 'center', padding: '16px', marginTop: 'auto' }}
-            >
-              Select
-            </button>
-          </div>
+            <p className="pp-hero-sub">
+              Deploy multilingual AI voice agents that handle outreach calls<br />
+              intelligently at scale.
+            </p>
 
-          {/* Plan 2 */}
-          <div style={{ position: 'relative', height: '100%', transform: 'scale(1.05)', zIndex: 1 }}>
-            <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: '#fff', color: '#000', padding: '4px 16px', borderRadius: '100px', fontSize: '11px', fontWeight: '800', letterSpacing: '1.5px', textTransform: 'uppercase', zIndex: 2, boxShadow: '0 4px 12px rgba(255,255,255,0.15)' }}>
-              Most Popular
-            </div>
-            <div className="panel" style={{
-              display: 'flex', flexDirection: 'column', padding: '40px 32px', height: '100%',
-              border: '1px solid rgba(255,255,255,0.2)',
-              background: 'rgba(255,255,255,0.04)',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
-            }}>
-              <h3 style={{ fontSize: '24px', color: '#fff', marginBottom: '12px', fontWeight: '600', textAlign: 'center' }}>Professional</h3>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
-                <span style={{ fontSize: '42px', fontWeight: '700', color: '#fff' }}>₹20,000</span>
-                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '16px' }}>/ month</span>
-              </div>
+            <WaveformBars active={waveActive} />
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '40px', flex: 1, justifyContent: 'flex-start' }}>
-                {[
-                  "3000 credits / month",
-                  "1 call per credit (2K calls)",
-                  "Detailed segregation",
-                  "Lead generation"
-                ].map((feature, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <CheckCircle2 size={18} className="sn-green" />
-                    <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '15px' }}>{feature}</span>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={() => handleSelectPlan('plan2')}
-                className="btn-call"
-                style={{ width: '100%', justifyContent: 'center', padding: '16px', background: 'rgba(255,255,255,0.1)', marginTop: 'auto' }}
-              >
-                Select
+            <div className="pp-hero-btns">
+              <button className="btn-call pp-btn-primary" onClick={() => document.getElementById('pricing-section').scrollIntoView({ behavior: 'smooth' })}>
+                <Phone size={16} /> Start AI Calling
+              </button>
+              <button className="btn-call" style={{ background: 'transparent' }} onClick={() => window.location.href = 'mailto:sales@callinggen.ai'}>
+                Book Demo <ArrowRight size={15} />
               </button>
             </div>
-          </div>
 
-          {/* Plan 3 */}
-          <div className="panel" style={{ display: 'flex', flexDirection: 'column', padding: '40px 32px', height: '100%' }}>
-            <h3 style={{ fontSize: '24px', color: '#fff', marginBottom: '12px', fontWeight: '600', textAlign: 'center' }}>Enterprise</h3>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
-              <span style={{ fontSize: '42px', fontWeight: '700', color: '#fff' }}>Custom</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '40px', flex: 1, justifyContent: 'flex-start' }}>
-              {[
-                "Unlimited credits",
-                "Custom concurrent calls",
-                "Dedicated support",
-                "Custom integration"
-              ].map((feature, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <CheckCircle2 size={18} className="sn-green" />
-                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '15px' }}>{feature}</span>
+            {/* Mini stats */}
+            <div className="pp-hero-stats">
+              {[['15K+', 'AI Calls / Day'], ['99.9%', 'Uptime SLA'], ['12+', 'Languages'], ['< 1s', 'Response Time']].map(([v, l]) => (
+                <div key={l} className="pp-hero-stat">
+                  <span className="pp-hero-stat-val">{v}</span>
+                  <span className="pp-hero-stat-lbl">{l}</span>
                 </div>
               ))}
             </div>
-
-            <button
-              onClick={() => handleSelectPlan('custom')}
-              className="btn-call"
-              style={{ width: '100%', justifyContent: 'center', padding: '16px', marginTop: 'auto' }}
-            >
-              Select
-            </button>
           </div>
-        </div>
+        </section>
 
-        {onboardingView !== 'plans' && (
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 300,
-            background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px'
-          }}>
-            <div className="panel" data-hide-scrollbar style={{ width: '100%', maxWidth: '540px', padding: '32px', maxHeight: '90vh', overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {success ? (
-                <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                  <CheckCircle2 size={48} className="sn-green" style={{ margin: '0 auto 16px' }} />
-                  <h3 style={{ fontSize: '24px', color: '#fff', marginBottom: '12px' }}>Request Sent Successfully!</h3>
-                  <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '15px' }}>
-                    Our team will review your request and get back to you shortly.
-                  </p>
+        {/* ── PRICING ── */}
+        <section className="pp-section" id="pricing-section">
+          <div className="pp-section-label">Simple Pricing</div>
+          <h2 className="pp-section-h2">Built for scalable AI voice outreach</h2>
+          <p className="pp-section-sub">One platform. All your AI calling infrastructure needs.</p>
+
+          <div className="pp-cards">
+            {PLANS.map((plan) => (
+              <div
+                key={plan.id}
+                className={`pp-card${plan.popular ? ' pp-card--popular' : ''}`}
+              >
+                {plan.popular && (
+                  <div className="pp-card-badge">MOST POPULAR</div>
+                )}
+
+                <div className="pp-card-name">{plan.name}</div>
+
+                <div className="pp-card-price">
+                  <span className="pp-card-amount">{plan.price}</span>
+                  <span className="pp-card-period">/month</span>
                 </div>
-              ) : onboardingView === 'purpose' ? (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                    <div className="panel-label" style={{ marginBottom: 0 }}>
-                      <div className="label-dot"></div>
-                      Select Your Purpose
-                    </div>
-                    <button onClick={() => setOnboardingView('plans')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
-                      <X size={20} />
-                    </button>
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <button 
-                      onClick={() => handlePurposeSelect('education')}
-                      className="panel" 
-                      style={{ 
-                        padding: '24px', textAlign: 'left', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.05)',
-                        transition: 'all 0.2s', background: 'rgba(255,255,255,0.02)'
-                      }}
-                      onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
-                      onMouseOut={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div className="logo-mark" style={{ width: '40px', height: '40px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>
-                          <Shield size={20} />
-                        </div>
-                        <div>
-                          <h4 style={{ color: '#fff', fontSize: '18px', marginBottom: '4px' }}>Education Purpose</h4>
-                          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>For schools, colleges, and educational monitoring</p>
-                        </div>
-                      </div>
-                    </button>
 
-                    <button 
-                      onClick={() => handlePurposeSelect('regular')}
-                      className="panel" 
-                      style={{ 
-                        padding: '24px', textAlign: 'left', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.05)',
-                        transition: 'all 0.2s', background: 'rgba(255,255,255,0.02)'
-                      }}
-                      onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
-                      onMouseOut={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div className="logo-mark" style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.05)', color: '#fff' }}>
-                          <LogIn size={20} />
-                        </div>
-                        <div>
-                          <h4 style={{ color: '#fff', fontSize: '18px', marginBottom: '4px' }}>Regular Purpose</h4>
-                          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>For business, SaaS, and general communication</p>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                </>
-              ) : onboardingView === 'education-form' ? (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <div className="panel-label" style={{ marginBottom: 0 }}>
-                      <div className="label-dot"></div>
-                      Education Request Form
-                    </div>
-                    <button onClick={() => setOnboardingView('purpose')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
-                      <X size={20} />
-                    </button>
-                  </div>
+                <div className="pp-card-setup">
+                  + {plan.setup} one-time setup
+                </div>
 
-                  <form onSubmit={handleSendRequest} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div className="field">
-                      <label className="field-label">Name</label>
-                      <input
-                        type="text"
-                        className="field-input"
-                        placeholder="Your full name"
-                        value={formData.name}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="field">
-                      <label className="field-label">Education / Organization</label>
-                      <input
-                        type="text"
-                        className="field-input"
-                        placeholder="School/College name"
-                        value={formData.organizationName}
-                        onChange={e => setFormData({ ...formData, organizationName: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="field">
-                      <label className="field-label">Email Address</label>
-                      <input
-                        type="email"
-                        className="field-input"
-                        placeholder="work@example.com"
-                        value={formData.email}
-                        onChange={e => setFormData({ ...formData, email: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="field">
-                      <label className="field-label">Credits</label>
-                      <input
-                        type="text"
-                        className="field-input"
-                        value={formData.creditsSelected}
-                        disabled
-                        style={{ opacity: 0.7, background: 'rgba(255,255,255,0.02)' }}
-                      />
-                    </div>
-                    <button type="submit" className="btn-call" style={{ width: '100%', marginTop: '12px', justifyContent: 'center' }}>
-                      Submit Request
-                    </button>
-                  </form>
-                </>
-              ) : (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <div className="panel-label" style={{ marginBottom: 0 }}>
-                      <div className="label-dot"></div>
-                      Request Pricing Plan
-                    </div>
-                    <button onClick={() => setOnboardingView('plans')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
-                      <X size={20} />
-                    </button>
-                  </div>
+                <div className="pp-card-divider" />
 
-                  <form onSubmit={handleSendRequest} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div className="field">
-                      <label className="field-label">Name</label>
-                      <input
-                        type="text"
-                        className="field-input"
-                        placeholder="Your full name"
-                        value={formData.name}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        required
-                      />
-                    </div>
+                <ul className="pp-card-features">
+                  {plan.features.map((f) => (
+                    <li key={f}>
+                      <Check size={14} className="pp-check" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
 
-                    <div className="field">
-                      <label className="field-label">Organization Name</label>
-                      <input
-                        type="text"
-                        className="field-input"
-                        placeholder="Company or project name"
-                        value={formData.organizationName}
-                        onChange={e => setFormData({ ...formData, organizationName: e.target.value })}
-                        required
-                      />
-                    </div>
+                <button
+                  className={`btn-call pp-card-cta${plan.popular ? ' pp-btn-primary' : ''}`}
+                  onClick={() => handlePlanClick(plan)}
+                >
+                  {plan.cta}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
 
-                    <div className="field">
-                      <label className="field-label">Email Address</label>
-                      <input
-                        type="email"
-                        className="field-input"
-                        placeholder="work@example.com"
-                        value={formData.email}
-                        onChange={e => setFormData({ ...formData, email: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="field" style={{ position: 'relative' }} ref={dropdownRef}>
-                      <label className="field-label">Purpose of Using This</label>
-                      <div
-                        onClick={() => setShowDropdown(!showDropdown)}
-                        className="field-input"
-                        style={{
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          cursor: 'pointer', minHeight: '44px', padding: '8px 16px'
-                        }}
-                      >
-                        <span style={{
-                          color: formData.selectedPurposes.length > 0 ? '#fff' : 'rgba(255,255,255,0.3)',
-                          fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                        }}>
-                          {formData.selectedPurposes.length > 0
-                            ? formData.selectedPurposes.join(', ')
-                            : 'Select purpose(s)'}
-                        </span>
-                        <ChevronDown size={16} style={{
-                          transform: showDropdown ? 'rotate(180deg)' : 'none',
-                          transition: 'transform 0.2s',
-                          color: 'rgba(255,255,255,0.3)'
-                        }} />
-                      </div>
-
-                      {showDropdown && (
-                        <div style={{
-                          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
-                          marginTop: '8px', background: '#1a1a1a',
-                          border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
-                          boxShadow: '0 10px 30px rgba(0,0,0,0.5)', overflow: 'hidden'
-                        }}>
-                          <div style={{ maxHeight: '240px', overflowY: 'auto', padding: '8px' }}>
-                            {PURPOSE_TEMPLATES.map((tpl) => (
-                              <div
-                                key={tpl}
-                                onClick={() => togglePurpose(tpl)}
-                                style={{
-                                  padding: '10px 12px', borderRadius: '8px', cursor: 'pointer',
-                                  display: 'flex', alignItems: 'center', gap: '10px',
-                                  background: formData.selectedPurposes.includes(tpl) ? 'rgba(255,255,255,0.05)' : 'transparent',
-                                  transition: 'all 0.2s'
-                                }}
-                              >
-                                <div style={{
-                                  width: '16px', height: '16px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  background: formData.selectedPurposes.includes(tpl) ? '#fff' : 'transparent',
-                                  borderColor: formData.selectedPurposes.includes(tpl) ? '#fff' : 'rgba(255,255,255,0.2)'
-                                }}>
-                                  {formData.selectedPurposes.includes(tpl) && <Check size={12} color="#000" />}
-                                </div>
-                                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>{tpl}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {isOtherSelected && (
-                      <div className="field">
-                        <label className="field-label">Specify Other Purpose</label>
-                        <input
-                          type="text"
-                          className="field-input"
-                          placeholder="Please describe..."
-                          value={formData.otherPurpose}
-                          onChange={e => setFormData({ ...formData, otherPurpose: e.target.value })}
-                          required
-                        />
-                      </div>
-                    )}
-
-                    <div className="field">
-                      <label className="field-label">Purpose of the Call</label>
-                      <textarea
-                        className="field-input"
-                        style={{ minHeight: '80px', padding: '12px', resize: 'none' }}
-                        placeholder="Briefly describe what the AI agent will say..."
-                        value={formData.callPurpose}
-                        onChange={e => setFormData({ ...formData, callPurpose: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="config-grid">
-                      <div className="field">
-                        <label className="field-label">Target Audience</label>
-                        <input
-                          type="text"
-                          className="field-input"
-                          placeholder="e.g. Existing customers"
-                          value={formData.targetAudience}
-                          onChange={e => setFormData({ ...formData, targetAudience: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="field">
-                        <label className="field-label">Credits Requested</label>
-                        <input
-                          type="text"
-                          className="field-input"
-                          value={formData.creditsSelected}
-                          disabled
-                          style={{ opacity: 0.7, background: 'rgba(255,255,255,0.02)' }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="field">
-                      <label className="field-label">Key Points for Script</label>
-                      <textarea
-                        className="field-input"
-                        style={{ minHeight: '100px', padding: '12px', resize: 'none' }}
-                        placeholder="Bullet points of information to include in the call..."
-                        value={formData.scriptPoints}
-                        onChange={e => setFormData({ ...formData, scriptPoints: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="btn-call"
-                      style={{ width: '100%', marginTop: '12px', justifyContent: 'center' }}
-                      disabled={formData.selectedPurposes.length === 0}
-                    >
-                      Submit Request
-                    </button>
-                  </form>
-                </>
-              )}
+        {/* ── ENTERPRISE ── */}
+        <section className="pp-section">
+          <div className="pp-enterprise">
+            <div className="pp-enterprise-left">
+              <div className="pp-section-label" style={{ justifyContent: 'flex-start' }}>Enterprise</div>
+              <h2 className="pp-enterprise-h2">Enterprise AI Calling</h2>
+              <p className="pp-enterprise-sub">
+                Custom AI calling infrastructure for high-volume outreach operations.
+                Tailored deployment, SLA guarantees, and white-glove onboarding.
+              </p>
+              <button className="btn-call pp-btn-primary" style={{ alignSelf: 'flex-start', marginTop: 8 }} onClick={() => window.location.href = 'mailto:sales@callinggen.ai'}>
+                Talk To Sales <ArrowRight size={15} />
+              </button>
+            </div>
+            <div className="pp-enterprise-right">
+              {ENTERPRISE_FEATURES.map(({ icon, text }) => (
+                <div key={text} className="pp-ent-feat">
+                  <div className="pp-ent-icon">{icon}</div>
+                  <span>{text}</span>
+                </div>
+              ))}
             </div>
           </div>
-        )}
+        </section>
+
+        {/* ── CREDITS ── */}
+        <section className="pp-section" style={{ paddingBottom: 80 }}>
+          <div className="pp-section-label">Add-On Credits</div>
+          <h2 className="pp-section-h2">Additional AI Call Credits</h2>
+          <p className="pp-section-sub">Scale instantly with additional AI outreach credits.</p>
+
+          <div className="pp-credits">
+            {CREDITS.map(({ calls, price }) => (
+              <div key={calls} className="pp-credit-row">
+                <div className="pp-credit-calls">
+                  <Phone size={14} style={{ opacity: 0.5 }} />
+                  {calls}
+                </div>
+                <div className="pp-credit-dots" />
+                <div className="pp-credit-price">{price}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
       </main>
+
+      {/* ── MODAL ── */}
+      {showModal && (
+        <div className="pp-overlay" onClick={() => setShowModal(false)}>
+          <div className="panel pp-modal" onClick={e => e.stopPropagation()}>
+            {submitted ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <CheckCircle2 size={48} className="sn-green" style={{ margin: '0 auto 16px' }} />
+                <h3 style={{ fontSize: 22, color: '#fff', marginBottom: 8 }}>Request Sent!</h3>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>Our team will reach out shortly.</p>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                  <div>
+                    <div className="panel-label" style={{ padding: 0, marginBottom: 4 }}>
+                      <div className="label-dot" /> Get Started
+                    </div>
+                    <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700 }}>{selectedPlan?.name} Plan</h3>
+                  </div>
+                  <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
+                    <X size={20} />
+                  </button>
+                </div>
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {[['name', 'Full Name', 'text', 'Your full name'], ['org', 'Organization', 'text', 'Company name'], ['email', 'Work Email', 'email', 'work@example.com']].map(([key, label, type, ph]) => (
+                    <div key={key} className="field">
+                      <label className="field-label">{label}</label>
+                      <input type={type} className="field-input" placeholder={ph} required value={formData[key]} onChange={e => setFormData({ ...formData, [key]: e.target.value })} />
+                    </div>
+                  ))}
+                  <button type="submit" className="btn-call pp-btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}>
+                    Submit Request
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Sticky mobile CTA */}
+      <div className="pp-sticky-cta">
+        <button className="btn-call pp-btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => document.getElementById('pricing-section').scrollIntoView({ behavior: 'smooth' })}>
+          <Phone size={15} /> View Plans
+        </button>
+      </div>
     </div>
   );
 }
