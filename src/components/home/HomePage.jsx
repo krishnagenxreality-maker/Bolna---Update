@@ -172,7 +172,10 @@ export default function HomePage() {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <button 
-                onClick={() => navigate('/login', { state: { from: '/?join=true' } })}
+                onClick={() => {
+                  handleCloseJoin();
+                  navigate('/login', { state: { from: '/?join=true' } });
+                }}
                 className="btn-call" 
                 style={{ width: '100%', padding: '16px', justifyContent: 'center' }}
               >

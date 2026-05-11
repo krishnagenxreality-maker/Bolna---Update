@@ -50,7 +50,9 @@ export default function BolnaDashboard() {
     stopCalling,
     availableAgents,
     stats,
-    credits
+    credits,
+    scheduledJobs,
+    deleteScheduledJob
   } = useBolnaDashboard();
 
   // Local state for Call Manager scheduling UI
@@ -125,146 +127,191 @@ export default function BolnaDashboard() {
             )}
 
             {activeView === 'manager' && (
-              <div className="manager-page-wrapper">
-                
-                {/* === LEFT PANEL: Scheduling & Control === */}
-                <div className="manager-left-panel">
+              <>
+                <div className="manager-page-wrapper">
                   
-                  {/* Campaign Title */}
-                  <div className="mgr-section">
-                    <label className="mgr-section-label">
-                      <FileText size={14} />
-                      Campaign Title
-                    </label>
-                    <input
-                      type="text"
-                      className="field-input campaign-title-input"
-                      placeholder="Enter Campaign Title"
-                      value={campaignTitle}
-                      onChange={(e) => setCampaignTitle(e.target.value)}
-                    />
-                  </div>
-
-                  {/* Agent Selection */}
-                  <div className="mgr-section">
-                    <label className="mgr-section-label">
-                      <Users size={14} />
-                      Select Agent
-                    </label>
-                    {availableAgents.length > 1 ? (
-                      <Dropdown
-                        value={agentId}
-                        onChange={(val) => setAgentId(val)}
-                        options={availableAgents.map(agent => ({
-                          label: agent.name,
-                          value: `${agent.name}::${agent.id}`
-                        }))}
+                  {/* === LEFT PANEL: Scheduling & Control === */}
+                  <div className="manager-left-panel">
+                    
+                    {/* Campaign Title */}
+                    <div className="mgr-section">
+                      <label className="mgr-section-label">
+                        <FileText size={14} />
+                        Campaign Title
+                      </label>
+                      <input
+                        type="text"
+                        className="field-input campaign-title-input"
+                        placeholder="Enter Campaign Title"
+                        value={campaignTitle}
+                        onChange={(e) => setCampaignTitle(e.target.value)}
                       />
-                    ) : (
-                      <div className="field-input read-only" style={{ 
-                        background: 'rgba(255, 255, 255, 0.03)', 
-                        color: 'rgba(255, 255, 255, 0.5)',
-                        fontSize: '0.85rem',
-                        padding: '0.6rem',
-                        borderRadius: '0.5rem',
-                        border: '1px solid rgba(255, 255, 255, 0.05)',
-                        fontFamily: 'monospace'
-                      }}>
-                        {availableAgents.length === 1 ? availableAgents[0].name : (agentId ? agentId.split('::')[0] : 'Not configured')}
+                    </div>
+
+                    {/* Agent Selection */}
+                    <div className="mgr-section">
+                      <label className="mgr-section-label">
+                        <Users size={14} />
+                        Select Agent
+                      </label>
+                      {availableAgents.length > 1 ? (
+                        <Dropdown
+                          value={agentId}
+                          onChange={(val) => setAgentId(val)}
+                          options={availableAgents.map(agent => ({
+                            label: agent.name,
+                            value: `${agent.name}::${agent.id}`
+                          }))}
+                        />
+                      ) : (
+                        <div className="field-input read-only" style={{ 
+                          background: 'rgba(255, 255, 255, 0.03)', 
+                          color: 'rgba(255, 255, 255, 0.5)',
+                          fontSize: '0.85rem',
+                          padding: '0.6rem',
+                          borderRadius: '0.5rem',
+                          border: '1px solid rgba(255, 255, 255, 0.05)',
+                          fontFamily: 'monospace'
+                        }}>
+                          {availableAgents.length === 1 ? availableAgents[0].name : (agentId ? agentId.split('::')[0] : 'Not configured')}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Date & Time Selection */}
+                    <div className="mgr-section">
+                      <label className="mgr-section-label">
+                        <CalendarDays size={14} />
+                        Schedule Date & Time
+                      </label>
+                      <div className="schedule-datetime-row">
+                        <div className="schedule-field">
+                          <input
+                            type="date"
+                            className="field-input schedule-date-input"
+                            value={scheduleDate}
+                            onChange={(e) => setScheduleDate(e.target.value)}
+                            min={new Date().toISOString().split('T')[0]}
+                          />
+                        </div>
+                        <div className="schedule-field">
+                          <input
+                            type="time"
+                            className="field-input schedule-time-input"
+                            value={scheduleTime}
+                            onChange={(e) => setScheduleTime(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Upload Section */}
+                    <div className="mgr-section">
+                      <UploadPanel handleFile={handleFileWithTracking} />
+                    </div>
+
+                    {/* Uploaded Sheets Info */}
+                    {uploadCount > 0 && (
+                      <div className="mgr-session-info">
+                        <div className="session-info-row">
+                          <span className="session-info-label">Sheets Uploaded Today</span>
+                          <span className="session-info-value">{uploadCount}</span>
+                        </div>
+                        <div className="session-info-row">
+                          <span className="session-info-label">Last Upload</span>
+                          <span className="session-info-value">{lastUploadTime}</span>
+                        </div>
+                        <div className="session-info-row">
+                          <span className="session-info-label">Contacts Loaded</span>
+                          <span className="session-info-value">{sessionContacts.length}</span>
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Date & Time Selection */}
-                  <div className="mgr-section">
-                    <label className="mgr-section-label">
-                      <CalendarDays size={14} />
-                      Schedule Date & Time
-                    </label>
-                    <div className="schedule-datetime-row">
-                      <div className="schedule-field">
-                        <input
-                          type="date"
-                          className="field-input schedule-date-input"
-                          value={scheduleDate}
-                          onChange={(e) => setScheduleDate(e.target.value)}
-                          min={new Date().toISOString().split('T')[0]}
+                  {/* === RIGHT PANEL: Contacts, Actions & Monitoring === */}
+                  <div className="manager-right-panel">
+                    
+                    {/* Contacts Table */}
+                    <ContactsTable 
+                      contacts={sessionContacts} 
+                      isCalling={isCalling}
+                      stopCalling={stopCalling}
+                    />
+
+                    {/* Action Row: Schedule button + Horizontal Navigation */}
+                    <div className="mgr-action-row">
+                      <div className="mgr-action-btn-wrap">
+                        <ActionBar 
+                          isCalling={isCalling} 
+                          startCalling={() => startCalling(campaignTitle, scheduleDate, scheduleTime)} 
+                          contactsCount={sessionContacts.length} 
                         />
                       </div>
-                      <div className="schedule-field">
-                        <input
-                          type="time"
-                          className="field-input schedule-time-input"
-                          value={scheduleTime}
-                          onChange={(e) => setScheduleTime(e.target.value)}
-                        />
+
+                      <div className="mgr-nav-horizontal">
+                        {managerQuickNavItems.map((item) => (
+                          <button
+                            key={item.id}
+                            className={`mgr-nav-compact-item ${isShining ? 'shining' : ''}`}
+                            onClick={() => handleNavClick(item.id)}
+                            style={{ '--nav-accent': item.color }}
+                          >
+                            <div className="mgr-nav-compact-icon">{item.icon}</div>
+                            <span className="mgr-nav-compact-label">{item.label}</span>
+                          </button>
+                        ))}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Upload Section */}
-                  <div className="mgr-section">
-                    <UploadPanel handleFile={handleFileWithTracking} />
+                    <CallFlowVisualization contacts={sessionContacts} agentId={agentId} isCalling={isCalling} />
                   </div>
-
-                  {/* Uploaded Sheets Info */}
-                  {uploadCount > 0 && (
-                    <div className="mgr-session-info">
-                      <div className="session-info-row">
-                        <span className="session-info-label">Sheets Uploaded Today</span>
-                        <span className="session-info-value">{uploadCount}</span>
-                      </div>
-                      <div className="session-info-row">
-                        <span className="session-info-label">Last Upload</span>
-                        <span className="session-info-value">{lastUploadTime}</span>
-                      </div>
-                      <div className="session-info-row">
-                        <span className="session-info-label">Contacts Loaded</span>
-                        <span className="session-info-value">{sessionContacts.length}</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {/* === RIGHT PANEL: Contacts, Actions & Monitoring === */}
-                <div className="manager-right-panel">
-                  
-                  {/* Contacts Table */}
-                  <ContactsTable 
-                    contacts={sessionContacts} 
-                    isCalling={isCalling}
-                    stopCalling={stopCalling}
-                  />
-
-                  {/* Action Row: Schedule button + Horizontal Navigation */}
-                  <div className="mgr-action-row">
-                    <div className="mgr-action-btn-wrap">
-                      <ActionBar 
-                        isCalling={isCalling} 
-                        startCalling={startCalling} 
-                        contactsCount={sessionContacts.length} 
-                      />
-                    </div>
-
-                    <div className="mgr-nav-horizontal">
-                      {managerQuickNavItems.map((item) => (
-                        <button
-                          key={item.id}
-                          className={`mgr-nav-compact-item ${isShining ? 'shining' : ''}`}
-                          onClick={() => handleNavClick(item.id)}
-                          style={{ '--nav-accent': item.color }}
-                        >
-                          <div className="mgr-nav-compact-icon">{item.icon}</div>
-                          <span className="mgr-nav-compact-label">{item.label}</span>
-                        </button>
+              {/* Scheduled Calls Section - FULL WIDTH BELOW PANELS */}
+              {scheduledJobs && scheduledJobs.filter(j => j.status === 'Scheduled').length > 0 && (
+                <div className="mgr-scheduled-section-full">
+                    <h3 className="mgr-section-title">
+                      <Clock size={18} />
+                      Scheduled Calls
+                    </h3>
+                    <div className="scheduled-jobs-list">
+                      {scheduledJobs.filter(j => j.status === 'Scheduled').map((job) => (
+                        <div key={job.id} className="scheduled-job-card">
+                          <div className="job-card-main">
+                            <div className="job-info">
+                              <span className="job-campaign">{job.campaignTitle}</span>
+                              <span className="job-agent">{job.agentName}</span>
+                            </div>
+                            <div className="job-timing">
+                              <div className="job-date">
+                                <CalendarDays size={12} />
+                                {new Date(job.scheduledAt).toLocaleDateString()}
+                              </div>
+                              <div className="job-time">
+                                <Clock size={12} />
+                                {new Date(job.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                            <div className={`job-status status-${job.status.toLowerCase()}`}>
+                              {job.status}
+                            </div>
+                            {job.status === 'Scheduled' && (
+                              <button 
+                                className="job-cancel-btn"
+                                onClick={() => deleteScheduledJob(job.id)}
+                                title="Cancel Schedule"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
-
-                  {/* Live Journey */}
-                  <CallFlowVisualization contacts={sessionContacts} agentId={agentId} isCalling={isCalling} />
-                </div>
-              </div>
+                )}
+              </>
             )}
 
             {activeView === 'details' && (

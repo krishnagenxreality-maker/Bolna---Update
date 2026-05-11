@@ -4,13 +4,15 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Supabase Setup
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const HOST = process.env.HOST || '0.0.0.0';
@@ -744,6 +746,106 @@ app.post('/api/education/attendance/:userId', async (req, res) => {
     res.json({ success: true, count: data.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// --- SCHEDULED CALLS ---
+
+const JOBS_FILE = path.join(__dirname, 'scheduled_jobs.json');
+
+const loadJobs = () => {
+  if (!fs.existsSync(JOBS_FILE)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(JOBS_FILE, 'utf8'));
+  } catch (e) {
+    return [];
+  }
+};
+
+const saveJobs = (jobs) => {
+  fs.writeFileSync(JOBS_FILE, JSON.stringify(jobs, null, 2));
+};
+
+app.get('/api/schedule/:userId', (req, res) => {
+  const { userId } = req.params;
+  const jobs = loadJobs().filter(j => j.userId === userId);
+  res.json({ success: true, jobs });
+});
+
+app.post('/api/schedule', (req, res) => {
+  const { userId, campaignTitle, agentId, agentName, contacts, scheduledAt, apiKey } = req.body;
+  
+  if (!userId || !agentId || !contacts || !scheduledAt || !apiKey) {
+    return res.status(400).json({ success: false, message: 'Missing required fields' });
+  }
+
+  const jobs = loadJobs();
+  const newJob = {
+    id: Date.now().toString(),
+    userId,
+    campaignTitle: campaignTitle || 'Untitled Campaign',
+    agentId,
+    agentName: agentName || 'Default Agent',
+    contacts,
+    scheduledAt, // ISO format
+    apiKey,
+    status: 'Scheduled',
+    createdAt: new Date().toISOString()
+  };
+
+  jobs.push(newJob);
+  saveJobs(jobs);
+  res.json({ success: true, job: newJob });
+});
+
+app.delete('/api/schedule/:id', (req, res) => {
+  const { id } = req.params;
+  let jobs = loadJobs();
+  const initialCount = jobs.length;
+  jobs = jobs.filter(j => j.id !== id);
+  
+  if (jobs.length === initialCount) {
+    return res.status(404).json({ success: false, message: 'Job not found' });
+  }
+  
+  saveJobs(jobs);
+  res.json({ success: true, message: 'Job deleted' });
+});
+
+// Background Watcher Engine
+const startScheduler = () => {
+  setInterval(async () => {
+    const jobs = loadJobs();
+    const now = new Date();
+    let changed = false;
+
+    for (let job of jobs) {
+      if (job.status === 'Scheduled' && new Date(job.scheduledAt) <= now) {
+        job.status = 'Running';
+        changed = true;
+        saveJobs(jobs); // Save immediate status change
+
+        console.log(`[Scheduler] Job ${job.id} (${job.campaignTitle}) triggered for user ${job.userId}. Frontend will handle execution.`);
+      }
+    }
+
+    if (changed) saveJobs(jobs);
+  }, 30000); // Check every 30 seconds
+};
+
+startScheduler();
+
+// Update Job Status
+app.post('/api/schedule/status', (req, res) => {
+  const { jobId, status } = req.body;
+  const jobs = loadJobs();
+  const job = jobs.find(j => j.id === jobId);
+  if (job) {
+    job.status = status;
+    saveJobs(jobs);
+    res.json({ success: true, status: job.status });
+  } else {
+    res.status(404).json({ success: false, message: 'Job not found' });
   }
 });
 

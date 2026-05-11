@@ -1,0 +1,108 @@
+[
+  {
+    "id": "1778308169223",
+    "userId": "jk",
+    "campaignTitle": "Something",
+    "agentId": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844",
+    "agentName": "Edu",
+    "contacts": [
+      {
+        "id": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844::1778308167133-0-bp6bi1p7m",
+        "name": "Jaua Krishna",
+        "phone": "+916301228536",
+        "status": "pending",
+        "executionId": null,
+        "date": "2026-05-09",
+        "agentId": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844"
+      }
+    ],
+    "scheduledAt": "2026-05-09T06:32:00.000Z",
+    "apiKey": "bn-2f122a4e574d4aa6aa0ee3290a3897e0",
+    "status": "Completed",
+    "createdAt": "2026-05-09T06:29:29.223Z"
+  },
+  {
+    "id": "1778309258752",
+    "userId": "jk",
+    "campaignTitle": "Something",
+    "agentId": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844",
+    "agentName": "Edu",
+    "contacts": [
+      {
+        "id": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844::1778309255910-0-ll2s4y43r",
+        "name": "Jaua Krishna",
+        "phone": "+916301228536",
+        "status": "pending",
+        "executionId": null,
+        "date": "2026-05-09",
+        "agentId": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844"
+      }
+    ],
+    "scheduledAt": "2026-05-09T06:50:00.000Z",
+    "apiKey": "bn-2f122a4e574d4aa6aa0ee3290a3897e0",
+    "status": "Completed",
+    "createdAt": "2026-05-09T06:47:38.752Z"
+  },
+  {
+    "id": "1778330234707",
+    "userId": "jk",
+    "campaignTitle": "demo attendance campaign",
+    "agentId": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844",
+    "agentName": "Edu",
+    "contacts": [
+      {
+        "id": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844::1778330218423-0-gny36ware",
+        "name": "Pranav",
+        "phone": "+916302480521",
+        "status": "pending",
+        "executionId": null,
+        "date": "2026-05-09",
+        "agentId": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844"
+      },
+      {
+        "id": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844::1778330218423-1-i01tbygjo",
+        "name": "Vamshi",
+        "phone": "+917780788136",
+        "status": "pending",
+        "executionId": null,
+        "date": "2026-05-09",
+        "agentId": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844"
+      }
+    ],
+    "scheduledAt": "2026-05-09T12:38:00.000Z",
+    "apiKey": "bn-2f122a4e574d4aa6aa0ee3290a3897e0",
+    "status": "Completed",
+    "createdAt": "2026-05-09T12:37:14.707Z"
+  },
+  {
+    "id": "1778335337686",
+    "userId": "jk",
+    "campaignTitle": "sa",
+    "agentId": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844",
+    "agentName": "Edu",
+    "contacts": [
+      {
+        "id": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844::1778335319925-0-hbqdhxhx8",
+        "name": "sai charan",
+        "phone": "+917799327779",
+        "status": "pending",
+        "executionId": null,
+        "date": "2026-05-09",
+        "agentId": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844"
+      },
+      {
+        "id": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844::1778335319925-1-87lri8xay",
+        "name": "Vamshi",
+        "phone": "+917780788136",
+        "status": "pending",
+        "executionId": null,
+        "date": "2026-05-09",
+        "agentId": "Edu::1b6bf2f5-cdba-47a1-9178-adc168d84844"
+      }
+    ],
+    "scheduledAt": "2026-05-09T14:03:00.000Z",
+    "apiKey": "bn-2f122a4e574d4aa6aa0ee3290a3897e0",
+    "status": "Running-Acknowledge",
+    "createdAt": "2026-05-09T14:02:17.686Z"
+  }
+]

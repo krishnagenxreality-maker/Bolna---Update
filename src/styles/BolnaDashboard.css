@@ -1693,3 +1693,180 @@ body {
     padding: 0 20px 40px;
   }
 }
+
+/* Scheduled Calls UI */
+.mgr-scheduled-section {
+  margin-top: 40px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px;
+  animation: fadein 0.5s ease-out;
+}
+
+.mgr-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 20px;
+  letter-spacing: 0.5px;
+}
+
+.scheduled-jobs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scheduled-job-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 16px 20px;
+  transition: all 0.2s ease;
+}
+
+.scheduled-job-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(4px);
+}
+
+.job-card-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.job-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.job-campaign {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.job-agent {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: monospace;
+}
+
+.job-timing {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+}
+
+.job-date, .job-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.job-status {
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 100px;
+  text-align: center;
+}
+
+.status-scheduled {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.status-running {
+  background: rgba(245, 200, 66, 0.1);
+  color: #f5c842;
+  border: 1px solid rgba(245, 200, 66, 0.2);
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0% { border-color: rgba(245, 200, 66, 0.2); }
+  50% { border-color: rgba(245, 200, 66, 0.6); }
+  100% { border-color: rgba(245, 200, 66, 0.2); }
+}
+
+.status-completed {
+  background: rgba(125, 255, 179, 0.1);
+  color: #7dffb3;
+  border: 1px solid rgba(125, 255, 179, 0.2);
+}
+
+.status-failed {
+  background: rgba(255, 112, 112, 0.1);
+  color: #ff7070;
+  border: 1px solid rgba(255, 112, 112, 0.2);
+}
+
+.job-cancel-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.4);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.job-cancel-btn:hover {
+  background: rgba(255, 112, 112, 0.15);
+  color: #ff7070;
+  border-color: rgba(255, 112, 112, 0.3);
+  transform: scale(1.1);
+}
+
+
+/* Full-Width Scheduled Section */
+.mgr-scheduled-section-full {
+  width: 100%;
+  margin-top: 30px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(10px);
+  animation: fadein 0.5s ease-out;
+}
+
+.mgr-scheduled-section-full .mgr-section-title {
+  margin-bottom: 24px;
+}
+
+.mgr-scheduled-section-full .scheduled-jobs-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .mgr-scheduled-section-full .scheduled-jobs-list {
+    grid-template-columns: 1fr;
+  }
+}
+
