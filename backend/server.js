@@ -907,7 +907,7 @@ app.get('/api/custom-agents/:userId', async (req, res) => {
 });
 
 app.post('/api/custom-agents', async (req, res) => {
-  const { userId, agentName, script, scriptType, bolnaAgentId } = req.body;
+  const { userId, agentName, script, scriptType, bolnaAgentId, voiceId, voiceName } = req.body;
   
   if (!userId || !agentName || !script || !bolnaAgentId) {
     return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -921,7 +921,9 @@ app.post('/api/custom-agents', async (req, res) => {
         agent_name: agentName,
         script: script,
         script_type: scriptType || 'manual',
-        bolna_agent_id: bolnaAgentId
+        bolna_agent_id: bolnaAgentId,
+        voice_id: voiceId,
+        voice_name: voiceName
       }])
       .select()
       .single();

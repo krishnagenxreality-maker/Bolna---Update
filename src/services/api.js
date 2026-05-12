@@ -1,8 +1,15 @@
-export async function makeCall(key, agId, phone) {
+export async function makeCall(key, agId, phone, name = "") {
   const res = await fetch("https://api.bolna.ai/call", {
     method: "POST",
     headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ agent_id: agId, recipient_phone_number: phone })
+    body: JSON.stringify({ 
+      agent_id: agId, 
+      recipient_phone_number: phone,
+      user_variables: {
+        customer_name: name || "Hello",
+        name: name || "Hello"
+      }
+    })
   });
   if (!res.ok) { 
     const txt = await res.text(); 
@@ -11,6 +18,27 @@ export async function makeCall(key, agId, phone) {
   const data = await res.json();
   if (!data.execution_id) throw new Error("No execution_id returned");
   return data.execution_id;
+}
+
+export async function fetchVoices(key) {
+  if (!key) return [];
+  try {
+    const res = await fetch("https://api.bolna.ai/voices", {
+      headers: { "Authorization": `Bearer ${key}` }
+    });
+    if (!res.ok) {
+      // Fallback to V2
+      const resV2 = await fetch("https://api.bolna.ai/v2/voices", {
+        headers: { "Authorization": `Bearer ${key}` }
+      });
+      if (!resV2.ok) return [];
+      return await resV2.json();
+    }
+    return await res.json();
+  } catch (err) {
+    console.error("Failed to fetch voices:", err);
+    return [];
+  }
 }
 
 export async function fetchExecutionStatus(key, executionId) {

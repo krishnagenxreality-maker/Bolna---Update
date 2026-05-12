@@ -191,7 +191,7 @@ export function useBolnaDashboard() {
       updateContactStatus(id, "queued");
       try {
         const actualBolnaId = agId.includes('::') ? agId.split('::')[1] : agId;
-        const execId = await makeCall(key, actualBolnaId, contact.phone);
+        const execId = await makeCall(key, actualBolnaId, contact.phone, contact.name);
         updateContactExecId(id, execId);
         updateContactStatus(id, "calling");
         addLog(`✓ Call queued: ${contact.name} (${contact.phone}) → exec ${execId.slice(0,8)}…`, "ok");
@@ -368,7 +368,9 @@ export function useBolnaDashboard() {
                 id: a.bolna_agent_id,
                 isCustom: true,
                 scriptType: a.script_type,
-                script: a.script
+                script: a.script,
+                voiceId: a.voice_id,
+                voiceName: a.voice_name
               }));
               currentAgents = [...currentAgents, ...customAgents];
             }
@@ -483,7 +485,9 @@ export function useBolnaDashboard() {
           id: agentData.bolnaAgentId,
           isCustom: true,
           scriptType: agentData.scriptType,
-          script: agentData.script
+          script: agentData.script,
+          voiceId: agentData.voiceId,
+          voiceName: agentData.voiceName
         };
         console.log("SYNC_CUSTOM_AGENT_SUCCESS", newAgent);
         setAvailableAgents(prev => [...prev, newAgent]);
