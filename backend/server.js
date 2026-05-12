@@ -27,14 +27,29 @@ app.use(bodyParser.json());
 // Helper to map DB row to API response (snake to camel)
 const mapUser = (user) => {
   if (!user) return null;
-  const { bolna_api_key, bolna_agent_id, user_id, is_first_login, ...rest } = user;
+  const { 
+    bolna_api_key, bolna_agent_id, user_id, is_first_login, 
+    selected_plan, total_credits, used_credits, remaining_credits,
+    active_sessions, report_usage_weekly, report_usage_monthly,
+    campaign_count, device_session, ...rest 
+  } = user;
+  
   return {
     ...rest,
     userId: user_id,
     bolnaApiKey: bolna_api_key,
     bolnaAgentId: bolna_agent_id,
-    credits: user.credits || 0,
-    isFirstLogin: user_id !== 'AdminGenx' && is_first_login !== false, // Always false for AdminGenx for stability
+    credits: remaining_credits !== undefined ? remaining_credits : (user.credits || 0),
+    selectedPlan: selected_plan || 'Starter',
+    totalCredits: total_credits || 2000,
+    usedCredits: used_credits || 0,
+    remainingCredits: remaining_credits !== undefined ? remaining_credits : (user.credits || 0),
+    activeSessions: active_sessions || 0,
+    reportUsageWeekly: report_usage_weekly || 0,
+    reportUsageMonthly: report_usage_monthly || 0,
+    campaignCount: campaign_count || 0,
+    deviceSession: device_session || null,
+    isFirstLogin: user_id !== 'AdminGenx' && is_first_login !== false,
     userType: user.user_type || 'regular'
   };
 };
@@ -80,13 +95,34 @@ app.post('/api/login', async (req, res) => {
     }
 
     if (passwordMatch) {
-      const mapped = mapUser(user);
+      // Session Control: Single device login
+      // If user is already logged in elsewhere and didn't check "logout other devices"
+      if (user.device_session && !req.body.forceLogout && userId !== 'AdminGenx') {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'This account is already logged in on another device. Please logout from other device or click Logout Other Devices.',
+          sessionActive: true
+        });
+      }
+
+      const deviceSessionToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      
+      // Update session token in DB
+      await supabase.from('users').update({ 
+        device_session: deviceSessionToken,
+        active_sessions: 1 
+      }).eq('user_id', userId);
+
+      const updatedUserRes = await supabase.from('users').select('*').eq('user_id', userId).single();
+      const mapped = mapUser(updatedUserRes.data);
       const { password: _, ...userWithoutPassword } = mapped;
+      
       res.json({ 
         success: true, 
         user: userWithoutPassword, 
         isFirstLogin: userWithoutPassword.isFirstLogin,
-        userType: userWithoutPassword.userType
+        userType: userWithoutPassword.userType,
+        deviceSession: deviceSessionToken
       });
     } else {
       res.status(401).json({ success: false, message: 'Invalid credentials' });
@@ -128,7 +164,11 @@ app.post('/api/users', async (req, res) => {
         email: newUser.email || '',
         bolna_api_key: newUser.bolnaApiKey,
         bolna_agent_id: newUser.bolnaAgentId,
-        credits: newUser.credits || 0,
+        credits: newUser.credits || 2000,
+        selected_plan: newUser.selectedPlan || 'Starter',
+        total_credits: newUser.totalCredits || 2000,
+        used_credits: 0,
+        remaining_credits: newUser.totalCredits || 2000,
         user_type: newUser.userType || 'regular',
         is_first_login: true
       }])
@@ -192,6 +232,13 @@ app.put('/api/users/:oldUserId', async (req, res) => {
     if (updatedData.bolnaApiKey !== undefined) toUpdate.bolna_api_key = updatedData.bolnaApiKey;
     if (updatedData.bolnaAgentId !== undefined) toUpdate.bolna_agent_id = updatedData.bolnaAgentId;
     if (updatedData.userType !== undefined) toUpdate.user_type = updatedData.userType;
+    if (updatedData.selectedPlan !== undefined) toUpdate.selected_plan = updatedData.selectedPlan;
+    if (updatedData.totalCredits !== undefined) toUpdate.total_credits = updatedData.totalCredits;
+    if (updatedData.usedCredits !== undefined) toUpdate.used_credits = updatedData.usedCredits;
+    if (updatedData.remainingCredits !== undefined) {
+      toUpdate.remaining_credits = updatedData.remainingCredits;
+      toUpdate.credits = updatedData.remainingCredits; // Sync with legacy field
+    }
 
     const { data, error } = await supabase
       .from('users')
@@ -206,6 +253,20 @@ app.put('/api/users/:oldUserId', async (req, res) => {
     }
 
     res.json({ success: true, user: mapUser(data) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Logout Endpoint
+app.post('/api/logout', async (req, res) => {
+  const { userId } = req.body;
+  try {
+    await supabase.from('users').update({ 
+      device_session: null,
+      active_sessions: 0 
+    }).eq('user_id', userId);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -258,26 +319,101 @@ app.post('/api/user-credits/deduct/:userId', async (req, res) => {
   try {
     const { data: user, error: fetchError } = await supabase
       .from('users')
-      .select('credits')
+      .select('remaining_credits, used_credits, credits')
       .eq('user_id', userId)
       .single();
 
     if (fetchError || !user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    const currentCredits = user.credits || 0;
-    if (currentCredits <= 0) {
+    const currentRemaining = user.remaining_credits !== undefined ? user.remaining_credits : (user.credits || 0);
+    const currentUsed = user.used_credits || 0;
+
+    if (currentRemaining <= 0) {
       return res.status(400).json({ success: false, message: 'No credits remaining' });
     }
 
     const { data, error } = await supabase
       .from('users')
-      .update({ credits: currentCredits - 1 })
+      .update({ 
+        remaining_credits: currentRemaining - 1,
+        used_credits: currentUsed + 1,
+        credits: currentRemaining - 1 // Sync with legacy field
+      })
       .eq('user_id', userId)
-      .select('credits')
+      .select('remaining_credits, used_credits, credits')
       .single();
 
     if (error) throw error;
-    res.json({ success: true, credits: data.credits });
+    res.json({ 
+      success: true, 
+      credits: data.remaining_credits,
+      usedCredits: data.used_credits 
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin: Add credits
+app.post('/api/user-credits/add/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { amount } = req.body;
+  try {
+    const { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('remaining_credits, total_credits, credits')
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const newRemaining = (user.remaining_credits || 0) + amount;
+    const newTotal = (user.total_credits || 0) + amount;
+
+    const { data, error } = await supabase
+      .from('users')
+      .update({ 
+        remaining_credits: newRemaining,
+        total_credits: newTotal,
+        credits: newRemaining
+      })
+      .eq('user_id', userId)
+      .select('remaining_credits, total_credits')
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, credits: data.remaining_credits, totalCredits: data.total_credits });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Track Report Usage
+app.post('/api/reports/track/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { type } = req.body; // 'weekly' or 'monthly'
+  try {
+    const { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('report_usage_weekly, report_usage_monthly')
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const update = {};
+    if (type === 'weekly') update.report_usage_weekly = (user.report_usage_weekly || 0) + 1;
+    if (type === 'monthly') update.report_usage_monthly = (user.report_usage_monthly || 0) + 1;
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(update)
+      .eq('user_id', userId)
+      .select('report_usage_weekly, report_usage_monthly')
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, usage: data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -791,6 +927,29 @@ app.post('/api/schedule', async (req, res) => {
   if (!userId || !agentId || !contacts || !scheduledAt || !apiKey) {
     return res.status(400).json({ success: false, message: 'Missing required fields' });
   }
+
+  // Plan Validation: Starter plan limits
+  try {
+    const { data: user } = await supabase.from('users').select('selected_plan').eq('user_id', userId).single();
+    if (user && user.selected_plan === 'Starter') {
+      // Check for any "Scheduled" or "Running" jobs for this user today
+      const today = new Date().toISOString().split('T')[0];
+      const { data: activeJobs } = await supabase
+        .from('scheduled_jobs')
+        .select('id')
+        .eq('user_id', userId)
+        .in('status', ['Scheduled', 'Running', 'Running-Acknowledge'])
+        .gte('scheduled_at', `${today}T00:00:00`)
+        .lte('scheduled_at', `${today}T23:59:59`);
+
+      if (activeJobs && activeJobs.length > 0) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Starter Plan Limit: You can only have 1 active or scheduled campaign at a time today. Please wait for your current campaign to complete or upgrade to Growth plan.' 
+        });
+      }
+    }
+  } catch (e) { }
 
   const newJobToInsert = {
     id: Date.now().toString(),

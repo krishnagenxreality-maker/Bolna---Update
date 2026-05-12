@@ -12,17 +12,18 @@ const PLANS = [
     name: 'Starter',
     price: '₹4,999',
     setup: '₹7,999',
+    credits: 2000,
     cta: 'Get Started',
     popular: false,
     features: [
-      'Up to 2,000 AI calls / month',
+      '2,000 Completed AI calls',
+      'No charges for No-Answer/Busy',
       'Telugu & English AI voice agents',
       'AI call summaries',
       'AI lead classification',
       'Campaign analytics',
       'Excel Upload',
       'Single workspace',
-      'Email support',
     ],
   },
   {
@@ -30,16 +31,17 @@ const PLANS = [
     name: 'Growth',
     price: '₹11,999',
     setup: '₹14,999',
+    credits: 6000,
     cta: 'Scale With AI',
     popular: true,
     features: [
-      'Up to 6,000 AI calls / month',
+      '6,000 Completed AI calls',
+      'No charges for No-Answer/Busy',
       'Multi-campaign AI calling',
       'AI retry calling',
       'Advanced analytics',
       'AI conversation insights',
       'Lead tracking',
-      'Faster processing',
       '3 team members',
     ],
   },
@@ -48,17 +50,18 @@ const PLANS = [
     name: 'Pro',
     price: '₹24,999',
     setup: '₹29,999',
+    credits: 15000,
     cta: 'Contact Sales',
     popular: false,
     features: [
-      'Up to 15,000 AI calls / month',
+      '15,000 Completed AI calls',
+      'No charges for No-Answer/Busy',
       'Multi-agent AI calling',
       'Custom AI voice',
       'Dedicated infrastructure',
       'Enterprise analytics',
       'Priority queue',
       'Dedicated onboarding',
-      'Team collaboration',
     ],
   },
 ];
@@ -73,16 +76,47 @@ const CREDIT_STEPS = [
 ];
 
 const FAQS = [
-  { q: 'What payment methods do you accept?', a: 'We accept all major credit/debit cards, UPI, net banking, and bank transfers. All payments are processed securely in INR.' },
-  { q: 'Is the setup fee a one-time charge?', a: 'Yes, the setup fee is a one-time charge paid at the time of onboarding. It covers account configuration, AI agent setup, and initial campaign assistance. It is not recurring.' },
-  { q: 'What happens if I exceed my monthly call limit?', a: "If you exceed your plan's monthly call limit, your campaigns will pause automatically. You can purchase add-on credit packs instantly to continue without any downtime." },
-  { q: 'Do unused credits roll over to the next month?', a: 'Monthly plan credits reset at the end of each billing cycle and do not roll over. However, add-on credit packs you purchase separately are valid for 90 days from the date of purchase.' },
-  { q: 'Can I upgrade or downgrade my plan?', a: 'Yes, you can upgrade your plan at any time and the change takes effect immediately. Downgrades take effect at the start of your next billing cycle.' },
-  { q: 'What counts as one AI call credit?', a: 'One credit equals one outbound AI call attempt, regardless of call duration or outcome. Both connected and unanswered calls consume one credit.' },
-  { q: 'Are add-on credits tied to a specific plan?', a: 'No, add-on credit packs can be purchased on any plan — Starter, Growth, or Pro. They are added on top of your existing monthly allocation and can be used immediately.' },
-  { q: 'Is there a refund policy?', a: 'Setup fees are non-refundable. For monthly subscriptions, if you face a technical issue on our end, we will issue pro-rated credits. Please contact support@callinggen.ai for refund requests.' },
-  { q: 'Do you offer a free trial?', a: 'We currently do not offer a self-serve free trial. However, you can book a demo with our team and we will run a sample campaign so you can evaluate the platform before subscribing.' },
-  { q: 'Is GST included in the pricing?', a: 'All displayed prices are exclusive of GST. Applicable GST (18%) will be added at checkout. A GST invoice will be provided for all transactions.' },
+  {
+    q: 'What payment methods do you accept?',
+    a: 'We accept all major credit/debit cards, UPI, net banking, and bank transfers. All payments are processed securely in INR.',
+  },
+  {
+    q: 'Is the setup fee a one-time charge?',
+    a: 'Yes, the setup fee is a one-time charge paid at the time of onboarding. It covers account configuration, AI agent setup, and initial campaign assistance. It is not recurring.',
+  },
+  {
+    q: 'What happens if I exceed my monthly call limit?',
+    a: "If you exceed your plan's monthly call limit, your campaigns will pause automatically. You can purchase add-on credit packs instantly to continue without any downtime.",
+  },
+  {
+    q: 'Do unused credits roll over to the next month?',
+    a: 'Monthly plan credits reset at the end of each billing cycle and do not roll over. However, add-on credit packs you purchase separately are valid for 90 days from the date of purchase.',
+  },
+  {
+    q: 'Can I upgrade or downgrade my plan?',
+    a: 'Yes, you can upgrade your plan at any time and the change takes effect immediately. Downgrades take effect at the start of your next billing cycle.',
+  },
+  {
+    q: 'What counts as one AI call credit?',
+    a: 'One credit equals one successfully completed outbound AI call. We do NOT deduct credits for calls that are busy, failed, cancelled, or go to voicemail (No Answer). You only pay for results.',
+  },
+  {
+    q: 'Are add-on credits tied to a specific plan?',
+    a: 'No, add-on credit packs can be purchased on any plan — Starter, Growth, or Pro. They are added on top of your existing monthly allocation and can be used immediately.',
+  },
+  {
+    q: 'Is there a refund policy?',
+    a: 'Setup fees are non-refundable. For monthly subscriptions, if you face a technical issue on our end, we will issue pro-rated credits. Please contact support@callinggen.ai for refund requests.',
+  },
+  {
+    q: 'Do you offer a free trial?',
+    a: 'We currently do not offer a self-serve free trial. However, you can book a demo with our team and we will run a sample campaign so you can evaluate the platform before subscribing.',
+  },
+  {
+    q: 'Is GST included in the pricing?',
+    a: 'All displayed prices are exclusive of GST. Applicable GST (18%) will be added at checkout. A GST invoice will be provided for all transactions.',
+  },
+
 ];
 
 const PAGE_STYLES = `
@@ -423,8 +457,13 @@ export default function PricingPage() {
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                   <div>
-                    <div className="panel-label" style={{ padding: 0, marginBottom: 4 }}><div className="label-dot" /> Get Started</div>
-                    <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, fontFamily: 'Outfit' }}>{selectedPlan?.name} Plan</h3>
+                    <div className="panel-label" style={{ padding: 0, marginBottom: 4 }}>
+                      <div className="label-dot" /> Get Started
+                    </div>
+                    <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, fontFamily: 'Outfit' }}>
+                      {selectedPlan?.name} Plan — {selectedPlan?.credits?.toLocaleString()} Credits
+                    </h3>
+
                   </div>
                   <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}><X size={20} /></button>
                 </div>

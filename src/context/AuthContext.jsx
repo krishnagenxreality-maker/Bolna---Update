@@ -10,32 +10,59 @@ export const AuthProvider = ({ children }) => {
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
-  const login = async (userId, password) => {
+  const [deviceSession, setDeviceSession] = useState(() => {
+    return localStorage.getItem('bolna_device_session');
+  });
+
+  const login = async (userId, password, forceLogout = false) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/login`, { userId, password });
+      const response = await axios.post(`${API_BASE_URL}/api/login`, { userId, password, forceLogout });
       if (response.data.success) {
         const userData = response.data.user;
+        const sessionToken = response.data.deviceSession;
+        
         setUser(userData);
+        setDeviceSession(sessionToken);
+        
         localStorage.setItem('bolna_user', JSON.stringify(userData));
+        if (sessionToken) {
+          localStorage.setItem('bolna_device_session', sessionToken);
+        }
+        
         return { 
           success: true, 
           role: userData.role, 
           isFirstLogin: response.data.isFirstLogin,
-          userType: response.data.userType
+          userType: response.data.userType,
+          deviceSession: sessionToken
         };
       }
     } catch (error) {
+      if (error.response?.data?.sessionActive) {
+        return { 
+          success: false, 
+          message: error.response.data.message, 
+          sessionActive: true 
+        };
+      }
       return { success: false, message: error.response?.data?.message || 'Login failed' };
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (user?.userId) {
+      try {
+        await axios.post(`${API_BASE_URL}/api/logout`, { userId: user.userId });
+      } catch (err) { }
+    }
     setUser(null);
+    setDeviceSession(null);
     localStorage.removeItem('bolna_user');
+    localStorage.removeItem('bolna_device_session');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, deviceSession }}>
       {children}
     </AuthContext.Provider>
   );
