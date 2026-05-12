@@ -23,7 +23,7 @@ export const LeadsView = ({
   const [selectedCategory, setSelectedCategory] = useState('');
   const [modalData, setModalData] = useState(null);
   const [loadingRecording, setLoadingRecording] = useState(false);
-  const ROWS_PER_PAGE = 4;
+  const ROWS_PER_PAGE = 7;
 
   // Filter by date
   const filteredContacts = useMemo(() => contacts.filter(c => !searchDate || c.date === searchDate), [contacts, searchDate]);
@@ -170,10 +170,10 @@ export const LeadsView = ({
         </p>
       </div>
 
-      <div className="leads-layout-wrapper">
+      <div className="leads-layout-wrapper" style={{ display: 'flex', gridTemplateColumns: 'none', height: 'auto', overflow: 'visible' }}>
         
         {/* LEFT COLUMN: Navigation & Metrics */}
-        <div className="leads-left-column">
+        <div className="leads-left-column" style={{ width: '280px', flexShrink: 0 }}>
           <div className="details-nav-matrix">
             {navItems.map((item) => (
               <div 
@@ -194,9 +194,7 @@ export const LeadsView = ({
                 <Tag size={14} />
               </div>
               <div className="metric-info">
-                <div className="metric-value">
-                  {categorizedContacts.length}
-                </div>
+                <div className="metric-value">{categorizedContacts.length}</div>
                 <div className="metric-label">Total Leads</div>
               </div>
             </div>
@@ -206,9 +204,7 @@ export const LeadsView = ({
                 <Layers size={14} />
               </div>
               <div className="metric-info">
-                <div className="metric-value">
-                  {uniqueCategories.length}
-                </div>
+                <div className="metric-value">{uniqueCategories.length}</div>
                 <div className="metric-label">Categories</div>
               </div>
             </div>
@@ -218,9 +214,7 @@ export const LeadsView = ({
                 <CheckCircle2 size={14} />
               </div>
               <div className="metric-info">
-                <div className="metric-value">
-                  {filteredContacts.filter(c => c.status === 'called' || c.status === 'completed').length}
-                </div>
+                <div className="metric-value">{filteredContacts.filter(c => c.status === 'called' || c.status === 'completed').length}</div>
                 <div className="metric-label">Completed</div>
               </div>
             </div>
@@ -230,212 +224,209 @@ export const LeadsView = ({
                 <PhoneOff size={14} />
               </div>
               <div className="metric-info">
-                <div className="metric-value">
-                  {filteredContacts.filter(c => c.status === 'no answer').length}
-                </div>
+                <div className="metric-value">{filteredContacts.filter(c => c.status === 'no answer').length}</div>
                 <div className="metric-label">No Answer</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* CENTER COLUMN: Analytics */}
-        <div className="leads-center-column">
-          <Panel label="Category Distribution">
-            <div className="panel-body" style={{ height: '200px', paddingTop: '10px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={classificationData}
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {classificationData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip {...chartTheme.tooltip} />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Panel>
-
-          <Panel label="Lead Volume Trend">
-            <div className="panel-body" style={{ height: '200px', paddingTop: '20px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={leadsTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} vertical={false} />
-                  <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} />
-                  <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} />
-                  <Tooltip {...chartTheme.tooltip} />
-                  <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Panel>
-        </div>
-
-        {/* RIGHT COLUMN: Leads Analysis Table */}
-        <div className="leads-right-column">
-          <Panel>
-            <PanelHead>
-              <div className="panel-label" style={{marginBottom:0}}>
-                <span className="label-dot" />
-                AI Lead Analysis
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button 
-                  onClick={handleDownload}
-                  className="nav-btn"
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    fontSize: '11px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <Download size={14} /> Download
-                </button>
-                <DatePicker value={searchDate} onChange={setSearchDate} />
-              </div>
-            </PanelHead>
-
-            <div className="panel-body">
-              {/* Dynamic Category Filter Dropdown */}
-              <div className="leads-filter-bar">
-                <div className="leads-filter-dropdown-wrap">
-                  <Tag size={14} style={{ color: 'rgba(255,255,255,0.4)' }} />
-                  <select
-                    id="leads-category-filter"
-                    className="leads-filter-dropdown"
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                  >
-                    <option value="">All Categories</option>
-                    {uniqueCategories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+        {/* MAIN CONTENT: Table and Graphs */}
+        <div className="leads-main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
+          
+          {/* CENTERED TABLE SECTION */}
+          <div className="leads-table-section" style={{ width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
+            <Panel>
+              <PanelHead>
+                <div className="panel-label" style={{marginBottom:0}}>
+                  <span className="label-dot" />
+                  AI Lead Analysis
                 </div>
-                {selectedCategory && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <button 
-                    className="leads-filter-clear"
-                    onClick={() => setSelectedCategory('')}
+                    onClick={handleDownload}
+                    className="nav-btn"
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
                   >
-                    <X size={12} /> Clear
+                    <Download size={14} /> Download
                   </button>
-                )}
-              </div>
+                  <DatePicker value={searchDate} onChange={setSearchDate} />
+                </div>
+              </PanelHead>
 
-              <div className="details-table-scroll-container" style={{ flex: '0 0 auto', maxHeight: 'none' }}>
-                <div className="table-wrap">
-                  <table className="ct">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Name</th>
-                        <th>Phone</th>
-                        <th>Category</th>
-                        <th>Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentRows.map((c, i) => (
-                        <tr key={c.id}>
-                          <td className="td-num">{currentPage * ROWS_PER_PAGE + i + 1}</td>
-                          <td className="td-name">{c.name}</td>
-                          <td className="td-phone">{c.phone}</td>
-                          <td>
-                            <span 
-                              className="category-cell-clickable"
-                              onClick={() => handleCategoryClick(c)}
-                              title="Click to view details"
-                            >
-                              {c.leadCategory || 'PENDING'}
-                            </span>
-                          </td>
-                          <td className="td-phone" style={{ fontSize: '11px' }}>{c.date}</td>
-                        </tr>
+              <div className="panel-body">
+                <div className="leads-filter-bar">
+                  <div className="leads-filter-dropdown-wrap">
+                    <Tag size={14} style={{ color: 'rgba(255,255,255,0.4)' }} />
+                    <select
+                      id="leads-category-filter"
+                      className="leads-filter-dropdown"
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                    >
+                      <option value="">All Categories</option>
+                      {uniqueCategories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
                       ))}
-                    </tbody>
-                  </table>
-                  {filteredLeads.length === 0 && (
-                    <div className="no-data" style={{ padding: '40px', textAlign: 'center', opacity: 0.5 }}>
-                      No lead records found for this selection.
-                    </div>
+                    </select>
+                  </div>
+                  {selectedCategory && (
+                    <button 
+                      className="leads-filter-clear"
+                      onClick={() => setSelectedCategory('')}
+                    >
+                      <X size={12} /> Clear
+                    </button>
                   )}
                 </div>
-              </div>
 
-              {/* Flex spacer to push pagination to the bottom */}
-              <div style={{ flex: 1 }} />
-
-              {/* Pagination Controls - Aligned to bottom */}
-              {totalPages > 1 && (
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between', 
-                  marginTop: '0px',
-                  padding: '12px 4px 4px'
-                }}>
-                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono' }}>
-                    Showing {currentPage * ROWS_PER_PAGE + 1}-{Math.min((currentPage + 1) * ROWS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length}
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button 
-                      onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                      disabled={currentPage === 0}
-                      className="nav-btn"
-                      style={{ 
-                        padding: '6px', 
-                        borderRadius: '6px', 
-                        opacity: currentPage === 0 ? 0.3 : 1,
-                        cursor: currentPage === 0 ? 'not-allowed' : 'pointer'
-                      }}
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-                    <button 
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
-                      disabled={currentPage === totalPages - 1}
-                      className="nav-btn"
-                      style={{ 
-                        padding: '6px', 
-                        borderRadius: '6px', 
-                        opacity: currentPage === totalPages - 1 ? 0.3 : 1,
-                        cursor: currentPage === totalPages - 1 ? 'not-allowed' : 'pointer'
-                      }}
-                    >
-                      <ChevronRight size={16} />
-                    </button>
+                <div className="details-table-scroll-container" style={{ flex: '0 0 auto', maxHeight: 'none' }}>
+                  <div className="table-wrap">
+                    <table className="ct">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Name</th>
+                          <th>Phone</th>
+                          <th>Category</th>
+                          <th>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentRows.map((c, i) => (
+                          <tr key={c.id}>
+                            <td className="td-num">{currentPage * ROWS_PER_PAGE + i + 1}</td>
+                            <td className="td-name">{c.name}</td>
+                            <td className="td-phone">{c.phone}</td>
+                            <td>
+                              <span 
+                                className="category-cell-clickable"
+                                onClick={() => handleCategoryClick(c)}
+                                title="Click to view details"
+                              >
+                                {c.leadCategory || 'PENDING'}
+                              </span>
+                            </td>
+                            <td className="td-phone" style={{ fontSize: '11px' }}>{c.date}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {filteredLeads.length === 0 && (
+                      <div className="no-data" style={{ padding: '40px', textAlign: 'center', opacity: 0.5 }}>
+                        No lead records found for this selection.
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
-            
-            {/* Disclaimer Section */}
-            <div style={{ 
-              margin: '0 20px 16px', 
-              padding: '12px', 
-              background: 'rgba(255, 255, 255, 0.02)', 
-              borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.04)',
-              fontSize: '10px',
-              color: 'rgba(255, 255, 255, 0.3)',
-              lineHeight: '1.4'
-            }}>
-              "After every month the leads data will be deleted, so please make sure that you download your data. Due to security reasons, we do not store or access your data. Your data always remains with you."
-            </div>
-          </Panel>
-        </div>
 
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    marginTop: '12px',
+                    padding: '0 4px 12px'
+                  }}>
+                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono' }}>
+                      Showing {currentPage * ROWS_PER_PAGE + 1}-{Math.min((currentPage + 1) * ROWS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                        disabled={currentPage === 0}
+                        className="nav-btn"
+                        style={{ 
+                          padding: '6px', 
+                          borderRadius: '6px', 
+                          opacity: currentPage === 0 ? 0.3 : 1,
+                          cursor: currentPage === 0 ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <button 
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                        disabled={currentPage === totalPages - 1}
+                        className="nav-btn"
+                        style={{ 
+                          padding: '6px', 
+                          borderRadius: '6px', 
+                          opacity: currentPage === totalPages - 1 ? 0.3 : 1,
+                          cursor: currentPage === totalPages - 1 ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div style={{ 
+                margin: '0 20px 16px', 
+                padding: '12px', 
+                background: 'rgba(255, 255, 255, 0.02)', 
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.04)',
+                fontSize: '10px',
+                color: 'rgba(255, 255, 255, 0.3)',
+                lineHeight: '1.4'
+              }}>
+                "After every month the leads data will be deleted, so please make sure that you download your data. Due to security reasons, we do not store or access your data. Your data always remains with you."
+              </div>
+            </Panel>
+          </div>
+
+          {/* GRAPHS SECTION BELOW TABLE */}
+          <div className="leads-graphs-section" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+            <Panel label="Category Distribution">
+              <div className="panel-body" style={{ height: '200px', paddingTop: '10px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={classificationData}
+                      innerRadius={50}
+                      outerRadius={70}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {classificationData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip {...chartTheme.tooltip} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </Panel>
+
+            <Panel label="Lead Volume Trend">
+              <div className="panel-body" style={{ height: '200px', paddingTop: '20px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={leadsTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} vertical={false} />
+                    <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} />
+                    <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} />
+                    <Tooltip {...chartTheme.tooltip} />
+                    <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Panel>
+          </div>
+        </div>
       </div>
+
 
       {/* Category Detail Modal */}
       {modalData && (
