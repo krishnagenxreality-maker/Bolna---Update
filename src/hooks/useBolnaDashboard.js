@@ -277,40 +277,32 @@ export function useBolnaDashboard() {
       );
       
       if (activeJobs.length > 0) {
-        alert("Starter Plan Limit: You can only have 1 active or scheduled campaign at a time today. Please wait for your current campaign to complete or upgrade to Growth plan.");
         return;
       }
     }
 
     const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`);
     const now = new Date();
+    const isImmediate = scheduledAt <= now;
+    const agentName = agentId.includes('::') ? agentId.split('::')[0] : 'Default Agent';
 
-    if (scheduledAt > now) {
-      const agentName = agentId.includes('::') ? agentId.split('::')[0] : 'Default Agent';
-      const success = await addScheduledJob({
-        campaignTitle,
-        agentId,
-        agentName,
-        contacts: sessionContacts,
-        scheduledAt: scheduledAt.toISOString()
-      });
-      if (success) {
+    const success = await addScheduledJob({
+      campaignTitle,
+      agentId,
+      agentName,
+      contacts: sessionContacts,
+      scheduledAt: isImmediate ? now.toISOString() : scheduledAt.toISOString(),
+      status: isImmediate ? 'Running' : 'Scheduled'
+    });
+
+    if (success) {
+      if (isImmediate) {
+        addLog(`Immediate campaign "${campaignTitle}" created and starting...`, "info");
+      } else {
         alert(`Calls scheduled successfully for ${scheduleDate} at ${scheduleTime}`);
-        setSessionContacts([]); 
       }
-      return;
+      setSessionContacts([]); 
     }
-
-    setIsCalling(true);
-    setShowProgress(true);
-    setShowDone(false);
-    setCallStartTime(new Date());
-    
-    const activeContacts = contactsRef.current.filter(c => c.agentId === agentId);
-    callQueueRef.current = activeContacts.filter(c => c.status === "pending" || c.status === "failed").map(c => c.id);
-    
-    addLog("Calls started — batching 10 every 10 minutes", "info");
-    await dispatchNextBatch(apiKey, agentId);
   };
 
   const stopCalling = () => {
@@ -337,7 +329,8 @@ export function useBolnaDashboard() {
         const parsed = parseContactsLogic(rows).map(c => ({
           ...c, 
           id: agentId ? `${agentId}::${c.id}` : c.id,
-          agentId 
+          agentId,
+          sheetName: file.name
         }));
         
         if (!parsed.length) { alert("No valid contacts found."); return; }

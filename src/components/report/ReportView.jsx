@@ -223,7 +223,12 @@ export const ReportView = ({
   const agentMap = {};
   dayContacts.forEach(c => {
     const key = c.agentId || 'Unknown';
-    if (!agentMap[key]) agentMap[key] = { name: c.agentName || key, calls: 0, interested: 0, notInterested: 0, rescheduled: 0 };
+    if (!agentMap[key]) {
+      let name = c.agentName || 'Voice Agent';
+      // Strip internal IDs if present (e.g. "Name::UUID")
+      if (name.includes('::')) name = name.split('::')[0];
+      agentMap[key] = { name, calls: 0, interested: 0, notInterested: 0, rescheduled: 0 };
+    }
     agentMap[key].calls++;
     if (c.leadCategory === 'interested') agentMap[key].interested++;
     if (c.leadCategory === 'not_interested') agentMap[key].notInterested++;
@@ -302,6 +307,7 @@ Rules:
 - NEVER invent data. If a metric is missing, state "Not provided"
 - Format tables using markdown pipe syntax
 - Do NOT include any time, duration, or timestamp data anywhere
+- NEVER include internal Agent IDs, UUIDs, or backend identifiers. Only use human-readable agent names.
 - Keep total length under 1200 words
 - Temperature: keep output consistent and factual`;
 

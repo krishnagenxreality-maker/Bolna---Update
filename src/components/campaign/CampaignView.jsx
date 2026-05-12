@@ -93,8 +93,8 @@ export const CampaignView = ({
       // Credits used = total calls attempted (completed + failed + no answer + busy)
       const creditsUsed = completedCalls + noAnswer + busy + failed;
 
-      // Get creation date from createdAt
-      const createdDate = job.createdAt ? job.createdAt.split('T')[0] : (job.scheduledAt ? job.scheduledAt.split('T')[0] : '');
+      // Get scheduled date prioritized over created date
+      const displayDate = job.scheduledAt ? job.scheduledAt.split('T')[0] : (job.createdAt ? job.createdAt.split('T')[0] : '');
 
       // Determine display status
       let displayStatus = job.status;
@@ -105,10 +105,13 @@ export const CampaignView = ({
         .filter(c => c.summary && c.summary.length > 0)
         .map(c => c.summary);
 
+      // Sheet name from metadata in contacts
+      const sheetName = relevantContacts[0]?.sheetName || 'N/A';
+
       return {
         id: job.id,
         title: job.campaignTitle || 'Untitled Campaign',
-        createdDate,
+        displayDate,
         totalCalls,
         completedCalls,
         noAnswer,
@@ -116,34 +119,32 @@ export const CampaignView = ({
         failed,
         creditsUsed,
         agentName: job.agentName || 'Default Agent',
+        agentId: job.agentId || relevantContacts[0]?.agentId || '',
         status: displayStatus,
         callSummaries,
-        contacts: relevantContacts
+        contacts: relevantContacts,
+        sheetName
       };
     });
   }, [scheduledJobs, contacts]);
 
-  // Filter campaigns by selected date and agent
+  // Filter campaigns by agent
   const filteredCampaigns = useMemo(() => {
     return allCampaigns.filter(c => {
-      const dateMatch = !searchDate || c.createdDate === searchDate;
-      
       let agentMatch = true;
       if (agentId) {
         const targetId = agentId.includes('::') ? agentId.split('::')[1] : agentId;
-        const jobAgentId = c.contacts?.[0]?.agentId || ''; // Or check campaign property
-        const actualJobAgentId = jobAgentId.includes('::') ? jobAgentId.split('::')[1] : jobAgentId;
+        const actualJobAgentId = c.agentId.includes('::') ? c.agentId.split('::')[1] : c.agentId;
         agentMatch = actualJobAgentId === targetId;
       }
-      
-      return dateMatch && agentMatch;
+      return agentMatch;
     });
-  }, [allCampaigns, searchDate, agentId]);
+  }, [allCampaigns, agentId]);
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(0);
-  }, [searchDate]);
+  }, [searchDate, agentId]);
 
   const totalPages = Math.ceil(filteredCampaigns.length / ROWS_PER_PAGE);
   const currentRows = useMemo(() => {
@@ -183,6 +184,7 @@ export const CampaignView = ({
       case 'Completed': return { bg: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: 'rgba(16, 185, 129, 0.2)' };
       case 'Running': return { bg: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: 'rgba(245, 158, 11, 0.2)' };
       case 'Scheduled': return { bg: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'rgba(59, 130, 246, 0.2)' };
+      case 'Pending': return { bg: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255,255,255,0.7)', border: 'rgba(255, 255, 255, 0.1)' };
       default: return { bg: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255,255,255,0.5)', border: 'rgba(255, 255, 255, 0.1)' };
     }
   };
@@ -193,12 +195,13 @@ export const CampaignView = ({
       return;
     }
 
-    const headers = ['Campaign Title', 'Date Created', 'Total Calls', 'Credits Used', 'Agent', 'Status'];
+    const headers = ['Campaign Title', 'Date', 'Sheet Name', 'Total Calls', 'Credits Used', 'Agent', 'Status'];
     const csvContent = [
       headers.join(','),
       ...filteredCampaigns.map(c => [
         `"${c.title}"`,
-        `"${c.createdDate}"`,
+        `"${c.displayDate}"`,
+        `"${c.sheetName}"`,
         c.totalCalls,
         c.creditsUsed,
         `"${c.agentName}"`,
@@ -288,7 +291,7 @@ export const CampaignView = ({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Campaigns Table (NO graphs as per requirement) */}
+        {/* RIGHT COLUMN: Campaigns Table */}
         <div className="campaign-right-column">
           <Panel>
             <PanelHead>
@@ -322,8 +325,9 @@ export const CampaignView = ({
                     <thead>
                       <tr>
                         <th>#</th>
-                        <th>Campaign Title</th>
+                        <th>Campaign Name</th>
                         <th>Date</th>
+                        <th>Sheet Name</th>
                         <th>Calls</th>
                         <th>Credits</th>
                         <th>Agent</th>
@@ -347,7 +351,13 @@ export const CampaignView = ({
                                 {campaign.title}
                               </span>
                             </td>
-                            <td className="td-phone" style={{ fontSize: '11px' }}>{campaign.createdDate}</td>
+                            <td className="td-phone" style={{ fontSize: '11px' }}>{campaign.displayDate}</td>
+                            <td className="td-phone" style={{ fontSize: '11px', opacity: 0.7 }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <FileText size={12} style={{ opacity: 0.4 }} />
+                                {campaign.sheetName}
+                              </span>
+                            </td>
                             <td className="td-num" style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>{campaign.totalCalls}</td>
                             <td className="td-num" style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>{campaign.creditsUsed}</td>
                             <td className="td-phone" style={{ fontSize: '11px' }}>
@@ -448,7 +458,8 @@ export const CampaignView = ({
               </div>
               <div>
                 <h2 className="category-modal-title">{modalData.title}</h2>
-                <p className="category-modal-contact">{modalData.agentName.includes('::') ? modalData.agentName.split('::')[0] : modalData.agentName} • {modalData.createdDate}</p>
+                <p className="category-modal-contact">{modalData.agentName.includes('::') ? modalData.agentName.split('::')[0] : modalData.agentName} • {modalData.displayDate}</p>
+                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>Sheet: {modalData.sheetName}</p>
               </div>
             </div>
 
