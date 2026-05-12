@@ -50,6 +50,7 @@ export const CampaignView = ({
   scheduledJobs,
   searchDate, 
   setSearchDate,
+  agentId,
   activeView,
   setActiveView
 }) => {
@@ -122,11 +123,22 @@ export const CampaignView = ({
     });
   }, [scheduledJobs, contacts]);
 
-  // Filter campaigns by selected date
+  // Filter campaigns by selected date and agent
   const filteredCampaigns = useMemo(() => {
-    if (!searchDate) return allCampaigns;
-    return allCampaigns.filter(c => c.createdDate === searchDate);
-  }, [allCampaigns, searchDate]);
+    return allCampaigns.filter(c => {
+      const dateMatch = !searchDate || c.createdDate === searchDate;
+      
+      let agentMatch = true;
+      if (agentId) {
+        const targetId = agentId.includes('::') ? agentId.split('::')[1] : agentId;
+        const jobAgentId = c.contacts?.[0]?.agentId || ''; // Or check campaign property
+        const actualJobAgentId = jobAgentId.includes('::') ? jobAgentId.split('::')[1] : jobAgentId;
+        agentMatch = actualJobAgentId === targetId;
+      }
+      
+      return dateMatch && agentMatch;
+    });
+  }, [allCampaigns, searchDate, agentId]);
 
   // Reset page when filters change
   useEffect(() => {

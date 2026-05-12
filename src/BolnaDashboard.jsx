@@ -36,6 +36,7 @@ export default function BolnaDashboard() {
   const {
     apiKey, setApiKey,
     agentId, setAgentId,
+    allContacts,
     contacts,
     sessionContacts,
     logs,
@@ -125,7 +126,7 @@ export default function BolnaDashboard() {
           <main className="main">
             {activeView === 'calendar' && (
               <CalendarDashboardView
-                contacts={contacts}
+                contacts={allContacts}
                 agentId={agentId}
                 setAgentId={setAgentId}
                 availableAgents={availableAgents}
@@ -336,7 +337,7 @@ export default function BolnaDashboard() {
 
             {activeView === 'details' && (
               <CallDetailsView 
-                contacts={contacts}
+                contacts={allContacts}
                 searchDate={searchDate}
                 setSearchDate={setSearchDate}
                 detailsStatusTab={detailsStatusTab}
@@ -355,7 +356,7 @@ export default function BolnaDashboard() {
 
             {activeView === 'responses' && (
               <ResponseAnalysisView 
-                contacts={contacts}
+                contacts={allContacts}
                 responseTab={responseTab}
                 setResponseTab={setResponseTab}
                 searchDate={searchDate}
@@ -363,11 +364,13 @@ export default function BolnaDashboard() {
                 stats={stats}
                 activeView={activeView}
                 setActiveView={setActiveView}
+                onRetryCalls={retryCalls}
+                isCalling={isCalling}
               />
             )}
             {activeView === 'leads' && (
               <LeadsView 
-                contacts={contacts}
+                contacts={allContacts}
                 searchDate={searchDate}
                 setSearchDate={setSearchDate}
                 stats={stats}
@@ -378,17 +381,18 @@ export default function BolnaDashboard() {
             )}
             {activeView === 'campaign' && (
               <CampaignView
-                contacts={contacts}
+                contacts={allContacts}
                 scheduledJobs={scheduledJobs}
                 searchDate={searchDate}
                 setSearchDate={setSearchDate}
+                agentId={agentId}
                 activeView={activeView}
                 setActiveView={setActiveView}
               />
             )}
             {activeView === 'report' && (
               <ReportView
-                contacts={contacts}
+                contacts={allContacts}
                 agentId={agentId}
                 searchDate={searchDate}
                 setSearchDate={setSearchDate}

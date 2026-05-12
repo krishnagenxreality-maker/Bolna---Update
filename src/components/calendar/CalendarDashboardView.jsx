@@ -42,10 +42,20 @@ export const CalendarDashboardView = ({
 
   // Agent and Date filtering logic
   const activeContacts = contacts.filter(c => {
-    const agentMatch = !agentId || c.agentId === agentId.split('::')[1];
+    // Agent Filter: Handle both Name::ID or just ID comparisons
+    let agentMatch = true;
+    if (agentId) {
+      const targetId = agentId.includes('::') ? agentId.split('::')[1] : agentId;
+      const contactAgentId = c.agentId || '';
+      const actualContactAgentId = contactAgentId.includes('::') ? contactAgentId.split('::')[1] : contactAgentId;
+      agentMatch = actualContactAgentId === targetId;
+    }
+
+    // Date Filter
     const dateMatch = dateFilterType === 'all' || 
                       c.date === specificDate || 
-                      (c.createdAt && c.createdAt.startsWith(specificDate));
+                      (c.createdAt && c.createdAt.startsWith(specificDate)) ||
+                      (c.date && c.date.startsWith(specificDate));
     return agentMatch && dateMatch;
   });
 

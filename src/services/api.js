@@ -7,7 +7,9 @@ export async function makeCall(key, agId, phone, name = "") {
       recipient_phone_number: phone,
       user_variables: {
         customer_name: name || "Hello",
-        name: name || "Hello"
+        name: name || "Hello",
+        "{name}": name || "Hello",
+        "{{name}}": name || "Hello"
       }
     })
   });

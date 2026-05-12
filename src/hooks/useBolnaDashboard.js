@@ -560,6 +560,7 @@ export function useBolnaDashboard() {
   return {
     apiKey, setApiKey,
     agentId, setAgentId,
+    allContacts: contacts,
     contacts: displayContacts, setContacts,
     sessionContacts, setSessionContacts,
     logs, setLogs,

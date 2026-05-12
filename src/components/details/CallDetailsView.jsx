@@ -45,13 +45,15 @@ export const CallDetailsView = ({
   const retryEligible = useMemo(() => {
     return filteredData.filter(c => {
       const resp = (c.response || '').toLowerCase();
-      return resp.includes('no answer') || resp.includes('no_answer') || resp.includes('busy');
+      const status = (c.status || '').toLowerCase();
+      return resp.includes('no answer') || resp.includes('no_answer') || resp.includes('busy') || status === 'failed';
     });
   }, [filteredData]);
 
   const isRetryEligible = (contact) => {
     const resp = (contact.response || '').toLowerCase();
-    return resp.includes('no answer') || resp.includes('no_answer') || resp.includes('busy');
+    const status = (contact.status || '').toLowerCase();
+    return resp.includes('no answer') || resp.includes('no_answer') || resp.includes('busy') || status === 'failed';
   };
 
   const toggleRetrySelect = (id) => {

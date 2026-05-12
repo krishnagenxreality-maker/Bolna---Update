@@ -10,6 +10,8 @@ import { API_BASE_URL } from '../../config';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+const SECTION_COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#6366f1', '#06b6d4', '#84cc16', '#f97316', '#ef4444'];
+
 
 // ── Markdown table parser ──────────────────────────────────────────────────────
 function parseMarkdownTable(md) {

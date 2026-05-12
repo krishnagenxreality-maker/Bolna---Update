@@ -70,7 +70,11 @@ export default function AdminPortal() {
       email: req?.email || '',
       bolnaApiKey: '',
       agents: [{ name: '', id: '' }],
-      credits: parseCreditsFromRequest(req?.creditsSelected),
+      credits: parseCreditsFromRequest(req?.creditsSelected) || 2000,
+      totalCredits: parseCreditsFromRequest(req?.creditsSelected) || 2000,
+      remainingCredits: parseCreditsFromRequest(req?.creditsSelected) || 2000,
+      usedCredits: 0,
+      selectedPlan: req?.creditsSelected?.includes('Growth') ? 'Growth' : req?.creditsSelected?.includes('Pro') ? 'Pro' : 'Starter',
       userType: req?.purposeType || 'regular'
     });
     setError('');
@@ -667,35 +671,37 @@ export default function AdminPortal() {
                   </div>
                 </div>
 
-                <div className="config-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                  <div className="field">
-                    <label className="field-label">Total Credits</label>
-                    <input
-                      type="number"
-                      className="field-input"
-                      value={formData.totalCredits}
-                      onChange={e => setFormData(prev => ({ ...prev, totalCredits: parseInt(e.target.value, 10) }))}
-                    />
+                {showEditForm && (
+                  <div className="config-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                    <div className="field">
+                      <label className="field-label">Total Credits</label>
+                      <input
+                        type="number"
+                        className="field-input"
+                        value={formData.totalCredits}
+                        onChange={e => setFormData(prev => ({ ...prev, totalCredits: parseInt(e.target.value, 10) }))}
+                      />
+                    </div>
+                    <div className="field">
+                      <label className="field-label">Used Credits</label>
+                      <input
+                        type="number"
+                        className="field-input"
+                        value={formData.usedCredits}
+                        onChange={e => setFormData(prev => ({ ...prev, usedCredits: parseInt(e.target.value, 10) }))}
+                      />
+                    </div>
+                    <div className="field">
+                      <label className="field-label">Remaining</label>
+                      <input
+                        type="number"
+                        className="field-input"
+                        value={formData.remainingCredits}
+                        onChange={e => setFormData(prev => ({ ...prev, remainingCredits: parseInt(e.target.value, 10) }))}
+                      />
+                    </div>
                   </div>
-                  <div className="field">
-                    <label className="field-label">Used Credits</label>
-                    <input
-                      type="number"
-                      className="field-input"
-                      value={formData.usedCredits}
-                      onChange={e => setFormData(prev => ({ ...prev, usedCredits: parseInt(e.target.value, 10) }))}
-                    />
-                  </div>
-                  <div className="field">
-                    <label className="field-label">Remaining</label>
-                    <input
-                      type="number"
-                      className="field-input"
-                      value={formData.remainingCredits}
-                      onChange={e => setFormData(prev => ({ ...prev, remainingCredits: parseInt(e.target.value, 10) }))}
-                    />
-                  </div>
-                </div>
+                )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div className="field">

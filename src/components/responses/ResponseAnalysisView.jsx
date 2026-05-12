@@ -17,8 +17,11 @@ export const ResponseAnalysisView = ({
   setSearchDate,
   stats,
   activeView,
-  setActiveView
+  setActiveView,
+  onRetryCalls,
+  isCalling
 }) => {
+  const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
   const ROWS_PER_PAGE = 4;
 
@@ -224,17 +227,59 @@ export const ResponseAnalysisView = ({
                   <table className="ct">
                     <thead>
                       <tr>
+                        <th style={{ width: '40px' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={selectedIds.length === currentRows.length && currentRows.length > 0}
+                            onChange={(e) => {
+                              if (e.target.checked) setSelectedIds(currentRows.map(r => r.id));
+                              else setSelectedIds([]);
+                            }}
+                          />
+                        </th>
                         <th>#</th>
                         <th>Name</th>
                         <th>Phone</th>
                         <th>Status</th>
                         <th>Response</th>
                         <th>Date</th>
+                        <th style={{ width: '120px' }}>
+                          <button 
+                            className="nav-btn"
+                            disabled={selectedIds.length === 0 || isCalling}
+                            onClick={() => {
+                              onRetryCalls(selectedIds);
+                              setSelectedIds([]);
+                            }}
+                            style={{
+                              padding: '4px 10px',
+                              fontSize: '10px',
+                              background: selectedIds.length > 0 ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                              borderColor: selectedIds.length > 0 ? '#3b82f6' : 'rgba(255,255,255,0.1)',
+                              color: selectedIds.length > 0 ? '#fff' : 'rgba(255,255,255,0.3)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <PhoneCall size={12} /> {isCalling ? 'Calling...' : 'Make Calls'}
+                          </button>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {currentRows.map((c, i) => (
                         <tr key={c.id}>
+                          <td>
+                            <input 
+                              type="checkbox" 
+                              checked={selectedIds.includes(c.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) setSelectedIds(prev => [...prev, c.id]);
+                                else setSelectedIds(prev => prev.filter(id => id !== c.id));
+                              }}
+                            />
+                          </td>
                           <td className="td-num">{currentPage * ROWS_PER_PAGE + i + 1}</td>
                           <td className="td-name">{c.name}</td>
                           <td className="td-phone">{c.phone}</td>
@@ -243,6 +288,7 @@ export const ResponseAnalysisView = ({
                           </td>
                           <td className="td-response">{c.response || "-"}</td>
                           <td className="td-phone" style={{ fontSize: '11px' }}>{c.date}</td>
+                          <td></td>
                         </tr>
                       ))}
                     </tbody>
