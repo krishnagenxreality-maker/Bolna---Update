@@ -12,17 +12,18 @@ const PLANS = [
     name: 'Starter',
     price: '₹4,999',
     setup: '₹7,999',
+    credits: 2000,
     cta: 'Get Started',
     popular: false,
     features: [
-      'Up to 2,000 AI calls / month',
+      '2,000 Completed AI calls',
+      'No charges for No-Answer/Busy',
       'Telugu & English AI voice agents',
       'AI call summaries',
       'AI lead classification',
       'Campaign analytics',
       'CSV upload',
       'Single workspace',
-      'Email support',
     ],
   },
   {
@@ -30,16 +31,17 @@ const PLANS = [
     name: 'Growth',
     price: '₹11,999',
     setup: '₹14,999',
+    credits: 6000,
     cta: 'Scale With AI',
     popular: true,
     features: [
-      'Up to 6,000 AI calls / month',
+      '6,000 Completed AI calls',
+      'No charges for No-Answer/Busy',
       'Multi-campaign AI calling',
       'AI retry calling',
       'Advanced analytics',
       'AI conversation insights',
       'Lead tracking',
-      'Faster processing',
       '3 team members',
     ],
   },
@@ -48,17 +50,18 @@ const PLANS = [
     name: 'Pro',
     price: '₹24,999',
     setup: '₹29,999',
+    credits: 15000,
     cta: 'Contact Sales',
     popular: false,
     features: [
-      'Up to 15,000 AI calls / month',
+      '15,000 Completed AI calls',
+      'No charges for No-Answer/Busy',
       'Multi-agent AI calling',
       'Custom AI voice',
       'Dedicated infrastructure',
       'Enterprise analytics',
       'Priority queue',
       'Dedicated onboarding',
-      'Team collaboration',
     ],
   },
 ];
@@ -95,7 +98,7 @@ const FAQS = [
   },
   {
     q: 'What counts as one AI call credit?',
-    a: 'One credit equals one outbound AI call attempt, regardless of call duration or outcome. Both connected and unanswered calls consume one credit.',
+    a: 'One credit equals one successfully completed outbound AI call. We do NOT deduct credits for calls that are busy, failed, cancelled, or go to voicemail (No Answer). You only pay for results.',
   },
   {
     q: 'Are add-on credits tied to a specific plan?',
@@ -560,7 +563,9 @@ export default function PricingPage() {
                     <div className="panel-label" style={{ padding: 0, marginBottom: 4 }}>
                       <div className="label-dot" /> Get Started
                     </div>
-                    <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, fontFamily: 'Outfit' }}>{selectedPlan?.name} Plan</h3>
+                    <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, fontFamily: 'Outfit' }}>
+                      {selectedPlan?.name} Plan — {selectedPlan?.credits?.toLocaleString()} Credits
+                    </h3>
                   </div>
                   <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
                     <X size={20} />

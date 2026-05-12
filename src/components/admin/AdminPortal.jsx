@@ -28,7 +28,11 @@ export default function AdminPortal() {
     bolnaApiKey: '',
     agents: [{ name: '', id: '' }],
     credits: 0,
-    userType: 'regular'
+    userType: 'regular',
+    selectedPlan: 'Starter',
+    totalCredits: 2000,
+    usedCredits: 0,
+    remainingCredits: 2000
   });
 
   const [editingUserId, setEditingUserId] = useState(null);
@@ -98,7 +102,12 @@ export default function AdminPortal() {
   };
 
   const handleOpenAdd = () => {
-    setFormData({ userId: '', password: '', organization: '', email: '', bolnaApiKey: '', agents: [{ name: '', id: '' }], credits: 0, userType: 'regular' });
+    setFormData({ 
+      userId: '', password: '', organization: '', email: '', 
+      bolnaApiKey: '', agents: [{ name: '', id: '' }], 
+      credits: 2000, userType: 'regular',
+      selectedPlan: 'Starter', totalCredits: 2000, usedCredits: 0, remainingCredits: 2000
+    });
     setError('');
     setSuccess('');
     setShowPassword(false);
@@ -128,8 +137,12 @@ export default function AdminPortal() {
       email: user.email || '',
       bolnaApiKey: user.bolnaApiKey || '',
       agents: parsedAgents,
-      credits: user.credits || 0,
-      userType: user.userType || 'regular'
+      credits: user.remainingCredits || user.credits || 0,
+      userType: user.userType || 'regular',
+      selectedPlan: user.selectedPlan || 'Starter',
+      totalCredits: user.totalCredits || 2000,
+      usedCredits: user.usedCredits || 0,
+      remainingCredits: user.remainingCredits || user.credits || 0
     });
     setEditingUserId(user.userId);
     setError('');
@@ -312,30 +325,32 @@ export default function AdminPortal() {
                   <tr>
                     <th>User ID</th>
                     <th>Organization</th>
-                    <th>Bolna API Key</th>
-                    <th>Bolna Agent ID</th>
+                    <th>Plan</th>
+                    <th>Remaining Credits</th>
+                    <th>API Key</th>
                     <th>Type</th>
-                    <th>Role</th>
                     <th style={{ textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u) => (
                     <tr key={u.userId}>
-                      <td className="td-name">{u.userId}</td>
+                    <td className="td-name">{u.userId}</td>
                       <td>{u.organization || '-'}</td>
+                      <td>
+                        <span className={`spill ${u.selectedPlan === 'Pro' ? 's-calling' : u.selectedPlan === 'Growth' ? 's-blue' : 's-pending'}`} style={{ textTransform: 'capitalize' }}>
+                          {u.selectedPlan || 'Starter'}
+                        </span>
+                      </td>
+                      <td className="td-phone" style={{ fontWeight: '700', color: (u.remainingCredits || u.credits) > 0 ? '#7dffb3' : '#ff7070' }}>
+                        {u.remainingCredits || u.credits || 0}
+                      </td>
                       <td className="td-phone" style={{ fontSize: '11px' }}>
                         {u.bolnaApiKey ? `••••${u.bolnaApiKey.slice(-4)}` : '-'}
                       </td>
-                      <td className="td-phone" style={{ fontSize: '11px' }}>{renderAgentId(u.bolnaAgentId)}</td>
                       <td>
                         <span className={`spill ${u.userType === 'education' ? 's-blue' : 's-done'}`} style={{ textTransform: 'capitalize' }}>
                           {u.userType || 'regular'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`spill ${u.role === 'admin' ? 's-calling' : 's-pending'}`}>
-                          {u.role}
                         </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
@@ -603,39 +618,83 @@ export default function AdminPortal() {
                   </div>
                 </div>
 
-                <div className="field">
-                  <label className="field-label">Organization Name</label>
-                  <input
-                    type="text"
-                    className="field-input"
-                    value={formData.organization}
-                    onChange={e => setFormData(prev => ({ ...prev, organization: e.target.value }))}
-                    required
-                  />
+                <div className="config-grid">
+                  <div className="field">
+                    <label className="field-label">Organization</label>
+                    <input
+                      type="text"
+                      className="field-input"
+                      value={formData.organization}
+                      onChange={e => setFormData(prev => ({ ...prev, organization: e.target.value }))}
+                    />
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Email Address</label>
+                    <input
+                      type="email"
+                      className="field-input"
+                      value={formData.email}
+                      onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    />
+                  </div>
                 </div>
 
-                <div className="field">
-                  <label className="field-label">Email ID</label>
-                  <input
-                    type="email"
-                    className="field-input"
-                    value={formData.email}
-                    onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="user@example.com"
-                  />
+                <div className="config-grid">
+                  <div className="field">
+                    <label className="field-label">Selected Plan</label>
+                    <select
+                      className="field-input"
+                      value={formData.selectedPlan}
+                      onChange={e => setFormData(prev => ({ ...prev, selectedPlan: e.target.value }))}
+                      style={{ appearance: 'auto' }}
+                    >
+                      <option value="Starter">Starter (2k Credits)</option>
+                      <option value="Growth">Growth (6k Credits)</option>
+                      <option value="Pro">Pro (15k Credits)</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label className="field-label">User Type</label>
+                    <select
+                      className="field-input"
+                      value={formData.userType}
+                      onChange={e => setFormData(prev => ({ ...prev, userType: e.target.value }))}
+                      style={{ appearance: 'auto' }}
+                    >
+                      <option value="regular">Regular</option>
+                      <option value="education">Education</option>
+                    </select>
+                  </div>
                 </div>
 
-                <div className="field">
-                  <label className="field-label">User Type</label>
-                  <select
-                    className="field-input"
-                    value={formData.userType}
-                    onChange={e => setFormData(prev => ({ ...prev, userType: e.target.value }))}
-                    style={{ background: '#1a1a1a' }}
-                  >
-                    <option value="regular">Regular</option>
-                    <option value="education">Education</option>
-                  </select>
+                <div className="config-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                  <div className="field">
+                    <label className="field-label">Total Credits</label>
+                    <input
+                      type="number"
+                      className="field-input"
+                      value={formData.totalCredits}
+                      onChange={e => setFormData(prev => ({ ...prev, totalCredits: parseInt(e.target.value, 10) }))}
+                    />
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Used Credits</label>
+                    <input
+                      type="number"
+                      className="field-input"
+                      value={formData.usedCredits}
+                      onChange={e => setFormData(prev => ({ ...prev, usedCredits: parseInt(e.target.value, 10) }))}
+                    />
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Remaining</label>
+                    <input
+                      type="number"
+                      className="field-input"
+                      value={formData.remainingCredits}
+                      onChange={e => setFormData(prev => ({ ...prev, remainingCredits: parseInt(e.target.value, 10) }))}
+                    />
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

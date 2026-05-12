@@ -45,6 +45,24 @@ export const Header = ({ activeView, setActiveView, credits }) => {
           alignItems: 'center',
           gap: '6px',
           fontFamily: "'JetBrains Mono', monospace",
+          fontSize: '11px',
+          fontWeight: '700',
+          color: 'rgba(255,255,255,0.5)',
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          padding: '6px 14px',
+          borderRadius: '100px',
+          textTransform: 'uppercase',
+          letterSpacing: '1px'
+        }}>
+          {user?.selectedPlan || 'Starter'} PLAN
+        </div>
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontFamily: "'JetBrains Mono', monospace",
           fontSize: '12px',
           fontWeight: '600',
           letterSpacing: '0.5px',

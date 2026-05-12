@@ -8,6 +8,7 @@ import {
 import { 
   CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, RotateCcw, Megaphone 
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export const CallDetailsView = ({ 
   contacts, 
@@ -21,6 +22,7 @@ export const CallDetailsView = ({
   onRetryCalls,
   isCalling
 }) => {
+  const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedForRetry, setSelectedForRetry] = useState([]);
   const ROWS_PER_PAGE = 4;
@@ -273,22 +275,29 @@ export const CallDetailsView = ({
                   </div>
                   {selectedForRetry.length > 0 && (
                     <button
-                      onClick={handleRetryCalls}
+                      onClick={() => {
+                        if (user?.selectedPlan === 'Starter') {
+                          alert("AI Retry Calling is not available on the Starter Plan. Please upgrade to the Growth Plan to unlock this feature.");
+                          return;
+                        }
+                        handleRetryCalls();
+                      }}
                       disabled={isCalling}
                       style={{
                         display: 'flex', alignItems: 'center', gap: '6px',
                         padding: '6px 14px', borderRadius: '6px',
-                        background: isCalling ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2))',
-                        border: '1px solid rgba(59, 130, 246, 0.3)',
-                        color: isCalling ? 'rgba(255,255,255,0.3)' : '#60a5fa',
-                        cursor: isCalling ? 'not-allowed' : 'pointer',
+                        background: isCalling ? 'rgba(255,255,255,0.05)' : (user?.selectedPlan === 'Starter' ? 'rgba(255,255,255,0.03)' : 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2))'),
+                        border: isCalling ? '1px solid rgba(255,255,255,0.1)' : (user?.selectedPlan === 'Starter' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(59, 130, 246, 0.3)'),
+                        color: isCalling ? 'rgba(255,255,255,0.3)' : (user?.selectedPlan === 'Starter' ? 'rgba(255,255,255,0.2)' : '#60a5fa'),
+                        cursor: (isCalling || user?.selectedPlan === 'Starter') ? 'not-allowed' : 'pointer',
                         fontFamily: "'Outfit', sans-serif",
                         fontSize: '11px', fontWeight: 700,
-                        transition: 'all 0.2s'
+                        transition: 'all 0.2s',
+                        filter: user?.selectedPlan === 'Starter' ? 'grayscale(1)' : 'none'
                       }}
                     >
                       <RotateCcw size={12} />
-                      Make Calls ({selectedForRetry.length})
+                      {user?.selectedPlan === 'Starter' ? 'Retry Locked (Starter)' : `Make Calls (${selectedForRetry.length})`}
                     </button>
                   )}
                 </div>

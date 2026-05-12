@@ -161,6 +161,18 @@ export function useBolnaDashboard() {
           const finalStatus = sl === "completed" ? "called" : sl;
           updateContactStatus(contact.id, finalStatus, sl, category, data.summary || "", recordingUrl); 
           addLog(`✓ ${sl.toUpperCase()}: ${contact.name}${category ? ` (${category})` : ""}`, "ok"); 
+
+          // Deduct credit only for successfully completed calls
+          if (sl === "completed") {
+            try {
+              const creditRes = await axios.post(`${API_BASE_URL}/api/user-credits/deduct/${user.userId}`);
+              if (creditRes.data.success) {
+                setCredits(creditRes.data.credits);
+              }
+            } catch (creditErr) {
+              console.error("Credit deduction failed", creditErr);
+            }
+          }
         }
         else if (["failed","error","cancelled"].includes(sl)) { 
           updateContactStatus(contact.id, "failed", sl); 
@@ -196,14 +208,6 @@ export function useBolnaDashboard() {
         updateContactExecId(id, execId);
         updateContactStatus(id, "calling");
         addLog(`✓ Call queued: ${contact.name} (${contact.phone}) → exec ${execId.slice(0,8)}…`, "ok");
-        if (user && user.userId) {
-          try {
-            const creditRes = await axios.post(`${API_BASE_URL}/api/user-credits/deduct/${user.userId}`);
-            if (creditRes.data.success) {
-              setCredits(creditRes.data.credits);
-            }
-          } catch (creditErr) { }
-        }
       } catch(err) {
         updateContactStatus(id, "failed", err.message);
         addLog(`✗ Failed to call ${contact.name}: ${err.message}`, "err");
@@ -250,6 +254,33 @@ export function useBolnaDashboard() {
     if (!apiKey || !agentId) { alert("Please enter your Bolna API Key and Agent ID first."); return; }
     if (isCalling) return;
     if (!contacts.length) { alert("No contacts loaded."); return; }
+
+    // Credit validation
+    if (credits <= 0) {
+      alert("Insufficient credits. Please upgrade your plan or add credits to continue.");
+      return;
+    }
+
+    if (sessionContacts.length > credits) {
+      alert(`You only have ${credits} credits remaining, but you are trying to call ${sessionContacts.length} contacts. Please reduce the contact list or add credits.`);
+      return;
+    }
+
+    // Plan validation for Starter
+    if (user && user.selectedPlan === 'Starter') {
+      // Logic for 1 active/scheduled campaign today handled by backend in addScheduledJob
+      // But for immediate calls, we should also check if there are other jobs
+      const today = new Date().toISOString().split('T')[0];
+      const activeJobs = scheduledJobs.filter(j => 
+        ['Scheduled', 'Running', 'Running-Acknowledge'].includes(j.status) && 
+        j.scheduledAt.startsWith(today)
+      );
+      
+      if (activeJobs.length > 0) {
+        alert("Starter Plan Limit: You can only have 1 active or scheduled campaign at a time today. Please wait for your current campaign to complete or upgrade to Growth plan.");
+        return;
+      }
+    }
 
     const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`);
     const now = new Date();

@@ -4,6 +4,9 @@ import { DatePicker } from '../ui/DatePicker';
 import { Download, Sparkles, Loader2, CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, UserCheck, UserMinus, PhoneForwarded, Megaphone } from 'lucide-react';
 import { generateDailyReportWithDeepSeek } from '../../services/api';
 import { DEEPSEEK_API_KEY } from '../../utils/constants';
+import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
+import { API_BASE_URL } from '../../config';
 
 export const ReportView = ({ 
   contacts, 
@@ -14,6 +17,7 @@ export const ReportView = ({
   activeView,
   setActiveView
 }) => {
+  const { user } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [report, setReport] = useState(null);
 
@@ -30,10 +34,26 @@ export const ReportView = ({
   const currentStats = { total, completed, busy, interested, notInterested, rescheduled };
 
   const handleGenerate = async () => {
+    // Plan validation
+    if (user?.selectedPlan === 'Starter') {
+      alert("Daily AI Report generation is not available on the Starter Plan. Please upgrade to the Growth or Pro Plan to unlock automated reporting.");
+      return;
+    }
+
     if (total === 0) {
       alert("No calls found for the selected date.");
       return;
     }
+
+    // Weekly/Monthly Limit Check (Example logic for Growth/Pro)
+    const isGrowth = user?.selectedPlan === 'Growth';
+    const isPro = user?.selectedPlan === 'Pro';
+    
+    if (isGrowth && (user?.reportUsageWeekly || 0) >= 7) {
+      alert("Growth Plan Limit: You have reached your weekly limit of 7 AI reports. Please wait for next week or upgrade to Pro.");
+      return;
+    }
+
     setIsGenerating(true);
     
     const summaries = dayContacts
@@ -43,6 +63,13 @@ export const ReportView = ({
 
     const generated = await generateDailyReportWithDeepSeek(DEEPSEEK_API_KEY, currentStats, summaries);
     setReport(generated);
+    
+    // Track usage in backend
+    try {
+      await axios.post(`${API_BASE_URL}/api/reports/track/${user.userId}`, { type: 'weekly' });
+      await axios.post(`${API_BASE_URL}/api/reports/track/${user.userId}`, { type: 'monthly' });
+    } catch (e) { }
+
     setIsGenerating(false);
   };
 

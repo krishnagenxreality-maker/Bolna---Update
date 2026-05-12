@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showForceLogout, setShowForceLogout] = useState(false);
   const { login, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -20,28 +21,47 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
 
-    const result = await login(userId, password);
+    const result = await login(userId, password, false);
     
     if (result.success) {
-      if (result.userType === 'education') {
-        logout();
-        setError('Education portal is in development');
-        setIsLoading(false);
-        return;
+      handleLoginSuccess(result);
+    } else {
+      if (result.sessionActive) {
+        setShowForceLogout(true);
       }
+      setError(result.message);
+      setIsLoading(false);
+    }
+  };
 
-      if (result.isFirstLogin && result.role === 'user') {
-        navigate('/set-password');
-      } else {
-        if (result.role === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
-      }
+  const handleForceLogoutLogin = async () => {
+    setError('');
+    setIsLoading(true);
+    const result = await login(userId, password, true);
+    if (result.success) {
+      handleLoginSuccess(result);
     } else {
       setError(result.message);
       setIsLoading(false);
+    }
+  };
+
+  const handleLoginSuccess = (result) => {
+    if (result.userType === 'education') {
+      logout();
+      setError('Education portal is in development');
+      setIsLoading(false);
+      return;
+    }
+
+    if (result.isFirstLogin && result.role === 'user') {
+      navigate('/set-password');
+    } else {
+      if (result.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     }
   };
 
@@ -206,6 +226,24 @@ export default function LoginPage() {
                 </>
               )}
             </button>
+
+            {showForceLogout && (
+              <button
+                type="button"
+                onClick={handleForceLogoutLogin}
+                className="btn-call"
+                style={{ 
+                  width: '100%', 
+                  marginTop: '0px',
+                  justifyContent: 'center',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: '#ff7070',
+                  border: '1px solid rgba(255, 112, 112, 0.2)',
+                }}
+              >
+                Logout Other Devices & Sign In
+              </button>
+            )}
           </form>
 
           <div style={{ marginTop: '32px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px' }}>
