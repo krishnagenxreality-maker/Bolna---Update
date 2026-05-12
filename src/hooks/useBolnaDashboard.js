@@ -30,6 +30,7 @@ export function useBolnaDashboard() {
   const [searchDate, setSearchDate] = useState(new Date().toISOString().split('T')[0]);
   const [credits, setCredits] = useState(0);
   const [scheduledJobs, setScheduledJobs] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
   const [callStartTime, setCallStartTime] = useState(null);
 
   // --- REFS ---
@@ -47,10 +48,14 @@ export function useBolnaDashboard() {
   const fetchScheduledJobs = useCallback(async () => {
     if (!user || !user.userId) return;
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/schedule/${user.userId}`);
-      if (res.data.success) setScheduledJobs(res.data.jobs);
+      const [scheduleRes, campaignRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/api/schedule/${user.userId}`),
+        axios.get(`${API_BASE_URL}/api/campaigns/${user.userId}`)
+      ]);
+      if (scheduleRes.data.success) setScheduledJobs(scheduleRes.data.jobs);
+      if (campaignRes.data.success) setCampaigns(campaignRes.data.campaigns);
     } catch (err) {
-      console.error("Failed to fetch scheduled jobs", err);
+      console.error("Failed to fetch scheduled jobs:", err);
     }
   }, [user]);
 
@@ -292,7 +297,8 @@ export function useBolnaDashboard() {
       agentName,
       contacts: sessionContacts,
       scheduledAt: isImmediate ? now.toISOString() : scheduledAt.toISOString(),
-      status: isImmediate ? 'Running' : 'Scheduled'
+      status: isImmediate ? 'Running' : 'Scheduled',
+      sheetName: sessionContacts[0]?.sheetName || 'N/A'
     });
 
     if (success) {

@@ -905,6 +905,40 @@ const mapJob = (job) => {
   };
 };
 
+const mapCampaign = (c) => {
+  if (!c) return null;
+  const { user_id, campaign_title, campaign_date, uploaded_sheet_name, total_calls, selected_agent, campaign_status, credits_used, created_at, updated_at, ...rest } = c;
+  return {
+    ...rest,
+    userId: user_id,
+    title: campaign_title,
+    displayDate: campaign_date,
+    sheetName: uploaded_sheet_name,
+    totalCalls: total_calls,
+    agentName: selected_agent,
+    status: campaign_status,
+    creditsUsed: credits_used,
+    createdAt: created_at,
+    updatedAt: updated_at
+  };
+};
+
+app.get('/api/campaigns/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const { data: campaigns, error } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, campaigns: campaigns.map(mapCampaign) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.get('/api/schedule/:userId', async (req, res) => {
   const { userId } = req.params;
   try {
@@ -972,6 +1006,24 @@ app.post('/api/schedule', async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // Also sync to campaigns table
+    try {
+      await supabase.from('campaigns').insert([{
+        id: newJobToInsert.id,
+        user_id: userId,
+        campaign_title: campaignTitle || 'Untitled Campaign',
+        campaign_date: scheduledAt.split('T')[0],
+        uploaded_sheet_name: req.body.sheetName || (contacts[0]?.sheetName) || 'N/A',
+        total_calls: contacts.length,
+        selected_agent: agentName || 'Default Agent',
+        campaign_status: newJobToInsert.status,
+        credits_used: 0
+      }]);
+    } catch (campaignError) {
+      console.error('Failed to sync to campaigns table:', campaignError.message);
+    }
+
     res.json({ success: true, job: mapJob(data) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -1043,12 +1095,51 @@ app.post('/api/schedule/status', async (req, res) => {
     if (error) {
       return res.status(404).json({ success: false, message: 'Job not found' });
     }
+
+    // Sync status to campaigns table
+    try {
+      await supabase
+        .from('campaigns')
+        .update({ campaign_status: status, updated_at: new Date().toISOString() })
+        .eq('id', jobId);
+    } catch (e) { }
     
     res.json({ success: true, status: data.status });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+// Backfill existing campaigns from scheduled_jobs to campaigns table
+const backfillCampaigns = async () => {
+  try {
+    const { data: jobs } = await supabase.from('scheduled_jobs').select('*');
+    if (!jobs || jobs.length === 0) return;
+
+    for (const job of jobs) {
+      const { data: exists } = await supabase.from('campaigns').select('id').eq('id', job.id).single();
+      if (!exists) {
+        await supabase.from('campaigns').insert([{
+          id: job.id,
+          user_id: job.user_id,
+          campaign_title: job.campaign_title,
+          campaign_date: job.scheduled_at.split('T')[0],
+          uploaded_sheet_name: job.contacts[0]?.sheetName || 'N/A',
+          total_calls: job.contacts.length,
+          selected_agent: job.agent_name,
+          campaign_status: job.status,
+          credits_used: 0,
+          created_at: job.created_at
+        }]);
+      }
+    }
+    console.log('[Backfill] Campaigns table synchronized with scheduled_jobs.');
+  } catch (e) {
+    console.error('[Backfill Error]:', e.message);
+  }
+};
+
+setTimeout(backfillCampaigns, 5000);
 // --- CUSTOM AGENTS ---
 
 app.get('/api/custom-agents/:userId', async (req, res) => {

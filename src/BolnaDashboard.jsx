@@ -382,7 +382,7 @@ export default function BolnaDashboard() {
             {activeView === 'campaign' && (
               <CampaignView
                 contacts={allContacts}
-                scheduledJobs={scheduledJobs}
+                campaigns={campaigns}
                 searchDate={searchDate}
                 setSearchDate={setSearchDate}
                 agentId={agentId}

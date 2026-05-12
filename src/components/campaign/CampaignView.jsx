@@ -47,7 +47,7 @@ async function generateCampaignSummary(summaries) {
 
 export const CampaignView = ({ 
   contacts,
-  scheduledJobs,
+  campaigns,
   searchDate, 
   setSearchDate,
   agentId,
@@ -70,63 +70,51 @@ export const CampaignView = ({
     { id: 'report', label: 'Report', icon: <ClipboardList size={18} /> }
   ];
 
-  // Build campaigns from scheduledJobs data
-  // Each scheduled job IS a campaign (it has campaignTitle, contacts, agentName, status, createdAt)
+  // Build campaigns from campaigns table data
   const allCampaigns = useMemo(() => {
-    if (!scheduledJobs || scheduledJobs.length === 0) return [];
+    if (!campaigns || campaigns.length === 0) return [];
 
-    return scheduledJobs.map(job => {
-      const jobContacts = job.contacts || [];
-      const totalCalls = jobContacts.length;
+    return campaigns.map(camp => {
+      // We still use contacts to get real-time call counts if possible
+      // but the core data comes from the campaign record
+      const matchedContacts = contacts.filter(c => c.agentId === camp.agentId || c.agentName === camp.agentName);
       
-      // Match contacts from the main contacts array to get real-time status
-      const contactIds = new Set(jobContacts.map(c => c.id));
-      const matchedContacts = contacts.filter(c => contactIds.has(c.id));
-      
-      // Calculate call statistics from matched contacts (or fallback to job contacts)
-      const relevantContacts = matchedContacts.length > 0 ? matchedContacts : jobContacts;
-      const completedCalls = relevantContacts.filter(c => c.status === 'called' || c.status === 'completed').length;
-      const noAnswer = relevantContacts.filter(c => (c.status || '').includes('no answer') || (c.response || '').includes('no answer')).length;
-      const busy = relevantContacts.filter(c => (c.status || '').includes('busy') || (c.response || '').includes('busy')).length;
-      const failed = relevantContacts.filter(c => c.status === 'failed').length;
+      const completedCalls = matchedContacts.filter(c => c.status === 'called' || c.status === 'completed').length;
+      const noAnswer = matchedContacts.filter(c => (c.status || '').includes('no answer') || (c.response || '').includes('no answer')).length;
+      const busy = matchedContacts.filter(c => (c.status || '').includes('busy') || (c.response || '').includes('busy')).length;
+      const failed = matchedContacts.filter(c => c.status === 'failed').length;
 
       // Credits used = total calls attempted (completed + failed + no answer + busy)
       const creditsUsed = completedCalls + noAnswer + busy + failed;
 
-      // Get scheduled date prioritized over created date
-      const displayDate = job.scheduledAt ? job.scheduledAt.split('T')[0] : (job.createdAt ? job.createdAt.split('T')[0] : '');
-
       // Determine display status
-      let displayStatus = job.status;
+      let displayStatus = camp.status;
       if (displayStatus === 'Running-Acknowledge') displayStatus = 'Running';
 
-      // Collect all summaries for AI analysis
-      const callSummaries = relevantContacts
+      // Collect all summaries for AI analysis (if any)
+      const callSummaries = matchedContacts
         .filter(c => c.summary && c.summary.length > 0)
         .map(c => c.summary);
 
-      // Sheet name from metadata in contacts
-      const sheetName = relevantContacts[0]?.sheetName || 'N/A';
-
       return {
-        id: job.id,
-        title: job.campaignTitle || 'Untitled Campaign',
-        displayDate,
-        totalCalls,
+        id: camp.id,
+        title: camp.title || 'Untitled Campaign',
+        displayDate: camp.displayDate,
+        totalCalls: camp.totalCalls || 0,
         completedCalls,
         noAnswer,
         busy,
         failed,
-        creditsUsed,
-        agentName: job.agentName || 'Default Agent',
-        agentId: job.agentId || relevantContacts[0]?.agentId || '',
+        creditsUsed: camp.creditsUsed || creditsUsed,
+        agentName: camp.agentName || 'Default Agent',
+        agentId: camp.agentId || '',
         status: displayStatus,
         callSummaries,
-        contacts: relevantContacts,
-        sheetName
+        contacts: matchedContacts,
+        sheetName: camp.sheetName || 'N/A'
       };
     });
-  }, [scheduledJobs, contacts]);
+  }, [campaigns, contacts]);
 
   // Filter campaigns by agent
   const filteredCampaigns = useMemo(() => {
