@@ -50,7 +50,7 @@ export async function fetchExecutionStatus(key, executionId) {
 }
 
 export async function analyzeSummaryWithDeepSeek(apiKey, summary) {
-  if (!summary) return "not_interested";
+  if (!summary) return "Uncategorized";
 
   try {
     const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
@@ -64,7 +64,7 @@ export async function analyzeSummaryWithDeepSeek(apiKey, summary) {
         messages: [
           {
             role: "system",
-            content: "You are a call analysis assistant. Analyze the summary and classify it into one of these categories: interested, not_interested, reschedule. Return ONLY the single word category."
+            content: "You are a call analysis assistant. Analyze the call summary and generate a short descriptive Category Title (2-5 words) that captures the primary outcome or intent of the call. Examples: Fee Payment Confirmed, Student Marked Present, Parent Requested Callback, Appointment Rescheduled, Product Interested, Complaint Registered, Follow-up Needed, Not Interested, Information Provided, Voicemail Left. Return ONLY the category title, nothing else."
           },
           {
             role: "user",
@@ -75,18 +75,17 @@ export async function analyzeSummaryWithDeepSeek(apiKey, summary) {
       })
     });
 
-    if (!res.ok) return "not_interested";
+    if (!res.ok) return "Uncategorized";
     const data = await res.json();
-    const result = data.choices[0].message.content.toLowerCase().trim();
+    const result = data.choices[0].message.content.trim();
     
-    if (result.includes("not_interested") || result.includes("not interested")) return "not_interested";
-    if (result.includes("interested")) return "interested";
-    if (result.includes("reschedule")) return "reschedule";
-    
-    return "not_interested";
+    // Title-case the result and clean up
+    const cleaned = result.replace(/['"]/g, '').replace(/\.$/, '');
+    if (!cleaned || cleaned.length > 60) return "Uncategorized";
+    return cleaned;
   } catch (err) {
     console.error("AI Analysis failed:", err);
-    return "not_interested";
+    return "Uncategorized";
   }
 }
 

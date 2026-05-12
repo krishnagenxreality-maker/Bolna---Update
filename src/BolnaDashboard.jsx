@@ -367,13 +367,12 @@ export default function BolnaDashboard() {
             {activeView === 'leads' && (
               <LeadsView 
                 contacts={contacts}
-                leadsStatusTab={leadsStatusTab}
-                setLeadsStatusTab={setLeadsStatusTab}
                 searchDate={searchDate}
                 setSearchDate={setSearchDate}
                 stats={stats}
                 activeView={activeView}
                 setActiveView={setActiveView}
+                apiKey={apiKey}
               />
             )}
             {activeView === 'report' && (

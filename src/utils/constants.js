@@ -13,8 +13,4 @@ export const STATUS_META = {
   failed:    { label: "Failed",    cls: "s-failed"    },
 };
 
-export const LEAD_CATEGORIES = [
-  { id: 'interested', label: 'Interested' },
-  { id: 'not_interested', label: 'Not Interested' },
-  { id: 'reschedule', label: 'Reschedule' }
-];
+

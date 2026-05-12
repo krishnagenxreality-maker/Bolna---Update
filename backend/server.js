@@ -393,7 +393,7 @@ app.delete('/api/requests/:id', async (req, res) => {
 
 const mapContact = (c) => {
   if (!c) return null;
-  const { lead_category, call_date, created_at, execution_id, user_id, classification, ...rest } = c;
+  const { lead_category, call_date, created_at, execution_id, user_id, classification, recording_url, ...rest } = c;
   return {
     ...rest,
     leadCategory: lead_category || classification, // Support both field names
@@ -401,6 +401,7 @@ const mapContact = (c) => {
     date: call_date,
     executionId: execution_id,
     userId: user_id,
+    recordingUrl: recording_url || "",
     createdAt: created_at
   };
 };
@@ -438,6 +439,7 @@ app.post('/api/contacts', async (req, res) => {
       summary: c.summary,
       lead_category: c.leadCategory,
       execution_id: c.executionId,
+      recording_url: c.recordingUrl || null,
       call_date: c.date || new Date().toISOString().split('T')[0]
     }));
 

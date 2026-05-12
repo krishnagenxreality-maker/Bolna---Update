@@ -1,64 +1,88 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { Panel, PanelHead } from '../ui/Panel';
-import { StatusPill } from '../ui/StatusPill';
-import { LEAD_CATEGORIES } from '../../utils/constants';
 import { DatePicker } from '../ui/DatePicker';
+import { fetchExecutionStatus } from '../../services/api';
 import { 
-  PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
 import { 
-  CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, Download, UserPlus, UserMinus, UserCheck, MessageSquareOff
+  CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, Download, 
+  Tag, Layers, CheckCircle2, PhoneOff, X, Play, FileText, Mic
 } from 'lucide-react';
 
 export const LeadsView = ({ 
   contacts, 
-  leadsStatusTab, 
-  setLeadsStatusTab, 
   searchDate, 
   setSearchDate,
   stats,
   activeView,
-  setActiveView
+  setActiveView,
+  apiKey
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [modalData, setModalData] = useState(null);
+  const [loadingRecording, setLoadingRecording] = useState(false);
   const ROWS_PER_PAGE = 4;
 
+  // Filter by date
   const filteredContacts = useMemo(() => contacts.filter(c => !searchDate || c.date === searchDate), [contacts, searchDate]);
   
-  // Filtering table data based on selected lead category tab
+  // Get all contacts that have a leadCategory (completed calls with AI analysis)
+  const categorizedContacts = useMemo(() => {
+    return filteredContacts.filter(c => c.leadCategory && c.leadCategory !== '');
+  }, [filteredContacts]);
+
+  // Dynamic unique categories
+  const uniqueCategories = useMemo(() => {
+    const cats = new Set();
+    categorizedContacts.forEach(c => {
+      if (c.leadCategory) cats.add(c.leadCategory);
+    });
+    return Array.from(cats).sort();
+  }, [categorizedContacts]);
+
+  // Filter by selected category
   const filteredLeads = useMemo(() => {
-    return filteredContacts.filter(c => c.leadCategory === leadsStatusTab);
-  }, [filteredContacts, leadsStatusTab]);
+    if (!selectedCategory) return categorizedContacts;
+    return categorizedContacts.filter(c => c.leadCategory === selectedCategory);
+  }, [categorizedContacts, selectedCategory]);
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(0);
-  }, [searchDate, leadsStatusTab]);
+  }, [searchDate, selectedCategory]);
 
   const totalPages = Math.ceil(filteredLeads.length / ROWS_PER_PAGE);
   const currentRows = useMemo(() => {
     return filteredLeads.slice(currentPage * ROWS_PER_PAGE, (currentPage + 1) * ROWS_PER_PAGE);
   }, [filteredLeads, currentPage]);
 
+  // Dynamic category distribution for pie chart
   const classificationData = useMemo(() => {
-    const counts = { 'Interested': 0, 'Not Interested': 0, 'Rescheduled': 0 };
-    filteredContacts.forEach(c => {
-      if (c.leadCategory === 'interested') counts['Interested']++;
-      else if (c.leadCategory === 'not_interested') counts['Not Interested']++;
-      else if (c.leadCategory === 'reschedule') counts['Rescheduled']++;
+    const counts = {};
+    categorizedContacts.forEach(c => {
+      if (c.leadCategory) {
+        counts[c.leadCategory] = (counts[c.leadCategory] || 0) + 1;
+      }
     });
-    return Object.keys(counts).map(name => ({ name, value: counts[name] }));
-  }, [filteredContacts]);
+    return Object.keys(counts)
+      .map(name => ({ name, value: counts[name] }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8); // Top 8 for chart readability
+  }, [categorizedContacts]);
 
+  // Leads per day trend
   const leadsTrendData = useMemo(() => {
     const counts = {};
-    contacts.filter(c => c.leadCategory === 'interested').forEach(c => {
+    contacts.filter(c => c.leadCategory && c.leadCategory !== '').forEach(c => {
       counts[c.date] = (counts[c.date] || 0) + 1;
     });
-    return Object.keys(counts).sort().map(date => ({ date, count: counts[date] }));
+    return Object.keys(counts).sort().slice(-7).map(date => ({ date, count: counts[date] }));
   }, [contacts]);
 
-  const COLORS = ['#4ade80', '#f87171', '#fbbf24'];
+  // Dynamic color palette for pie chart
+  const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
 
   const chartTheme = {
     text: 'rgba(255,255,255,0.5)',
@@ -78,21 +102,48 @@ export const LeadsView = ({
     { id: 'report', label: 'Report', icon: <ClipboardList size={18} /> }
   ];
 
+  // Handle category click — open modal
+  const handleCategoryClick = useCallback(async (contact) => {
+    setModalData({
+      name: contact.name,
+      phone: contact.phone,
+      category: contact.leadCategory,
+      summary: contact.summary || 'No summary available.',
+      recordingUrl: contact.recordingUrl || null,
+      loading: false
+    });
+
+    // If no recording URL stored but we have executionId and apiKey, try fetching
+    if (!contact.recordingUrl && contact.executionId && apiKey) {
+      setLoadingRecording(true);
+      try {
+        const data = await fetchExecutionStatus(apiKey, contact.executionId);
+        if (data && data.telephony_data && data.telephony_data.recording_url) {
+          setModalData(prev => prev ? { ...prev, recordingUrl: data.telephony_data.recording_url } : prev);
+        }
+      } catch (e) {
+        console.error('Failed to fetch recording:', e);
+      }
+      setLoadingRecording(false);
+    }
+  }, [apiKey]);
+
+  const closeModal = () => setModalData(null);
+
   const handleDownload = () => {
     if (filteredLeads.length === 0) {
       alert("No leads to download for this selection.");
       return;
     }
 
-    const headers = ['Name', 'Phone Number', 'Status', 'Response', 'Category', 'Date'];
+    const headers = ['Name', 'Phone Number', 'Category', 'Summary', 'Date'];
     const csvContent = [
       headers.join(','),
       ...filteredLeads.map(c => [
         `"${c.name || ''}"`,
         `"${c.phone || ''}"`,
-        `"${c.status || ''}"`,
-        `"${(c.response || '').replace(/"/g, '""')}"`,
         `"${c.leadCategory || ''}"`,
+        `"${(c.summary || '').replace(/"/g, '""')}"`,
         `"${c.date || ''}"`
       ].join(','))
     ].join('\n');
@@ -101,7 +152,7 @@ export const LeadsView = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `leads_${searchDate || 'all'}_${leadsStatusTab}.csv`);
+    link.setAttribute('download', `leads_${searchDate || 'all'}${selectedCategory ? '_' + selectedCategory.replace(/\s+/g, '_') : ''}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -114,7 +165,7 @@ export const LeadsView = ({
       <div className="leads-header-section">
         <h1 className="leads-main-heading">Leads Section</h1>
         <p className="leads-sub-heading">
-          Track customer interests, monitor engagement outcomes, and analyze lead conversion activity.
+          AI-powered call categorization with dynamic filtering. Click any category to view full details and recordings.
         </p>
       </div>
 
@@ -138,44 +189,44 @@ export const LeadsView = ({
           {/* 2x2 Metrics Snapshot Section */}
           <div className="details-metrics-grid">
             <div className="mini-metric-card">
-              <div className="metric-icon-wrap" style={{ color: '#4ade80' }}>
-                <UserCheck size={14} />
+              <div className="metric-icon-wrap" style={{ color: '#8b5cf6' }}>
+                <Tag size={14} />
               </div>
               <div className="metric-info">
                 <div className="metric-value">
-                  {filteredContacts.filter(c => c.leadCategory === 'interested').length}
+                  {categorizedContacts.length}
                 </div>
-                <div className="metric-label">Interested</div>
+                <div className="metric-label">Total Leads</div>
               </div>
             </div>
 
             <div className="mini-metric-card">
-              <div className="metric-icon-wrap" style={{ color: '#f87171' }}>
-                <UserMinus size={14} />
+              <div className="metric-icon-wrap" style={{ color: '#3b82f6' }}>
+                <Layers size={14} />
               </div>
               <div className="metric-info">
                 <div className="metric-value">
-                  {filteredContacts.filter(c => c.leadCategory === 'not_interested').length}
+                  {uniqueCategories.length}
                 </div>
-                <div className="metric-label">Not Interested</div>
+                <div className="metric-label">Categories</div>
               </div>
             </div>
 
             <div className="mini-metric-card">
-              <div className="metric-icon-wrap" style={{ color: '#fbbf24' }}>
-                <PhoneCall size={14} />
+              <div className="metric-icon-wrap" style={{ color: '#10b981' }}>
+                <CheckCircle2 size={14} />
               </div>
               <div className="metric-info">
                 <div className="metric-value">
-                  {filteredContacts.filter(c => c.leadCategory === 'reschedule').length}
+                  {filteredContacts.filter(c => c.status === 'called' || c.status === 'completed').length}
                 </div>
-                <div className="metric-label">Reschedule</div>
+                <div className="metric-label">Completed</div>
               </div>
             </div>
 
             <div className="mini-metric-card">
-              <div className="metric-icon-wrap" style={{ color: '#6366f1' }}>
-                <MessageSquareOff size={14} />
+              <div className="metric-icon-wrap" style={{ color: '#f59e0b' }}>
+                <PhoneOff size={14} />
               </div>
               <div className="metric-info">
                 <div className="metric-value">
@@ -189,7 +240,7 @@ export const LeadsView = ({
 
         {/* CENTER COLUMN: Analytics */}
         <div className="leads-center-column">
-          <Panel label="Lead Classification">
+          <Panel label="Category Distribution">
             <div className="panel-body" style={{ height: '200px', paddingTop: '10px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -211,16 +262,16 @@ export const LeadsView = ({
             </div>
           </Panel>
 
-          <Panel label="Leads Acquisition Trend">
+          <Panel label="Lead Volume Trend">
             <div className="panel-body" style={{ height: '200px', paddingTop: '20px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={leadsTrendData}>
+                <BarChart data={leadsTrendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} vertical={false} />
                   <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} />
                   <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} />
                   <Tooltip {...chartTheme.tooltip} />
-                  <Line type="monotone" dataKey="count" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981' }} activeDot={{ r: 6 }} />
-                </LineChart>
+                  <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </Panel>
@@ -254,16 +305,30 @@ export const LeadsView = ({
             </PanelHead>
 
             <div className="panel-body">
-              <div className="details-tabs">
-                {LEAD_CATEGORIES.map(cat => (
-                  <button
-                    key={cat.id}
-                    className={`tab-btn ${leadsStatusTab === cat.id ? 'active' : ''}`}
-                    onClick={() => setLeadsStatusTab(cat.id)}
+              {/* Dynamic Category Filter Dropdown */}
+              <div className="leads-filter-bar">
+                <div className="leads-filter-dropdown-wrap">
+                  <Tag size={14} style={{ color: 'rgba(255,255,255,0.4)' }} />
+                  <select
+                    id="leads-category-filter"
+                    className="leads-filter-dropdown"
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
                   >
-                    {cat.label}
+                    <option value="">All Categories</option>
+                    {uniqueCategories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                {selectedCategory && (
+                  <button 
+                    className="leads-filter-clear"
+                    onClick={() => setSelectedCategory('')}
+                  >
+                    <X size={12} /> Clear
                   </button>
-                ))}
+                )}
               </div>
 
               <div className="details-table-scroll-container" style={{ flex: '0 0 auto', maxHeight: 'none' }}>
@@ -274,7 +339,6 @@ export const LeadsView = ({
                         <th>#</th>
                         <th>Name</th>
                         <th>Phone</th>
-                        <th>Status</th>
                         <th>Category</th>
                         <th>Date</th>
                       </tr>
@@ -286,11 +350,12 @@ export const LeadsView = ({
                           <td className="td-name">{c.name}</td>
                           <td className="td-phone">{c.phone}</td>
                           <td>
-                            <StatusPill status={c.status} />
-                          </td>
-                          <td>
-                            <span className={`spill s-${c.leadCategory === 'interested' ? 'done' : c.leadCategory === 'reschedule' ? 'queued' : 'pending'}`}>
-                              {(c.leadCategory || 'PENDING').replace('_', ' ').toUpperCase()}
+                            <span 
+                              className="category-cell-clickable"
+                              onClick={() => handleCategoryClick(c)}
+                              title="Click to view details"
+                            >
+                              {c.leadCategory || 'PENDING'}
                             </span>
                           </td>
                           <td className="td-phone" style={{ fontSize: '11px' }}>{c.date}</td>
@@ -370,6 +435,66 @@ export const LeadsView = ({
         </div>
 
       </div>
+
+      {/* Category Detail Modal */}
+      {modalData && (
+        <div className="category-detail-overlay" onClick={closeModal}>
+          <div className="category-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="category-modal-close" onClick={closeModal}>
+              <X size={20} />
+            </button>
+
+            <div className="category-modal-header">
+              <div className="category-modal-icon">
+                <Tag size={24} />
+              </div>
+              <div>
+                <h2 className="category-modal-title">{modalData.category}</h2>
+                <p className="category-modal-contact">{modalData.name} • {modalData.phone}</p>
+              </div>
+            </div>
+
+            <div className="category-modal-section">
+              <div className="category-modal-section-label">
+                <FileText size={14} />
+                Full Call Summary
+              </div>
+              <div className="category-summary-block">
+                {modalData.summary}
+              </div>
+            </div>
+
+            <div className="category-modal-section">
+              <div className="category-modal-section-label">
+                <Mic size={14} />
+                Voice Recording
+              </div>
+              <div className="category-audio-player">
+                {loadingRecording ? (
+                  <div className="audio-loading">
+                    <div className="audio-loading-spinner" />
+                    <span>Loading recording...</span>
+                  </div>
+                ) : modalData.recordingUrl ? (
+                  <audio 
+                    controls 
+                    src={modalData.recordingUrl} 
+                    className="audio-element"
+                    preload="metadata"
+                  >
+                    Your browser does not support the audio element.
+                  </audio>
+                ) : (
+                  <div className="audio-unavailable">
+                    <PhoneOff size={16} />
+                    <span>Recording not available for this call</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
