@@ -5,7 +5,8 @@ import {
   ListTodo, 
   BarChart, 
   Users, 
-  ClipboardList 
+  ClipboardList,
+  Megaphone
 } from 'lucide-react';
 
 export const Sidebar = ({ activeView, setActiveView }) => {
@@ -15,6 +16,7 @@ export const Sidebar = ({ activeView, setActiveView }) => {
     { id: 'details', label: 'Call Details', icon: <ListTodo size={20} /> },
     { id: 'responses', label: 'Responses', icon: <BarChart size={20} /> },
     { id: 'leads', label: 'Leads', icon: <Users size={20} /> },
+    { id: 'campaign', label: 'Campaign', icon: <Megaphone size={20} /> },
     { id: 'report', label: 'Reports', icon: <ClipboardList size={20} /> }
   ];
 

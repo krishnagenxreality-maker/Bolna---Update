@@ -26,10 +26,11 @@ import { ResponseAnalysisView } from './components/responses/ResponseAnalysisVie
 import { LeadsView } from './components/leads/LeadsView';
 import { CalendarDashboardView } from './components/calendar/CalendarDashboardView';
 import { ReportView } from './components/report/ReportView';
+import { CampaignView } from './components/campaign/CampaignView';
 
 import { Sidebar } from './components/layout/Sidebar';
 import { Dropdown } from './components/ui/Dropdown';
-import { ListTodo, BarChart, Users, ClipboardList, ArrowRight, CalendarDays, Clock, FileText } from 'lucide-react';
+import { ListTodo, BarChart, Users, ClipboardList, ArrowRight, CalendarDays, Clock, FileText, Megaphone } from 'lucide-react';
 
 export default function BolnaDashboard() {
   const {
@@ -98,15 +99,15 @@ export default function BolnaDashboard() {
     setIsShining(false);
   };
 
-  // Quick Navigation items for manager
   const managerQuickNavItems = [
     { id: 'details', label: 'Call Details', icon: <ListTodo size={20} />, color: '#3b82f6' },
     { id: 'responses', label: 'Responses', icon: <BarChart size={20} />, color: '#7dffb3' },
     { id: 'leads', label: 'Leads', icon: <Users size={20} />, color: '#f5c842' },
+    { id: 'campaign', label: 'Campaign', icon: <Megaphone size={20} />, color: '#ec4899' },
     { id: 'report', label: 'Report', icon: <ClipboardList size={20} />, color: '#a855f7' }
   ];
 
-  const isFullWidthView = activeView === 'calendar' || activeView === 'manager' || activeView === 'details' || activeView === 'responses' || activeView === 'leads' || activeView === 'report';
+  const isFullWidthView = activeView === 'calendar' || activeView === 'manager' || activeView === 'details' || activeView === 'responses' || activeView === 'leads' || activeView === 'campaign' || activeView === 'report';
 
   return (
     <div className="app-container" style={{ flexDirection: 'column', gap: 0, paddingRight: 0 }}>
@@ -367,11 +368,20 @@ export default function BolnaDashboard() {
             {activeView === 'leads' && (
               <LeadsView 
                 contacts={contacts}
-                leadsStatusTab={leadsStatusTab}
-                setLeadsStatusTab={setLeadsStatusTab}
                 searchDate={searchDate}
                 setSearchDate={setSearchDate}
                 stats={stats}
+                activeView={activeView}
+                setActiveView={setActiveView}
+                apiKey={apiKey}
+              />
+            )}
+            {activeView === 'campaign' && (
+              <CampaignView
+                contacts={contacts}
+                scheduledJobs={scheduledJobs}
+                searchDate={searchDate}
+                setSearchDate={setSearchDate}
                 activeView={activeView}
                 setActiveView={setActiveView}
               />

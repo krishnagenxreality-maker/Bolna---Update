@@ -1,8 +1,15 @@
-export async function makeCall(key, agId, phone) {
+export async function makeCall(key, agId, phone, name = "") {
   const res = await fetch("https://api.bolna.ai/call", {
     method: "POST",
     headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ agent_id: agId, recipient_phone_number: phone })
+    body: JSON.stringify({ 
+      agent_id: agId, 
+      recipient_phone_number: phone,
+      user_variables: {
+        customer_name: name || "Hello",
+        name: name || "Hello"
+      }
+    })
   });
   if (!res.ok) {
     const txt = await res.text();
@@ -13,6 +20,26 @@ export async function makeCall(key, agId, phone) {
   return data.execution_id;
 }
 
+export async function fetchVoices(key) {
+  if (!key) return [];
+  try {
+    const res = await fetch("https://api.bolna.ai/voices", {
+      headers: { "Authorization": `Bearer ${key}` }
+    });
+    if (!res.ok) {
+      // Fallback to V2
+      const resV2 = await fetch("https://api.bolna.ai/v2/voices", {
+        headers: { "Authorization": `Bearer ${key}` }
+      });
+      if (!resV2.ok) return [];
+      return await resV2.json();
+    }
+    return await res.json();
+  } catch (err) {
+    console.error("Failed to fetch voices:", err);
+    return [];
+  }
+}
 
 export async function fetchExecutionStatus(key, executionId) {
   const res = await fetch(`https://api.bolna.ai/executions/${executionId}`, {
@@ -24,7 +51,7 @@ export async function fetchExecutionStatus(key, executionId) {
 
 
 export async function analyzeSummaryWithDeepSeek(apiKey, summary) {
-  if (!summary) return "not_interested";
+  if (!summary) return "Uncategorized";
 
   try {
     const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
@@ -38,7 +65,7 @@ export async function analyzeSummaryWithDeepSeek(apiKey, summary) {
         messages: [
           {
             role: "system",
-            content: "You are a call analysis assistant. Analyze the summary and classify it into one of these categories: interested, not_interested, reschedule. Return ONLY the single word category."
+            content: "You are a call analysis assistant. Analyze the call summary and generate a short descriptive Category Title (2-5 words) that captures the primary outcome or intent of the call. Examples: Fee Payment Confirmed, Student Marked Present, Parent Requested Callback, Appointment Rescheduled, Product Interested, Complaint Registered, Follow-up Needed, Not Interested, Information Provided, Voicemail Left. Return ONLY the category title, nothing else."
           },
           {
             role: "user",
@@ -49,18 +76,17 @@ export async function analyzeSummaryWithDeepSeek(apiKey, summary) {
       })
     });
 
-    if (!res.ok) return "not_interested";
+    if (!res.ok) return "Uncategorized";
     const data = await res.json();
-    const result = data.choices[0].message.content.toLowerCase().trim();
-
-    if (result.includes("not_interested") || result.includes("not interested")) return "not_interested";
-    if (result.includes("interested")) return "interested";
-    if (result.includes("reschedule")) return "reschedule";
-
-    return "not_interested";
+    const result = data.choices[0].message.content.trim();
+    
+    // Title-case the result and clean up
+    const cleaned = result.replace(/['"]/g, '').replace(/\.$/, '');
+    if (!cleaned || cleaned.length > 60) return "Uncategorized";
+    return cleaned;
   } catch (err) {
     console.error("AI Analysis failed:", err);
-    return "not_interested";
+    return "Uncategorized";
   }
 }
 

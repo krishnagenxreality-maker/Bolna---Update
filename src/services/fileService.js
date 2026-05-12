@@ -27,5 +27,5 @@ export function parseContacts(rows) {
       executionId: null, 
       date: new Date().toISOString().split('T')[0] 
     };
-  }).filter(c => c.name && c.phone);
+  }).filter(c => c.phone);
 }

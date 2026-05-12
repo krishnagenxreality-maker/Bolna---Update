@@ -173,7 +173,7 @@ export default function StudentsManager() {
     try {
       for (const s of students) {
         try {
-          await makeCall(apiKey, actualAgentId, s.parent_phone);
+          await makeCall(apiKey, actualAgentId, s.parent_phone, s.name);
           // Deduct credit
           await axios.post(`${API_BASE_URL}/api/user-credits/deduct/${user.userId}`);
         } catch (e) {

@@ -26,7 +26,7 @@ export function useBolnaDashboard() {
   const [activeView, setActiveView] = useState("calendar");
   const [detailsStatusTab, setDetailsStatusTab] = useState("all");
   const [responseTab, setResponseTab] = useState("");
-  const [leadsStatusTab, setLeadsStatusTab] = useState("interested");
+  const [leadsStatusTab, setLeadsStatusTab] = useState("");
   const [searchDate, setSearchDate] = useState(new Date().toISOString().split('T')[0]);
   const [credits, setCredits] = useState(0);
   const [scheduledJobs, setScheduledJobs] = useState([]);
@@ -107,16 +107,16 @@ export function useBolnaDashboard() {
     }
   }, [addLog, agentId, user, scheduledJobs, fetchScheduledJobs]);
 
-  const updateContactStatus = useCallback((id, status, response = "", leadCategory = "", summary = "") => {
+  const updateContactStatus = useCallback((id, status, response = "", leadCategory = "", summary = "", recordingUrl = "") => {
     const now = new Date().toISOString().split('T')[0];
     const updated = contactsRef.current.map(c => 
-      c.id === id ? { ...c, status, response, leadCategory, summary, date: now } : c
+      c.id === id ? { ...c, status, response, leadCategory, summary, recordingUrl: recordingUrl || c.recordingUrl || "", date: now } : c
     );
     
     setContacts(updated);
     contactsRef.current = updated;
     setSessionContacts(prev => prev.map(c => 
-      c.id === id ? { ...c, status, response, leadCategory, summary, date: now } : c
+      c.id === id ? { ...c, status, response, leadCategory, summary, recordingUrl: recordingUrl || c.recordingUrl || "", date: now } : c
     ));
     
     console.log("CALL DETAILS UPDATED");
@@ -153,12 +153,13 @@ export function useBolnaDashboard() {
         const isSuccess = ["completed","no answer","no_answer","call disconnected","call_disconnected","busy"].includes(sl);
         if (isSuccess) { 
           let category = "";
+          const recordingUrl = data.telephony_data?.recording_url || "";
           if (data.summary) {
             category = await analyzeSummaryWithDeepSeek(DEEPSEEK_API_KEY, data.summary);
             console.log("RESPONSES UPDATED");
           }
           const finalStatus = sl === "completed" ? "called" : sl;
-          updateContactStatus(contact.id, finalStatus, sl, category, data.summary || ""); 
+          updateContactStatus(contact.id, finalStatus, sl, category, data.summary || "", recordingUrl); 
           addLog(`✓ ${sl.toUpperCase()}: ${contact.name}${category ? ` (${category})` : ""}`, "ok"); 
         }
         else if (["failed","error","cancelled"].includes(sl)) { 
@@ -191,7 +192,7 @@ export function useBolnaDashboard() {
       updateContactStatus(id, "queued");
       try {
         const actualBolnaId = agId.includes('::') ? agId.split('::')[1] : agId;
-        const execId = await makeCall(key, actualBolnaId, contact.phone);
+        const execId = await makeCall(key, actualBolnaId, contact.phone, contact.name);
         updateContactExecId(id, execId);
         updateContactStatus(id, "calling");
         addLog(`✓ Call queued: ${contact.name} (${contact.phone}) → exec ${execId.slice(0,8)}…`, "ok");
@@ -368,7 +369,9 @@ export function useBolnaDashboard() {
                 id: a.bolna_agent_id,
                 isCustom: true,
                 scriptType: a.script_type,
-                script: a.script
+                script: a.script,
+                voiceId: a.voice_id,
+                voiceName: a.voice_name
               }));
               currentAgents = [...currentAgents, ...customAgents];
             }
@@ -483,7 +486,9 @@ export function useBolnaDashboard() {
           id: agentData.bolnaAgentId,
           isCustom: true,
           scriptType: agentData.scriptType,
-          script: agentData.script
+          script: agentData.script,
+          voiceId: agentData.voiceId,
+          voiceName: agentData.voiceName
         };
         console.log("SYNC_CUSTOM_AGENT_SUCCESS", newAgent);
         setAvailableAgents(prev => [...prev, newAgent]);

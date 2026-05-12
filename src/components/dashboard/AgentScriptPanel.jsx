@@ -57,10 +57,11 @@ export const AgentScriptPanel = ({ agentId, apiKey, availableAgents = [] }) => {
         // Extract prompt from agent_prompts
         let prompt = '';
         if (data.agent_prompts) {
-          const keys = Object.keys(data.agent_prompts);
-          if (keys.length > 0) {
-            prompt = data.agent_prompts[keys[0]]?.prompt || '';
-            if (prompt) console.log("SCRIPT_RETRIEVAL_FOUND", "In agent_prompts");
+          // Check task_1 (V2) or task_0 (legacy) or any first key
+          const taskObj = data.agent_prompts.task_1 || data.agent_prompts.task_0 || data.agent_prompts[Object.keys(data.agent_prompts)[0]];
+          if (taskObj) {
+            prompt = taskObj.system_prompt || taskObj.prompt || '';
+            if (prompt) console.log("SCRIPT_RETRIEVAL_FOUND", "In agent_prompts (v1/v2)");
           }
         }
         
@@ -69,7 +70,10 @@ export const AgentScriptPanel = ({ agentId, apiKey, availableAgents = [] }) => {
           const conversationTask = data.agent_config.tasks.find(t => t.task_type === 'conversation');
           if (conversationTask?.tools_config?.llm_agent?.prompt) {
             prompt = conversationTask.tools_config.llm_agent.prompt;
-            if (prompt) console.log("SCRIPT_RETRIEVAL_FOUND", "In agent_config.tasks");
+            if (prompt) console.log("SCRIPT_RETRIEVAL_FOUND", "In agent_config.tasks.llm_agent.prompt");
+          } else if (conversationTask?.tools_config?.llm_agent?.llm_config?.prompt) {
+            prompt = conversationTask.tools_config.llm_agent.llm_config.prompt;
+            if (prompt) console.log("SCRIPT_RETRIEVAL_FOUND", "In agent_config.tasks.llm_agent.llm_config.prompt");
           }
         }
         
