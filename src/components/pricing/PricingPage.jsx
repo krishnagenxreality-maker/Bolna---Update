@@ -20,7 +20,7 @@ const PLANS = [
       'AI call summaries',
       'AI lead classification',
       'Campaign analytics',
-      'CSV upload',
+      'Excel Upload',
       'Single workspace',
       'Email support',
     ],
@@ -73,46 +73,16 @@ const CREDIT_STEPS = [
 ];
 
 const FAQS = [
-  {
-    q: 'What payment methods do you accept?',
-    a: 'We accept all major credit/debit cards, UPI, net banking, and bank transfers. All payments are processed securely in INR.',
-  },
-  {
-    q: 'Is the setup fee a one-time charge?',
-    a: 'Yes, the setup fee is a one-time charge paid at the time of onboarding. It covers account configuration, AI agent setup, and initial campaign assistance. It is not recurring.',
-  },
-  {
-    q: 'What happens if I exceed my monthly call limit?',
-    a: "If you exceed your plan's monthly call limit, your campaigns will pause automatically. You can purchase add-on credit packs instantly to continue without any downtime.",
-  },
-  {
-    q: 'Do unused credits roll over to the next month?',
-    a: 'Monthly plan credits reset at the end of each billing cycle and do not roll over. However, add-on credit packs you purchase separately are valid for 90 days from the date of purchase.',
-  },
-  {
-    q: 'Can I upgrade or downgrade my plan?',
-    a: 'Yes, you can upgrade your plan at any time and the change takes effect immediately. Downgrades take effect at the start of your next billing cycle.',
-  },
-  {
-    q: 'What counts as one AI call credit?',
-    a: 'One credit equals one outbound AI call attempt, regardless of call duration or outcome. Both connected and unanswered calls consume one credit.',
-  },
-  {
-    q: 'Are add-on credits tied to a specific plan?',
-    a: 'No, add-on credit packs can be purchased on any plan — Starter, Growth, or Pro. They are added on top of your existing monthly allocation and can be used immediately.',
-  },
-  {
-    q: 'Is there a refund policy?',
-    a: 'Setup fees are non-refundable. For monthly subscriptions, if you face a technical issue on our end, we will issue pro-rated credits. Please contact support@callinggen.ai for refund requests.',
-  },
-  {
-    q: 'Do you offer a free trial?',
-    a: 'We currently do not offer a self-serve free trial. However, you can book a demo with our team and we will run a sample campaign so you can evaluate the platform before subscribing.',
-  },
-  {
-    q: 'Is GST included in the pricing?',
-    a: 'All displayed prices are exclusive of GST. Applicable GST (18%) will be added at checkout. A GST invoice will be provided for all transactions.',
-  },
+  { q: 'What payment methods do you accept?', a: 'We accept all major credit/debit cards, UPI, net banking, and bank transfers. All payments are processed securely in INR.' },
+  { q: 'Is the setup fee a one-time charge?', a: 'Yes, the setup fee is a one-time charge paid at the time of onboarding. It covers account configuration, AI agent setup, and initial campaign assistance. It is not recurring.' },
+  { q: 'What happens if I exceed my monthly call limit?', a: "If you exceed your plan's monthly call limit, your campaigns will pause automatically. You can purchase add-on credit packs instantly to continue without any downtime." },
+  { q: 'Do unused credits roll over to the next month?', a: 'Monthly plan credits reset at the end of each billing cycle and do not roll over. However, add-on credit packs you purchase separately are valid for 90 days from the date of purchase.' },
+  { q: 'Can I upgrade or downgrade my plan?', a: 'Yes, you can upgrade your plan at any time and the change takes effect immediately. Downgrades take effect at the start of your next billing cycle.' },
+  { q: 'What counts as one AI call credit?', a: 'One credit equals one outbound AI call attempt, regardless of call duration or outcome. Both connected and unanswered calls consume one credit.' },
+  { q: 'Are add-on credits tied to a specific plan?', a: 'No, add-on credit packs can be purchased on any plan — Starter, Growth, or Pro. They are added on top of your existing monthly allocation and can be used immediately.' },
+  { q: 'Is there a refund policy?', a: 'Setup fees are non-refundable. For monthly subscriptions, if you face a technical issue on our end, we will issue pro-rated credits. Please contact support@callinggen.ai for refund requests.' },
+  { q: 'Do you offer a free trial?', a: 'We currently do not offer a self-serve free trial. However, you can book a demo with our team and we will run a sample campaign so you can evaluate the platform before subscribing.' },
+  { q: 'Is GST included in the pricing?', a: 'All displayed prices are exclusive of GST. Applicable GST (18%) will be added at checkout. A GST invoice will be provided for all transactions.' },
 ];
 
 const PAGE_STYLES = `
@@ -120,6 +90,7 @@ const PAGE_STYLES = `
   @keyframes shimmerLine { from { transform:translateX(-100%); } to { transform:translateX(100%); } }
   @keyframes glowPulse   { 0%,100%{ box-shadow:0 0 0 0 rgba(255,255,255,0.04); } 50%{ box-shadow:0 0 32px 0 rgba(255,255,255,0.07); } }
   @keyframes bestForFade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes modalIn    { from { opacity:0; transform:scale(0.96) translateY(12px); } to { opacity:1; transform:scale(1) translateY(0); } }
 
   input[type=range].credit-slider {
     -webkit-appearance: none; appearance: none;
@@ -134,24 +105,20 @@ const PAGE_STYLES = `
     box-shadow: 0 0 10px rgba(167,139,250,0.6); cursor: pointer;
     transition: box-shadow 0.2s ease;
   }
-  input[type=range].credit-slider::-webkit-slider-thumb:hover {
-    box-shadow: 0 0 18px rgba(167,139,250,0.9);
-  }
+  input[type=range].credit-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 18px rgba(167,139,250,0.9); }
   input[type=range].credit-slider::-moz-range-thumb {
     width: 20px; height: 20px; border-radius: 50%;
     background: #a78bfa; border: 2px solid #fff;
     box-shadow: 0 0 10px rgba(167,139,250,0.6); cursor: pointer;
   }
 
-  .faq-item { border-bottom: 1px solid rgba(255,255,255,0.06); transition: background 0.2s ease; }
+  .faq-item { border-bottom: 1px solid rgba(255,255,255,0.06); }
   .faq-item:last-child { border-bottom: none; }
   .faq-question {
     width: 100%; display: flex; justify-content: space-between;
-    align-items: center; gap: 16px;
-    padding: 20px 0; background: none; border: none;
-    cursor: pointer; text-align: left;
-    color: #fff; font-family: Outfit, sans-serif;
-    font-size: 15px; font-weight: 600;
+    align-items: center; gap: 16px; padding: 20px 0;
+    background: none; border: none; cursor: pointer; text-align: left;
+    color: #fff; font-family: Outfit, sans-serif; font-size: 15px; font-weight: 600;
     transition: color 0.2s ease;
   }
   .faq-question:hover { color: #c4b5fd; }
@@ -162,21 +129,52 @@ const PAGE_STYLES = `
   .bestfor-badge {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 7px 14px; border-radius: 999px;
-    background: rgba(167,139,250,0.1);
-    border: 1px solid rgba(167,139,250,0.25);
-    font-size: 13px; font-family: Outfit, sans-serif;
-    color: #c4b5fd; font-weight: 500;
-    animation: bestForFade 0.3s cubic-bezier(0.16,1,0.3,1) both;
-    margin-bottom: 20px;
+    background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.25);
+    font-size: 13px; font-family: Outfit, sans-serif; color: #c4b5fd; font-weight: 500;
+    animation: bestForFade 0.3s cubic-bezier(0.16,1,0.3,1) both; margin-bottom: 20px;
   }
+
+  .sales-field { display: flex; flex-direction: column; gap: 6px; }
+  .sales-label { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); font-family: Outfit, sans-serif; letter-spacing: 0.04em; }
+  .sales-input {
+    background: none; border: none; border-bottom: 1px solid rgba(255,255,255,0.15);
+    color: #fff; font-family: Outfit, sans-serif; font-size: 15px;
+    padding: 10px 0; outline: none; width: 100%; transition: border-color 0.2s;
+  }
+  .sales-input::placeholder { color: rgba(255,255,255,0.2); }
+  .sales-input:focus { border-bottom-color: #a78bfa; }
+  .phone-row { display: flex; align-items: center; gap: 0; border-bottom: 1px solid rgba(255,255,255,0.15); transition: border-color 0.2s; }
+  .phone-row:focus-within { border-bottom-color: #a78bfa; }
+  .country-prefix {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 10px 10px 0; cursor: pointer;
+    font-family: Outfit, sans-serif; font-size: 14px; color: rgba(255,255,255,0.6);
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .phone-input {
+    background: none; border: none; color: #fff;
+    font-family: Outfit, sans-serif; font-size: 15px;
+    padding: 10px 0; outline: none; flex: 1;
+  }
+  .phone-input::placeholder { color: rgba(255,255,255,0.2); }
+  .ok-btn {
+    padding: 10px 28px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08); color: #fff;
+    font-family: Outfit, sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; margin-top: 8px; align-self: flex-start;
+  }
+  .ok-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.35); }
 `;
 
 export default function PricingPage() {
   const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showProModal, setShowProModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', org: '', email: '' });
+  const [proForm, setProForm] = useState({ name: '', email: '', phone: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [proSubmitted, setProSubmitted] = useState(false);
   const [sliderIdx, setSliderIdx] = useState(0);
   const [openFaq, setOpenFaq] = useState(null);
 
@@ -184,7 +182,7 @@ export default function PricingPage() {
 
   const handlePlanClick = (plan) => {
     if (plan.id === 'pro') {
-      window.location.href = 'mailto:sales@callinggen.ai';
+      setShowProModal(true);
       return;
     }
     setSelectedPlan(plan);
@@ -215,34 +213,49 @@ export default function PricingPage() {
     }
   };
 
+  const handleProSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API_BASE_URL}/api/requests`, {
+        name: proForm.name,
+        email: proForm.email,
+        phone: proForm.phone,
+        purpose: 'Pro Plan - Contact Sales',
+        callPurpose: 'Enterprise sales inquiry',
+        creditsSelected: 'Pro',
+        scriptContent: '',
+        purposeType: 'regular',
+      });
+      setProSubmitted(true);
+      setTimeout(() => {
+        setShowProModal(false);
+        setProSubmitted(false);
+        setProForm({ name: '', email: '', phone: '' });
+      }, 3000);
+    } catch {
+      alert('Failed to submit. Please try again.');
+    }
+  };
+
   const sectionStyle = {
-    width: '100%',
-    maxWidth: '1300px',
-    margin: '0 auto',
-    padding: '80px 40px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
+    width: '100%', maxWidth: '1300px', margin: '0 auto', padding: '80px 40px',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
   };
 
   const pillLabel = (text) => (
     <div style={{
       display: 'inline-flex', alignItems: 'center', gap: '8px',
       padding: '5px 14px', borderRadius: '999px',
-      border: '1px solid rgba(255,255,255,0.12)',
-      background: 'rgba(255,255,255,0.05)',
-      fontSize: '11px', color: 'rgba(255,255,255,0.45)',
-      fontFamily: 'Outfit', letterSpacing: '0.1em',
-      textTransform: 'uppercase', marginBottom: '20px',
+      border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)',
+      fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontFamily: 'Outfit',
+      letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '20px',
       position: 'relative', overflow: 'hidden',
       animation: 'fadeSlideUp 0.65s cubic-bezier(0.16,1,0.3,1) both',
     }}>
       <span style={{
         position: 'absolute', inset: 0,
         background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%)',
-        animation: 'shimmerLine 1.2s ease-out 0.3s 1 forwards',
-        pointerEvents: 'none',
+        animation: 'shimmerLine 1.2s ease-out 0.3s 1 forwards', pointerEvents: 'none',
       }} />
       {text}
     </div>
@@ -266,36 +279,22 @@ export default function PricingPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
           <button
-            onClick={() => navigate('/pricing')}
-            className="nav-link"
+            onClick={() => navigate('/pricing')} className="nav-link"
             style={{
               background: 'linear-gradient(135deg, rgba(167,139,250,0.15), rgba(52,211,153,0.15))',
-              border: '1px solid rgba(167,139,250,0.45)',
-              color: '#c4b5fd', cursor: 'pointer',
+              border: '1px solid rgba(167,139,250,0.45)', color: '#c4b5fd', cursor: 'pointer',
               fontFamily: 'Outfit', fontWeight: '600', fontSize: '14px',
               padding: '7px 18px', borderRadius: '8px', letterSpacing: '0.02em',
               boxShadow: '0 0 16px rgba(167,139,250,0.25), inset 0 1px 0 rgba(255,255,255,0.08)',
-              transition: 'all 0.25s ease',
-              animation: 'glowPulse 3s ease-in-out infinite',
+              transition: 'all 0.25s ease', animation: 'glowPulse 3s ease-in-out infinite',
             }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(167,139,250,0.28), rgba(52,211,153,0.22))';
-              e.currentTarget.style.boxShadow = '0 0 28px rgba(167,139,250,0.45), inset 0 1px 0 rgba(255,255,255,0.12)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(167,139,250,0.15), rgba(52,211,153,0.15))';
-              e.currentTarget.style.boxShadow = '0 0 16px rgba(167,139,250,0.25), inset 0 1px 0 rgba(255,255,255,0.08)';
-            }}
-          >
-            ✦ Pricing
-          </button>
+            onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(167,139,250,0.28), rgba(52,211,153,0.22))'; e.currentTarget.style.boxShadow = '0 0 28px rgba(167,139,250,0.45), inset 0 1px 0 rgba(255,255,255,0.12)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(167,139,250,0.15), rgba(52,211,153,0.15))'; e.currentTarget.style.boxShadow = '0 0 16px rgba(167,139,250,0.25), inset 0 1px 0 rgba(255,255,255,0.08)'; }}
+          >✦ Pricing</button>
           <button
-            onClick={() => navigate('/login', { state: { from: '/pricing' } })}
-            className="logout-btn"
+            onClick={() => navigate('/login', { state: { from: '/pricing' } })} className="logout-btn"
             style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 20px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Outfit, sans-serif', fontSize: 14, fontWeight: 500, transition: 'all 0.2s' }}
-          >
-            <LogIn size={16} /> Login
-          </button>
+          ><LogIn size={16} /> Login</button>
         </div>
       </header>
 
@@ -304,26 +303,14 @@ export default function PricingPage() {
         {/* ══ PRICING PLANS ══ */}
         <section style={{ ...sectionStyle, paddingTop: '100px' }} id="pricing-section">
           {pillLabel('Simple Pricing')}
-          <h2 style={{
-            fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: '800', color: '#fff',
-            fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.03em', lineHeight: '1.1',
-            marginBottom: '18px',
-            animation: 'fadeSlideUp 0.65s cubic-bezier(0.16,1,0.3,1) 0.1s both',
-          }}>
+          <h2 style={{ fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: '800', color: '#fff', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.03em', lineHeight: '1.1', marginBottom: '18px', animation: 'fadeSlideUp 0.65s cubic-bezier(0.16,1,0.3,1) 0.1s both' }}>
             Built for scalable AI voice outreach
           </h2>
-          <p style={{
-            color: 'rgba(255,255,255,0.4)', fontSize: '18px',
-            fontFamily: 'Outfit, sans-serif', marginBottom: '64px', maxWidth: '560px', lineHeight: '1.6',
-            animation: 'fadeSlideUp 0.65s cubic-bezier(0.16,1,0.3,1) 0.2s both',
-          }}>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '18px', fontFamily: 'Outfit, sans-serif', marginBottom: '64px', maxWidth: '560px', lineHeight: '1.6', animation: 'fadeSlideUp 0.65s cubic-bezier(0.16,1,0.3,1) 0.2s both' }}>
             One platform. All your AI calling infrastructure needs.
           </p>
 
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '24px', width: '100%', maxWidth: '1200px',
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', width: '100%', maxWidth: '1200px' }}>
             {PLANS.map((plan, idx) => (
               <div
                 key={plan.id}
@@ -336,40 +323,18 @@ export default function PricingPage() {
                   boxShadow: plan.popular ? '0 0 60px rgba(167,139,250,0.14)' : 'none',
                   transition: 'border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease',
                 }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = plan.popular ? 'rgba(167,139,250,0.11)' : 'rgba(255,255,255,0.045)';
-                  e.currentTarget.style.borderColor = plan.popular ? 'rgba(167,139,250,0.55)' : 'rgba(255,255,255,0.14)';
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = plan.popular ? 'rgba(167,139,250,0.07)' : 'rgba(255,255,255,0.025)';
-                  e.currentTarget.style.borderColor = plan.popular ? 'rgba(167,139,250,0.35)' : 'rgba(255,255,255,0.07)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
+                onMouseEnter={e => { e.currentTarget.style.background = plan.popular ? 'rgba(167,139,250,0.11)' : 'rgba(255,255,255,0.045)'; e.currentTarget.style.borderColor = plan.popular ? 'rgba(167,139,250,0.55)' : 'rgba(255,255,255,0.14)'; e.currentTarget.style.transform = 'translateY(-4px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = plan.popular ? 'rgba(167,139,250,0.07)' : 'rgba(255,255,255,0.025)'; e.currentTarget.style.borderColor = plan.popular ? 'rgba(167,139,250,0.35)' : 'rgba(255,255,255,0.07)'; e.currentTarget.style.transform = 'translateY(0)'; }}
               >
                 {plan.popular && (
-                  <div style={{
-                    position: 'absolute', top: '-1px', left: '50%', transform: 'translateX(-50%)',
-                    background: 'linear-gradient(90deg, #a78bfa, #34d399)',
-                    color: '#0a0a0a', fontSize: '11px', fontWeight: '800',
-                    fontFamily: 'Outfit', letterSpacing: '0.12em', padding: '5px 18px',
-                    borderRadius: '0 0 12px 12px', whiteSpace: 'nowrap',
-                  }}>MOST POPULAR</div>
+                  <div style={{ position: 'absolute', top: '-1px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(90deg, #a78bfa, #34d399)', color: '#0a0a0a', fontSize: '11px', fontWeight: '800', fontFamily: 'Outfit', letterSpacing: '0.12em', padding: '5px 18px', borderRadius: '0 0 12px 12px', whiteSpace: 'nowrap' }}>MOST POPULAR</div>
                 )}
-                <div style={{
-                  fontSize: '15px', color: plan.popular ? '#a78bfa' : 'rgba(255,255,255,0.45)',
-                  fontFamily: 'Outfit', fontWeight: '700', letterSpacing: '0.1em',
-                  textTransform: 'uppercase', marginBottom: '20px', marginTop: plan.popular ? '16px' : '0',
-                }}>
-                  {plan.name}
-                </div>
+                <div style={{ fontSize: '15px', color: plan.popular ? '#a78bfa' : 'rgba(255,255,255,0.45)', fontFamily: 'Outfit', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '20px', marginTop: plan.popular ? '16px' : '0' }}>{plan.name}</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '8px' }}>
                   <span style={{ fontSize: 'clamp(36px, 4vw, 52px)', fontWeight: '800', color: '#fff', fontFamily: 'Outfit', letterSpacing: '-0.03em' }}>{plan.price}</span>
                   <span style={{ fontSize: '15px', color: 'rgba(255,255,255,0.3)', fontFamily: 'Outfit' }}>/month</span>
                 </div>
-                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.25)', fontFamily: 'Outfit', marginBottom: '28px' }}>
-                  + {plan.setup} one-time setup
-                </div>
+                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.25)', fontFamily: 'Outfit', marginBottom: '28px' }}>+ {plan.setup} one-time setup</div>
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', marginBottom: '26px' }} />
                 <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px', display: 'flex', flexDirection: 'column', gap: '14px', flex: 1 }}>
                   {plan.features.map((f) => (
@@ -386,27 +351,11 @@ export default function PricingPage() {
                     fontFamily: 'Outfit', fontWeight: '700', fontSize: '16px',
                     cursor: 'pointer', transition: 'all 0.25s ease',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    ...(plan.popular ? {
-                      background: 'linear-gradient(135deg, #a78bfa, #34d399)',
-                      border: 'none', color: '#0a0a0a',
-                      boxShadow: '0 6px 28px rgba(167,139,250,0.4)',
-                    } : {
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      color: 'rgba(255,255,255,0.75)',
-                    }),
+                    ...(plan.popular ? { background: 'linear-gradient(135deg, #a78bfa, #34d399)', border: 'none', color: '#0a0a0a', boxShadow: '0 6px 28px rgba(167,139,250,0.4)' } : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.75)' }),
                   }}
-                  onMouseEnter={e => {
-                    if (plan.popular) { e.currentTarget.style.opacity = '0.88'; }
-                    else { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }
-                  }}
-                  onMouseLeave={e => {
-                    if (plan.popular) { e.currentTarget.style.opacity = '1'; }
-                    else { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }
-                  }}
-                >
-                  {plan.cta} {plan.popular && <ArrowRight size={16} />}
-                </button>
+                  onMouseEnter={e => { if (plan.popular) { e.currentTarget.style.opacity = '0.88'; } else { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; } }}
+                  onMouseLeave={e => { if (plan.popular) { e.currentTarget.style.opacity = '1'; } else { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; } }}
+                >{plan.cta} {plan.popular && <ArrowRight size={16} />}</button>
               </div>
             ))}
           </div>
@@ -414,76 +363,22 @@ export default function PricingPage() {
 
         {/* ══ ADD-ON CREDITS ══ */}
         <section style={{ ...sectionStyle, paddingTop: '20px', paddingBottom: '80px' }}>
-          <h2 style={{
-            fontSize: 'clamp(22px, 3vw, 36px)', fontWeight: '700', color: '#fff',
-            fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em', marginBottom: '10px',
-          }}>
-            Add-On Credits
-          </h2>
-          <p style={{
-            color: 'rgba(255,255,255,0.4)', fontSize: '15px',
-            fontFamily: 'Outfit, sans-serif', marginBottom: '32px', maxWidth: '480px',
-          }}>
-            See pricing for users who opt in for add-on credits on their current plans.
-          </p>
+          <h2 style={{ fontSize: 'clamp(22px, 3vw, 36px)', fontWeight: '700', color: '#fff', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em', marginBottom: '10px' }}>Add-On Credits</h2>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '15px', fontFamily: 'Outfit, sans-serif', marginBottom: '32px', maxWidth: '480px' }}>See pricing for users who opt in for add-on credits on their current plans.</p>
 
-          <div style={{
-            width: '100%', maxWidth: '680px',
-            background: 'rgba(255,255,255,0.025)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: '20px', padding: '36px 40px', textAlign: 'left',
-          }}>
-            {/* Best For badge — animates on slider change */}
+          <div style={{ width: '100%', maxWidth: '680px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '36px 40px', textAlign: 'left' }}>
             <div key={sliderIdx} className="bestfor-badge">
-              <span style={{
-                width: '7px', height: '7px', borderRadius: '50%',
-                background: 'linear-gradient(135deg, #a78bfa, #34d399)',
-                flexShrink: 0, display: 'inline-block',
-              }} />
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'linear-gradient(135deg, #a78bfa, #34d399)', flexShrink: 0, display: 'inline-block' }} />
               Best for: {currentStep.bestFor}
             </div>
-
-            {/* Calls highlighted, amount dimmed */}
             <div style={{ marginBottom: '28px' }}>
-              <span style={{
-                fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: '800',
-                color: '#a78bfa', fontFamily: 'Outfit', letterSpacing: '-0.03em',
-              }}>
-                {currentStep.calls.toLocaleString()} calls
-              </span>
-              <span style={{
-                fontSize: '18px', color: 'rgba(255,255,255,0.35)',
-                fontFamily: 'Outfit', marginLeft: '14px',
-              }}>
-                {currentStep.payment}
-              </span>
+              <span style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: '800', color: '#a78bfa', fontFamily: 'Outfit', letterSpacing: '-0.03em' }}>{currentStep.calls.toLocaleString()} calls</span>
+              <span style={{ fontSize: '18px', color: 'rgba(255,255,255,0.35)', fontFamily: 'Outfit', marginLeft: '14px' }}>{currentStep.payment}</span>
             </div>
-
-            {/* Slider */}
-            <input
-              type="range"
-              className="credit-slider"
-              min={0}
-              max={CREDIT_STEPS.length - 1}
-              step={1}
-              value={sliderIdx}
-              onChange={e => setSliderIdx(Number(e.target.value))}
-              style={{ marginBottom: '12px' }}
-            />
-
-            {/* Step labels */}
+            <input type="range" className="credit-slider" min={0} max={CREDIT_STEPS.length - 1} step={1} value={sliderIdx} onChange={e => setSliderIdx(Number(e.target.value))} style={{ marginBottom: '12px' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
               {CREDIT_STEPS.map((s, i) => (
-                <span
-                  key={s.label}
-                  onClick={() => setSliderIdx(i)}
-                  style={{
-                    fontSize: '11px', fontFamily: 'Outfit',
-                    color: i === sliderIdx ? '#a78bfa' : 'rgba(255,255,255,0.25)',
-                    fontWeight: i === sliderIdx ? '700' : '400',
-                    cursor: 'pointer', transition: 'color 0.2s', userSelect: 'none',
-                  }}
-                >{s.label}</span>
+                <span key={s.label} onClick={() => setSliderIdx(i)} style={{ fontSize: '11px', fontFamily: 'Outfit', color: i === sliderIdx ? '#a78bfa' : 'rgba(255,255,255,0.25)', fontWeight: i === sliderIdx ? '700' : '400', cursor: 'pointer', transition: 'color 0.2s', userSelect: 'none' }}>{s.label}</span>
               ))}
             </div>
           </div>
@@ -492,25 +387,9 @@ export default function PricingPage() {
         {/* ══ FAQ ══ */}
         <section style={{ ...sectionStyle, paddingTop: '0', paddingBottom: '120px' }}>
           {pillLabel('FAQs')}
-          <h2 style={{
-            fontSize: 'clamp(24px, 3.5vw, 42px)', fontWeight: '700', color: '#fff',
-            fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em', marginBottom: '12px',
-          }}>
-            Frequently Asked Questions
-          </h2>
-          <p style={{
-            color: 'rgba(255,255,255,0.4)', fontSize: '15px',
-            fontFamily: 'Outfit, sans-serif', marginBottom: '48px', maxWidth: '480px',
-          }}>
-            Everything you need to know about payments, credits, and plans.
-          </p>
-
-          <div style={{
-            width: '100%', maxWidth: '760px',
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            borderRadius: '20px', overflow: 'hidden',
-          }}>
+          <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 42px)', fontWeight: '700', color: '#fff', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em', marginBottom: '12px' }}>Frequently Asked Questions</h2>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '15px', fontFamily: 'Outfit, sans-serif', marginBottom: '48px', maxWidth: '480px' }}>Everything you need to know about payments, credits, and plans.</p>
+          <div style={{ width: '100%', maxWidth: '760px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '20px', overflow: 'hidden' }}>
             {FAQS.map((faq, idx) => {
               const isOpen = openFaq === idx;
               return (
@@ -520,13 +399,7 @@ export default function PricingPage() {
                     <ChevronDown size={18} className={`faq-chevron${isOpen ? ' faq-chevron--open' : ''}`} />
                   </button>
                   <div className="faq-answer" style={{ maxHeight: isOpen ? '200px' : '0px', opacity: isOpen ? 1 : 0 }}>
-                    <p style={{
-                      fontSize: '14px', color: 'rgba(255,255,255,0.45)',
-                      fontFamily: 'Outfit', lineHeight: '1.7',
-                      paddingBottom: '20px', margin: 0,
-                    }}>
-                      {faq.a}
-                    </p>
+                    <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)', fontFamily: 'Outfit', lineHeight: '1.7', paddingBottom: '20px', margin: 0 }}>{faq.a}</p>
                   </div>
                 </div>
               );
@@ -536,17 +409,10 @@ export default function PricingPage() {
 
       </main>
 
-      {/* ══ MODAL ══ */}
+      {/* ══ STARTER / GROWTH MODAL ══ */}
       {showModal && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
-          onClick={() => setShowModal(false)}
-        >
-          <div
-            className="panel"
-            style={{ width: '100%', maxWidth: '420px', padding: '32px', borderRadius: '18px', position: 'relative' }}
-            onClick={e => e.stopPropagation()}
-          >
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }} onClick={() => setShowModal(false)}>
+          <div className="panel" style={{ width: '100%', maxWidth: '420px', padding: '32px', borderRadius: '18px', position: 'relative', animation: 'modalIn 0.3s cubic-bezier(0.16,1,0.3,1) both' }} onClick={e => e.stopPropagation()}>
             {submitted ? (
               <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                 <CheckCircle2 size={48} className="sn-green" style={{ margin: '0 auto 16px' }} />
@@ -557,47 +423,76 @@ export default function PricingPage() {
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                   <div>
-                    <div className="panel-label" style={{ padding: 0, marginBottom: 4 }}>
-                      <div className="label-dot" /> Get Started
-                    </div>
+                    <div className="panel-label" style={{ padding: 0, marginBottom: 4 }}><div className="label-dot" /> Get Started</div>
                     <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, fontFamily: 'Outfit' }}>{selectedPlan?.name} Plan</h3>
                   </div>
-                  <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
-                    <X size={20} />
-                  </button>
+                  <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}><X size={20} /></button>
                 </div>
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {[
-                    ['name', 'Full Name', 'text', 'Your full name'],
-                    ['org', 'Organization', 'text', 'Company name'],
-                    ['email', 'Work Email', 'email', 'work@example.com'],
-                  ].map(([key, label, type, ph]) => (
+                  {[['name','Full Name','text','Your full name'],['org','Organization','text','Company name'],['email','Work Email','email','work@example.com']].map(([key, label, type, ph]) => (
                     <div key={key} className="field">
                       <label className="field-label">{label}</label>
-                      <input
-                        type={type}
-                        className="field-input"
-                        placeholder={ph}
-                        required
-                        value={formData[key]}
-                        onChange={e => setFormData({ ...formData, [key]: e.target.value })}
-                      />
+                      <input type={type} className="field-input" placeholder={ph} required value={formData[key]} onChange={e => setFormData({ ...formData, [key]: e.target.value })} />
                     </div>
                   ))}
-                  <button
-                    type="submit"
-                    style={{
-                      width: '100%', padding: '13px', marginTop: 8,
-                      borderRadius: '10px', border: 'none', cursor: 'pointer',
-                      background: 'linear-gradient(135deg, #a78bfa, #34d399)',
-                      color: '#0a0a0a', fontFamily: 'Outfit', fontWeight: '700', fontSize: '14px',
-                      transition: 'opacity 0.2s',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
-                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                  >
-                    Submit Request
-                  </button>
+                  <button type="submit" style={{ width: '100%', padding: '13px', marginTop: 8, borderRadius: '10px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #a78bfa, #34d399)', color: '#0a0a0a', fontFamily: 'Outfit', fontWeight: '700', fontSize: '14px', transition: 'opacity 0.2s' }} onMouseEnter={e => e.currentTarget.style.opacity = '0.88'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>Submit Request</button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ══ PRO CONTACT SALES MODAL ══ */}
+      {showProModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }} onClick={() => setShowProModal(false)}>
+          <div style={{ width: '100%', maxWidth: '520px', background: '#141414', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '40px 44px', position: 'relative', animation: 'modalIn 0.3s cubic-bezier(0.16,1,0.3,1) both' }} onClick={e => e.stopPropagation()}>
+            {proSubmitted ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <CheckCircle2 size={52} style={{ color: '#34d399', margin: '0 auto 18px', display: 'block' }} />
+                <h3 style={{ fontSize: 24, color: '#fff', marginBottom: 10, fontFamily: 'Outfit', fontWeight: 700 }}>Thank you!</h3>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 15, fontFamily: 'Outfit', lineHeight: 1.6 }}>Our sales team will contact you within 24 hours.</p>
+              </div>
+            ) : (
+              <>
+                <button onClick={() => setShowProModal(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}><X size={20} /></button>
+
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#a78bfa', fontWeight: 700, fontFamily: 'Outfit' }}>1</div>
+                  <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, fontFamily: 'Outfit', margin: 0 }}>CallingGen — Pro Plan | Contact Sales</h2>
+                </div>
+                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, fontFamily: 'Outfit', marginBottom: 36, lineHeight: 1.5 }}>Please provide your details and our sales team will connect with you shortly.</p>
+
+                <form onSubmit={handleProSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+                  {/* Full Name */}
+                  <div className="sales-field">
+                    <label className="sales-label">Full Name *</label>
+                    <input className="sales-input" type="text" placeholder="Type your answer here..." required value={proForm.name} onChange={e => setProForm({ ...proForm, name: e.target.value })} />
+                  </div>
+
+                  {/* Business Email */}
+                  <div className="sales-field">
+                    <label className="sales-label">Business Email *</label>
+                    <input className="sales-input" type="email" placeholder="name@example.com" required value={proForm.email} onChange={e => setProForm({ ...proForm, email: e.target.value })} />
+                  </div>
+
+                  {/* Phone Number */}
+                  <div className="sales-field">
+                    <label className="sales-label">Phone Number *</label>
+                    <div className="phone-row">
+                      <div className="country-prefix">
+                        <span style={{ fontSize: 18 }}>🇮🇳</span>
+                        <ChevronDown size={13} style={{ color: 'rgba(255,255,255,0.3)' }} />
+                        <span style={{ marginLeft: 2, color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>+91</span>
+                        <span style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.12)', margin: '0 10px' }} />
+                      </div>
+                      <input className="phone-input" type="tel" placeholder="081234 56789" required value={proForm.phone} onChange={e => setProForm({ ...proForm, phone: e.target.value })} />
+                    </div>
+                  </div>
+
+                  <button type="submit" className="ok-btn">OK ✓</button>
                 </form>
               </>
             )}
@@ -608,16 +503,9 @@ export default function PricingPage() {
       {/* Sticky mobile CTA */}
       <div className="pp-sticky-cta">
         <button
-          style={{
-            flex: 1, padding: '14px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-            background: 'linear-gradient(135deg, #a78bfa, #34d399)',
-            color: '#0a0a0a', fontFamily: 'Outfit', fontWeight: '700', fontSize: '14px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-          }}
+          style={{ flex: 1, padding: '14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #a78bfa, #34d399)', color: '#0a0a0a', fontFamily: 'Outfit', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
           onClick={() => document.getElementById('pricing-section').scrollIntoView({ behavior: 'smooth' })}
-        >
-          <Phone size={15} /> View Plans
-        </button>
+        ><Phone size={15} /> View Plans</button>
       </div>
     </div>
   );
