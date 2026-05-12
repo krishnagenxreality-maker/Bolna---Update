@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Panel, PanelHead } from '../ui/Panel';
 import { DatePicker } from '../ui/DatePicker';
-import { Download, Sparkles, Loader2, CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, UserCheck, UserMinus, PhoneForwarded } from 'lucide-react';
+import { Download, Sparkles, Loader2, CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, UserCheck, UserMinus, PhoneForwarded, Megaphone } from 'lucide-react';
 import { generateDailyReportWithDeepSeek } from '../../services/api';
 import { DEEPSEEK_API_KEY } from '../../utils/constants';
 
@@ -86,6 +86,7 @@ ${report.conclusion}
     { id: 'details', label: 'Call Details', icon: <ListTodo size={18} /> },
     { id: 'responses', label: 'Responses', icon: <BarChart3 size={18} /> },
     { id: 'leads', label: 'Leads', icon: <Users size={18} /> },
+    { id: 'campaign', label: 'Campaign', icon: <Megaphone size={18} /> },
     { id: 'report', label: 'Report', icon: <ClipboardList size={18} /> }
   ];
 
