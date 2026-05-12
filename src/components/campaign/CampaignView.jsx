@@ -121,8 +121,9 @@ export const CampaignView = ({
     return allCampaigns.filter(c => {
       let agentMatch = true;
       if (agentId) {
-        const targetId = agentId.includes('::') ? agentId.split('::')[1] : agentId;
-        const actualJobAgentId = c.agentId.includes('::') ? c.agentId.split('::')[1] : c.agentId;
+        const targetId = (agentId || '').includes('::') ? agentId.split('::')[1] : agentId;
+        const jobAgId = c.agentId || '';
+        const actualJobAgentId = jobAgId.includes('::') ? jobAgId.split('::')[1] : jobAgId;
         agentMatch = actualJobAgentId === targetId;
       }
       return agentMatch;
@@ -351,7 +352,7 @@ export const CampaignView = ({
                             <td className="td-phone" style={{ fontSize: '11px' }}>
                               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <Bot size={12} style={{ opacity: 0.4 }} />
-                                {campaign.agentName.includes('::') ? campaign.agentName.split('::')[0] : campaign.agentName}
+                                {(campaign.agentName || '').includes('::') ? campaign.agentName.split('::')[0] : (campaign.agentName || 'Default Agent')}
                               </span>
                             </td>
                             <td>

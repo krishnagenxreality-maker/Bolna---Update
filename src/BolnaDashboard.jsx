@@ -56,6 +56,7 @@ export default function BolnaDashboard() {
     stats,
     credits,
     scheduledJobs,
+    campaigns,
     deleteScheduledJob,
     callStartTime,
     addCustomAgent,

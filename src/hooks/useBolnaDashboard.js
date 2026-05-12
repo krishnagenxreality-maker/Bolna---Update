@@ -580,6 +580,7 @@ export function useBolnaDashboard() {
     stats: { total, done, active, failed, pct },
     credits,
     scheduledJobs,
+    campaigns,
     deleteScheduledJob,
     fetchScheduledJobs,
     callStartTime,
