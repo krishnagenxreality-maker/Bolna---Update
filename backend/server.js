@@ -68,6 +68,25 @@ const mapRequest = (req) => {
   };
 };
 
+const mapDemoRequest = (req) => {
+  if (!req) return null;
+  const { 
+    full_name, business_type, use_cases, call_volume, 
+    current_process, demo_date, demo_time, created_at, ...rest 
+  } = req;
+  return {
+    ...rest,
+    fullName: full_name,
+    businessType: business_type,
+    useCases: use_cases || [],
+    callVolume: call_volume,
+    currentProcess: current_process,
+    demoDate: demo_date,
+    demoTime: demo_time,
+    createdAt: created_at
+  };
+};
+
 // Login Endpoint
 app.post('/api/login', async (req, res) => {
   const { userId, password } = req.body;
@@ -153,6 +172,7 @@ app.get('/api/users', async (req, res) => {
 // Admin: Create new user
 app.post('/api/users', async (req, res) => {
   const newUser = req.body;
+  const demoRequestId = newUser.demoRequestId;
   
   try {
     const hashedPassword = await bcrypt.hash(newUser.password, 10);
@@ -167,11 +187,11 @@ app.post('/api/users', async (req, res) => {
         email: newUser.email || '',
         bolna_api_key: newUser.bolnaApiKey,
         bolna_agent_id: newUser.bolnaAgentId,
-        credits: newUser.credits || 2000,
+        credits: newUser.credits !== undefined ? newUser.credits : 2000,
         selected_plan: newUser.selectedPlan || 'Starter',
-        total_credits: newUser.totalCredits || 2000,
+        total_credits: newUser.totalCredits !== undefined ? newUser.totalCredits : 2000,
         used_credits: 0,
-        remaining_credits: newUser.totalCredits || 2000,
+        remaining_credits: newUser.remainingCredits !== undefined ? newUser.remainingCredits : 2000,
         user_type: newUser.userType || 'regular',
         is_first_login: true
       }])
@@ -181,6 +201,14 @@ app.post('/api/users', async (req, res) => {
     if (error) {
       if (error.code === '23505') return res.status(400).json({ success: false, message: 'User ID already exists' });
       throw error;
+    }
+
+    // If created from a demo request, update the request status
+    if (demoRequestId) {
+      await supabase
+        .from('demo_requests')
+        .update({ status: 'Assigned' })
+        .eq('id', demoRequestId);
     }
 
     res.json({ success: true, user: mapUser(data) });
@@ -464,6 +492,8 @@ app.get('/api/requests', async (req, res) => {
 // User: Submit a request
 app.post('/api/requests', async (req, res) => {
   const r = req.body;
+  const userId = r.userId; // Logged in user ID
+  
   const requestToInsert = {
     id: Date.now().toString(),
     name: r.name,
@@ -485,6 +515,46 @@ app.post('/api/requests', async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // Handle Demo User Conversion logic if userId is provided
+    if (userId) {
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (!userError && user && user.user_type === 'demo') {
+        // Map plan names to credits
+        const planCredits = {
+          'Starter': 2000,
+          'Growth': 6000,
+          'Pro': 15000
+        };
+        const creditsToAssign = planCredits[r.creditsSelected] || 2000;
+
+        // Convert demo user to regular
+        await supabase
+          .from('users')
+          .update({
+            user_type: 'regular',
+            selected_plan: r.creditsSelected,
+            total_credits: creditsToAssign,
+            remaining_credits: creditsToAssign,
+            credits: creditsToAssign,
+            used_credits: 0
+          })
+          .eq('user_id', userId);
+
+        // Update original demo request if it exists
+        // (Assuming email matches or we have a more direct link)
+        await supabase
+          .from('demo_requests')
+          .update({ status: 'Converted' })
+          .eq('email', user.email);
+      }
+    }
+
     res.json({ success: true, request: mapRequest(data) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -506,6 +576,106 @@ app.put('/api/requests/:id/status', async (req, res) => {
 
     if (error) throw error;
     res.json({ success: true, request: mapRequest(data) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin: Get all demo requests
+app.get('/api/demo-requests', async (req, res) => {
+  try {
+    const { data: requests, error } = await supabase
+      .from('demo_requests')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(requests.map(mapDemoRequest));
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// User: Submit a demo request
+app.post('/api/demo-requests', async (req, res) => {
+  const r = req.body;
+  
+  // Ensure we have the minimum required fields to avoid NOT NULL violations
+  if (!r.fullName || !r.company || !r.email || !r.phone) {
+    return res.status(400).json({ success: false, message: 'Missing required fields: fullName, company, email, and phone are mandatory.' });
+  }
+
+  const demoToInsert = {
+    full_name: r.fullName,
+    company: r.company,
+    email: r.email,
+    phone: r.phone,
+    website: r.website || '',
+    business_type: r.businessType || 'Other',
+    use_cases: Array.isArray(r.useCases) ? r.useCases : [],
+    call_volume: r.callVolume || 'Unknown',
+    languages: Array.isArray(r.languages) ? r.languages : [],
+    current_process: r.currentProcess || 'Other',
+    demo_date: r.demoDate || '',
+    demo_time: r.demoTime || '',
+    timezone: r.timezone || '',
+    notes: r.notes || '',
+    status: 'Pending'
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('demo_requests')
+      .insert([demoToInsert])
+      .select();
+
+    if (error) {
+      console.error('Supabase Demo Request Insert Error:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      throw new Error('No data returned from database after insertion');
+    }
+
+    res.json({ success: true, request: mapDemoRequest(data[0]) });
+  } catch (err) {
+    console.error('Demo Request API Error:', err);
+    res.status(500).json({ success: false, message: err.message || 'An internal server error occurred while saving the demo request.' });
+  }
+});
+
+// Admin: Update demo request status
+app.put('/api/demo-requests/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    const { data, error } = await supabase
+      .from('demo_requests')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, request: mapDemoRequest(data) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin: Delete demo request
+app.delete('/api/demo-requests/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { error } = await supabase
+      .from('demo_requests')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

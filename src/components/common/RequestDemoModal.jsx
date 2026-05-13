@@ -119,6 +119,8 @@ function SelectCard({ label, selected, onClick }) {
   );
 }
 
+import { API_BASE_URL } from '../../config';
+
 export default function RequestDemoModal({ onClose }) {
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
@@ -564,7 +566,35 @@ export default function RequestDemoModal({ onClose }) {
             </button>
           ) : (
             <button
-              onClick={() => setSubmitted(true)}
+              onClick={async () => {
+                try {
+                  // Merge 'Other' fields into form
+                  const finalForm = { ...form };
+                  if (form.businessType === 'Other' && otherDesc.businessType) {
+                    finalForm.businessType = `Other: ${otherDesc.businessType}`;
+                  }
+                  if (form.currentProcess === 'Other' && otherDesc.currentProcess) {
+                    finalForm.currentProcess = `Other: ${otherDesc.currentProcess}`;
+                  }
+                  if (form.languages.includes('Other') && otherDesc.language) {
+                    finalForm.languages = form.languages.map(l => l === 'Other' ? `Other: ${otherDesc.language}` : l);
+                  }
+
+                  const response = await fetch(`${API_BASE_URL}/api/demo-requests`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(finalForm)
+                  });
+                  if (response.ok) {
+                    setSubmitted(true);
+                  } else {
+                    const errData = await response.json();
+                    alert(`Failed to submit demo request: ${errData.message || 'Please try again.'}`);
+                  }
+                } catch (err) {
+                  alert('Error submitting request. Please check your connection.');
+                }
+              }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
                 padding: '14px 32px', borderRadius: '10px',

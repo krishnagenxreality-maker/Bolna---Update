@@ -18,7 +18,10 @@ export default function AdminPortal() {
   const [showPassword, setShowPassword] = useState(false);
   const [activeView, setActiveView] = useState('users');
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [selectedDemoRequest, setSelectedDemoRequest] = useState(null);
+  const [demoRequests, setDemoRequests] = useState([]);
   const [createdFromRequestId, setCreatedFromRequestId] = useState(null);
+  const [createdFromDemoRequestId, setCreatedFromDemoRequestId] = useState(null);
 
   const [formData, setFormData] = useState({
     userId: '',
@@ -42,9 +45,23 @@ export default function AdminPortal() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
 
   useEffect(() => {
-    fetchUsers();
-    fetchRequests();
-  }, []);
+    if (activeView === 'demo') {
+      fetchDemoRequests();
+    } else if (activeView === 'requests') {
+      fetchRequests();
+    } else if (activeView === 'users') {
+      fetchUsers();
+    }
+  }, [activeView]);
+
+  const fetchDemoRequests = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/demo-requests`);
+      setDemoRequests(res.data);
+    } catch (err) {
+      console.error('Failed to fetch demo requests', err);
+    }
+  };
 
   const fetchRequests = async () => {
     try {
@@ -82,8 +99,45 @@ export default function AdminPortal() {
     setShowPassword(false);
     setSelectedRequest(null);
     setCreatedFromRequestId(requestId);
+    setCreatedFromDemoRequestId(null);
     setShowAddForm(true);
     setActiveView('users'); // Switch to users view since we are creating a user
+  };
+
+  const handleMarkDemoAssigned = (demoId) => {
+    const req = demoRequests.find(r => r.id === demoId);
+    setFormData({
+      userId: req?.fullName?.replace(/\s+/g, '').toLowerCase() || '',
+      password: '',
+      organization: req?.company || '',
+      email: req?.email || '',
+      bolnaApiKey: '',
+      agents: [{ name: '', id: '' }],
+      credits: 0, // Admin must manually enter credits
+      totalCredits: 0,
+      remainingCredits: 0,
+      usedCredits: 0,
+      selectedPlan: 'Starter',
+      userType: 'demo'
+    });
+    setError('');
+    setSuccess('');
+    setShowPassword(false);
+    setSelectedDemoRequest(null);
+    setCreatedFromDemoRequestId(demoId);
+    setCreatedFromRequestId(null);
+    setShowAddForm(true);
+    setActiveView('users');
+  };
+
+  const handleDeleteDemoRequest = async (demoId) => {
+    if (!window.confirm('Are you sure you want to delete this demo request?')) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/api/demo-requests/${demoId}`);
+      fetchDemoRequests();
+    } catch (err) {
+      alert('Failed to delete demo request');
+    }
   };
 
   const handleDeleteRequest = async (requestId) => {
@@ -163,7 +217,8 @@ export default function AdminPortal() {
       const { agents, ...rest } = formData;
       const payload = {
         ...rest,
-        bolnaAgentId: JSON.stringify(agents)
+        bolnaAgentId: JSON.stringify(agents),
+        demoRequestId: createdFromDemoRequestId
       };
       await axios.post(`${API_BASE_URL}/api/users`, payload);
       setShowAddForm(false);
@@ -173,6 +228,10 @@ export default function AdminPortal() {
         await axios.delete(`${API_BASE_URL}/api/requests/${createdFromRequestId}`);
         setCreatedFromRequestId(null);
         fetchRequests();
+      }
+      if (createdFromDemoRequestId) {
+        setCreatedFromDemoRequestId(null);
+        fetchDemoRequests();
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create user');
@@ -312,7 +371,14 @@ export default function AdminPortal() {
                 className={`tab-btn ${activeView === 'requests' ? 'active' : ''}`}
                 style={{ margin: 0 }}
               >
-                New User Requests
+                Pricing Requests
+              </button>
+              <button
+                onClick={() => setActiveView('demo')}
+                className={`tab-btn ${activeView === 'demo' ? 'active' : ''}`}
+                style={{ margin: 0 }}
+              >
+                Demo Users
               </button>
             </div>
             {activeView === 'users' && (
@@ -323,7 +389,7 @@ export default function AdminPortal() {
           </div>
 
           <div className="table-wrap">
-            {activeView === 'users' ? (
+            {activeView === 'users' && (
               <table className="ct">
                 <thead>
                   <tr>
@@ -353,7 +419,7 @@ export default function AdminPortal() {
                         {u.bolnaApiKey ? `••••${u.bolnaApiKey.slice(-4)}` : '-'}
                       </td>
                       <td>
-                        <span className={`spill ${u.userType === 'education' ? 's-blue' : 's-done'}`} style={{ textTransform: 'capitalize' }}>
+                        <span className={`spill ${u.userType === 'education' ? 's-blue' : u.userType === 'demo' ? 's-pending' : 's-done'}`} style={{ textTransform: 'capitalize' }}>
                           {u.userType || 'regular'}
                         </span>
                       </td>
@@ -393,7 +459,9 @@ export default function AdminPortal() {
                   ))}
                 </tbody>
               </table>
-            ) : (
+            )}
+
+            {activeView === 'requests' && (
               <table className="ct">
                 <thead>
                   <tr>
@@ -408,7 +476,7 @@ export default function AdminPortal() {
                 <tbody>
                   {requests.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="no-data">No requests found.</td>
+                      <td colSpan="6" className="no-data">No pricing requests found.</td>
                     </tr>
                   ) : (
                     requests.map((r) => (
@@ -461,6 +529,72 @@ export default function AdminPortal() {
               </table>
             )}
 
+            {activeView === 'demo' && (
+              <table className="ct">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Company</th>
+                    <th>Request Date</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'center' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {demoRequests.filter(r => r.status !== 'Converted').length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="no-data">No active demo requests found.</td>
+                    </tr>
+                  ) : (
+                    demoRequests.filter(r => r.status !== 'Converted').map((r) => (
+                      <tr key={r.id}>
+                        <td className="td-name">{r.fullName}</td>
+                        <td>{r.email}</td>
+                        <td>{r.phone}</td>
+                        <td>{r.company}</td>
+                        <td>{new Date(r.createdAt).toLocaleDateString()}</td>
+                        <td>
+                          <span className={`spill ${r.status === 'Pending' ? 's-pending' : r.status === 'Assigned' ? 's-blue' : 's-done'}`}>
+                            {r.status || 'Pending'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                            <button
+                              onClick={() => setSelectedDemoRequest(r)}
+                              style={{
+                                background: 'none', border: 'none',
+                                color: 'rgba(255, 255, 255, 0.3)',
+                                cursor: 'pointer', transition: 'color 0.2s'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
+                              onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.3)'}
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDemoRequest(r.id)}
+                              style={{
+                                background: 'none', border: 'none',
+                                color: 'rgba(255, 112, 112, 0.4)',
+                                cursor: 'pointer', transition: 'color 0.2s'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.color = '#ff7070'}
+                              onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255, 112, 112, 0.4)'}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+
             {/* Keep the closing div of table-wrap here since we added the ternary inside it */}
           </div>
         </div>
@@ -468,21 +602,22 @@ export default function AdminPortal() {
         {/* View Request Modal */}
         {selectedRequest && (
           <div style={{
-            position: 'fixed', inset: 0, zIndex: 200,
+            position: 'fixed', inset: 0, zIndex: 2000,
             background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px'
+            padding: '80px 20px'
           }}>
             <div className="panel" style={{ 
               width: '100%', 
-              maxWidth: '540px', 
-              padding: '32px',
-              maxHeight: '85vh',
-              overflowY: 'auto',
+              maxWidth: '640px', 
+              maxHeight: '80vh',
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              padding: 0,
+              overflow: 'hidden'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 32px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <div className="panel-label" style={{ marginBottom: 0 }}>
                   <div className="label-dot"></div>
                   User Request Details
@@ -492,7 +627,8 @@ export default function AdminPortal() {
                 </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Body */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div className="config-grid">
                   <div className="field">
                     <label className="field-label">Name</label>
@@ -549,12 +685,155 @@ export default function AdminPortal() {
                     {selectedRequest.callPurpose || '-'}
                   </div>
                 </div>
+              </div>
 
-                <button onClick={() => setSelectedRequest(null)} className="nav-btn" style={{ width: '100%', marginTop: '12px', border: '1px solid rgba(255,255,255,0.2)', padding: '12px', justifyContent: 'center' }}>
+              {/* Footer */}
+              <div style={{ padding: '16px 32px 32px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button onClick={() => setSelectedRequest(null)} className="nav-btn" style={{ width: '100%', border: '1px solid rgba(255,255,255,0.2)', padding: '12px', justifyContent: 'center' }}>
                   Close
                 </button>
                 {selectedRequest.status !== 'Created' && (
-                  <button onClick={() => handleMarkCreated(selectedRequest.id)} className="btn-call" style={{ width: '100%', marginTop: '8px', justifyContent: 'center' }}>
+                  <button onClick={() => handleMarkCreated(selectedRequest.id)} className="btn-call" style={{ width: '100%', justifyContent: 'center' }}>
+                    Create User
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* View Demo Request Modal */}
+        {selectedDemoRequest && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 2000,
+            background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '80px 20px'
+          }}>
+            <div className="panel" style={{ 
+              width: '100%', 
+              maxWidth: '640px', 
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 0,
+              overflow: 'hidden'
+            }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 32px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="panel-label" style={{ marginBottom: 0 }}>
+                  <div className="label-dot"></div>
+                  Demo Request Details
+                </div>
+                <button onClick={() => setSelectedDemoRequest(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="config-grid">
+                  <div className="field">
+                    <label className="field-label">Full Name</label>
+                    <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                      {selectedDemoRequest.fullName}
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Company</label>
+                    <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                      {selectedDemoRequest.company}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="config-grid">
+                  <div className="field">
+                    <label className="field-label">Email</label>
+                    <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                      {selectedDemoRequest.email}
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Phone</label>
+                    <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                      {selectedDemoRequest.phone}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="config-grid">
+                  <div className="field">
+                    <label className="field-label">Business Type</label>
+                    <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                      {selectedDemoRequest.businessType}
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Call Volume</label>
+                    <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                      {selectedDemoRequest.callVolume}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="field-label">Use Cases</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                    {selectedDemoRequest.useCases?.map((u, i) => (
+                      <span key={i} className="spill s-blue" style={{ fontSize: '11px' }}>{u}</span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="field-label">Languages</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                    {selectedDemoRequest.languages?.map((l, i) => (
+                      <span key={i} className="spill s-done" style={{ fontSize: '11px' }}>{l}</span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="field-label">Current Process</label>
+                  <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                    {selectedDemoRequest.currentProcess}
+                  </div>
+                </div>
+
+                <div className="config-grid">
+                  <div className="field">
+                    <label className="field-label">Scheduled Date</label>
+                    <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                      {selectedDemoRequest.demoDate}
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Scheduled Time</label>
+                    <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}>
+                      {selectedDemoRequest.demoTime} ({selectedDemoRequest.timezone || 'N/A'})
+                    </div>
+                  </div>
+                </div>
+
+                {selectedDemoRequest.notes && (
+                  <div className="field">
+                    <label className="field-label">Additional Notes</label>
+                    <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)', minHeight: '60px', whiteSpace: 'pre-wrap' }}>
+                      {selectedDemoRequest.notes}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding: '16px 32px 32px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button onClick={() => setSelectedDemoRequest(null)} className="nav-btn" style={{ width: '100%', border: '1px solid rgba(255,255,255,0.2)', padding: '12px', justifyContent: 'center' }}>
+                  Close
+                </button>
+                {selectedDemoRequest.status === 'Pending' && (
+                  <button onClick={() => handleMarkDemoAssigned(selectedDemoRequest.id)} className="btn-call" style={{ width: '100%', justifyContent: 'center' }}>
                     Create User
                   </button>
                 )}
@@ -566,222 +845,251 @@ export default function AdminPortal() {
         {/* User Modal (Add/Edit) */}
         {(showAddForm || showEditForm) && (
           <div style={{
-            position: 'fixed', inset: 0, zIndex: 200,
+            position: 'fixed', inset: 0, zIndex: 2000,
             background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px'
+            padding: '80px 20px'
           }}>
-            <div className="panel" style={{ width: '100%', maxWidth: '540px', padding: '32px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <div className="panel" style={{ width: '100%', maxWidth: '640px', maxHeight: '80vh', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 32px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <div className="panel-label" style={{ marginBottom: 0 }}>
                   <div className="label-dot"></div>
                   {showEditForm ? 'Edit User Details' : 'Create New User'}
                 </div>
-                <button onClick={() => { setShowAddForm(false); setShowEditForm(false); setCreatedFromRequestId(null); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
+                <button onClick={() => { setShowAddForm(false); setShowEditForm(false); setCreatedFromRequestId(null); setCreatedFromDemoRequestId(null); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
                   <X size={20} />
                 </button>
               </div>
 
-              <form onSubmit={showEditForm ? handleUpdateUser : handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div className="config-grid">
-                  <div className="field">
-                    <label className="field-label">User ID</label>
-                    <input
-                      type="text"
-                      className="field-input"
-                      value={formData.userId}
-                      onChange={e => setFormData(prev => ({ ...prev, userId: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div className="field">
-                    <label className="field-label">Password</label>
-                    <div style={{ position: 'relative' }}>
+              <form onSubmit={showEditForm ? handleUpdateUser : handleAddUser} style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                {/* Body */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div className="config-grid">
+                    <div className="field">
+                      <label className="field-label">User ID</label>
                       <input
-                        type={showPassword ? 'text' : 'password'}
+                        type="text"
                         className="field-input"
-                        value={formData.password}
-                        onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                        value={formData.userId}
+                        onChange={e => setFormData(prev => ({ ...prev, userId: e.target.value }))}
                         required
-                        style={{ paddingRight: '40px' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        style={{
-                          position: 'absolute', right: '12px', top: '50%',
-                          transform: 'translateY(-50%)',
-                          background: 'none', border: 'none',
-                          color: 'rgba(255,255,255,0.3)', cursor: 'pointer',
-                          display: 'flex', alignItems: 'center'
-                        }}
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="config-grid">
-                  <div className="field">
-                    <label className="field-label">Organization</label>
-                    <input
-                      type="text"
-                      className="field-input"
-                      value={formData.organization}
-                      onChange={e => setFormData(prev => ({ ...prev, organization: e.target.value }))}
-                    />
-                  </div>
-                  <div className="field">
-                    <label className="field-label">Email Address</label>
-                    <input
-                      type="email"
-                      className="field-input"
-                      value={formData.email}
-                      onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    />
-                  </div>
-                </div>
-
-                <div className="config-grid">
-                  <div className="field">
-                    <label className="field-label">Selected Plan</label>
-                    <select
-                      className="field-input"
-                      value={formData.selectedPlan}
-                      onChange={e => setFormData(prev => ({ ...prev, selectedPlan: e.target.value }))}
-                      style={{ appearance: 'auto' }}
-                    >
-                      <option value="Starter">Starter (2k Credits)</option>
-                      <option value="Growth">Growth (6k Credits)</option>
-                      <option value="Pro">Pro (15k Credits)</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label className="field-label">User Type</label>
-                    <select
-                      className="field-input"
-                      value={formData.userType}
-                      onChange={e => setFormData(prev => ({ ...prev, userType: e.target.value }))}
-                      style={{ appearance: 'auto' }}
-                    >
-                      <option value="regular">Regular</option>
-                      <option value="education">Education</option>
-                    </select>
-                  </div>
-                </div>
-
-                {showEditForm && (
-                  <div className="config-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                    <div className="field">
-                      <label className="field-label">Total Credits</label>
-                      <input
-                        type="number"
-                        className="field-input"
-                        value={formData.totalCredits}
-                        onChange={e => setFormData(prev => ({ ...prev, totalCredits: parseInt(e.target.value, 10) }))}
                       />
                     </div>
                     <div className="field">
-                      <label className="field-label">Used Credits</label>
+                      <label className="field-label">Password</label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          className="field-input"
+                          value={formData.password}
+                          onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                          required
+                          style={{ paddingRight: '40px' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          style={{
+                            position: 'absolute', right: '12px', top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none', border: 'none',
+                            color: 'rgba(255,255,255,0.3)', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center'
+                          }}
+                        >
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="config-grid">
+                    <div className="field">
+                      <label className="field-label">Organization</label>
                       <input
-                        type="number"
+                        type="text"
                         className="field-input"
-                        value={formData.usedCredits}
-                        onChange={e => setFormData(prev => ({ ...prev, usedCredits: parseInt(e.target.value, 10) }))}
+                        value={formData.organization}
+                        onChange={e => setFormData(prev => ({ ...prev, organization: e.target.value }))}
                       />
                     </div>
                     <div className="field">
-                      <label className="field-label">Remaining</label>
+                      <label className="field-label">Email Address</label>
                       <input
-                        type="number"
+                        type="email"
                         className="field-input"
-                        value={formData.remainingCredits}
-                        onChange={e => setFormData(prev => ({ ...prev, remainingCredits: parseInt(e.target.value, 10) }))}
+                        value={formData.email}
+                        onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
                       />
                     </div>
                   </div>
-                )}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div className="field">
-                    <label className="field-label">Bolna API Key</label>
-                    <input
-                      type="text"
-                      className="field-input"
-                      value={formData.bolnaApiKey}
-                      onChange={e => setFormData(prev => ({ ...prev, bolnaApiKey: e.target.value }))}
-                      required
-                    />
-                  </div>
+                  {!createdFromDemoRequestId && (
+                    <div className="config-grid">
+                      <div className="field">
+                        <label className="field-label">Selected Plan</label>
+                        {createdFromRequestId ? (
+                          <input
+                            type="text"
+                            className="field-input"
+                            value={formData.selectedPlan}
+                            readOnly
+                            style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.4)', cursor: 'not-allowed' }}
+                          />
+                        ) : (
+                          <select
+                            className="field-input"
+                            value={formData.selectedPlan}
+                            onChange={e => setFormData(prev => ({ ...prev, selectedPlan: e.target.value }))}
+                            style={{ appearance: 'auto' }}
+                          >
+                            <option value="Starter">Starter (2k Credits)</option>
+                            <option value="Growth">Growth (6k Credits)</option>
+                            <option value="Pro">Pro (15k Credits)</option>
+                          </select>
+                        )}
+                      </div>
+                      <div className="field">
+                        <label className="field-label">User Type</label>
+                        {createdFromRequestId ? (
+                          <input
+                            type="text"
+                            className="field-input"
+                            value="Regular"
+                            readOnly
+                            style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.4)', cursor: 'not-allowed' }}
+                          />
+                        ) : (
+                          <select
+                            className="field-input"
+                            value={formData.userType}
+                            onChange={e => setFormData(prev => ({ ...prev, userType: e.target.value }))}
+                            style={{ appearance: 'auto' }}
+                          >
+                            <option value="regular">Regular</option>
+                            <option value="education">Education</option>
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <label className="field-label" style={{ marginBottom: 0 }}>Bolna Agents</label>
-                      <button
-                        type="button"
-                        onClick={addAgentField}
-                        className="btn-call"
-                        style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '4px' }}
-                      >
-                        + Add Agent
-                      </button>
+                  {showEditForm && (
+                    <div className="config-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                      <div className="field">
+                        <label className="field-label">Total Credits</label>
+                        <input
+                          type="number"
+                          className="field-input"
+                          value={formData.totalCredits}
+                          onChange={e => setFormData(prev => ({ ...prev, totalCredits: parseInt(e.target.value, 10) }))}
+                        />
+                      </div>
+                      <div className="field">
+                        <label className="field-label">Used Credits</label>
+                        <input
+                          type="number"
+                          className="field-input"
+                          value={formData.usedCredits}
+                          onChange={e => setFormData(prev => ({ ...prev, usedCredits: parseInt(e.target.value, 10) }))}
+                        />
+                      </div>
+                      <div className="field">
+                        <label className="field-label">Remaining</label>
+                        <input
+                          type="number"
+                          className="field-input"
+                          value={formData.remainingCredits}
+                          onChange={e => setFormData(prev => ({ ...prev, remainingCredits: parseInt(e.target.value, 10) }))}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div className="field">
+                      <label className="field-label">Bolna API Key</label>
+                      <input
+                        type="text"
+                        className="field-input"
+                        value={formData.bolnaApiKey}
+                        onChange={e => setFormData(prev => ({ ...prev, bolnaApiKey: e.target.value }))}
+                        required
+                      />
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {formData.agents.map((agent, index) => (
-                        <div key={index} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
-                          <div style={{ flex: 1 }}>
-                            <label className="field-label" style={{ fontSize: '10px', opacity: 0.5 }}>Agent Name</label>
-                            <input
-                              type="text"
-                              className="field-input"
-                              placeholder="e.g. Sales Assistant"
-                              value={agent.name}
-                              onChange={e => handleAgentChange(index, 'name', e.target.value)}
-                              required
-                            />
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <label className="field-label" style={{ marginBottom: 0 }}>Bolna Agents</label>
+                        <button
+                          type="button"
+                          onClick={addAgentField}
+                          className="btn-call"
+                          style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '4px' }}
+                        >
+                          + Add Agent
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {formData.agents.map((agent, index) => (
+                          <div key={index} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+                            <div style={{ flex: 1 }}>
+                              <label className="field-label" style={{ fontSize: '10px', opacity: 0.5 }}>Agent Name</label>
+                              <input
+                                type="text"
+                                className="field-input"
+                                placeholder="e.g. Sales Assistant"
+                                value={agent.name}
+                                onChange={e => handleAgentChange(index, 'name', e.target.value)}
+                                required
+                              />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <label className="field-label" style={{ fontSize: '10px', opacity: 0.5 }}>Agent ID</label>
+                              <input
+                                type="text"
+                                className="field-input"
+                                placeholder="Bolna ID"
+                                value={agent.id}
+                                onChange={e => handleAgentChange(index, 'id', e.target.value)}
+                                required
+                              />
+                            </div>
+                            {formData.agents.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeAgentField(index)}
+                                style={{
+                                  background: 'rgba(255, 112, 112, 0.1)',
+                                  border: '1px solid rgba(255, 112, 112, 0.2)',
+                                  color: '#ff7070',
+                                  padding: '10px',
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center'
+                                }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
                           </div>
-                          <div style={{ flex: 1 }}>
-                            <label className="field-label" style={{ fontSize: '10px', opacity: 0.5 }}>Agent ID</label>
-                            <input
-                              type="text"
-                              className="field-input"
-                              placeholder="Bolna ID"
-                              value={agent.id}
-                              onChange={e => handleAgentChange(index, 'id', e.target.value)}
-                              required
-                            />
-                          </div>
-                          {formData.agents.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeAgentField(index)}
-                              style={{
-                                background: 'rgba(255, 112, 112, 0.1)',
-                                border: '1px solid rgba(255, 112, 112, 0.2)',
-                                color: '#ff7070',
-                                padding: '10px',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center'
-                              }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
+
+                  {error && <div style={{ color: '#ff7070', fontSize: '12px', marginTop: '8px' }}>{error}</div>}
                 </div>
 
-                {error && <div style={{ color: '#ff7070', fontSize: '12px', marginTop: '8px' }}>{error}</div>}
-
-                <button type="submit" className="btn-call" style={{ width: '100%', marginTop: '12px', justifyContent: 'center' }}>
-                  {showEditForm ? 'Update User Account' : 'Create User Account'}
-                </button>
+                {/* Footer */}
+                <div style={{ padding: '16px 32px 32px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <button type="submit" className="btn-call" style={{ width: '100%', justifyContent: 'center' }}>
+                    {showEditForm ? 'Update User Account' : 'Create User Account'}
+                  </button>
+                </div>
               </form>
             </div>
           </div>
@@ -790,7 +1098,7 @@ export default function AdminPortal() {
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
           <div style={{
-            position: 'fixed', inset: 0, zIndex: 300,
+            position: 'fixed', inset: 0, zIndex: 3000,
             background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(15px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '20px'

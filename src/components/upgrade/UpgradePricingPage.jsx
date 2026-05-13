@@ -170,8 +170,10 @@ export default function UpgradePricingPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const bolnaUser = JSON.parse(localStorage.getItem('bolna_user'));
     try {
       await axios.post(`${API_BASE_URL}/api/requests`, {
+        userId: bolnaUser?.userId,
         name: formData.name, organizationName: formData.org, email: formData.email,
         creditsSelected: selectedPlan?.name, purpose: 'AI Calling Plan Upgrade',
         callPurpose: 'Plan upgrade', scriptContent: '', purposeType: 'regular',
@@ -183,8 +185,10 @@ export default function UpgradePricingPage() {
 
   const handleProSubmit = async (e) => {
     e.preventDefault();
+    const bolnaUser = JSON.parse(localStorage.getItem('bolna_user'));
     try {
       await axios.post(`${API_BASE_URL}/api/requests`, {
+        userId: bolnaUser?.userId,
         name: proForm.name, email: proForm.email, phone: proForm.phone,
         purpose: 'Pro Plan - Contact Sales', callPurpose: 'Enterprise sales inquiry',
         creditsSelected: 'Pro', scriptContent: '', purposeType: 'regular',
