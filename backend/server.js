@@ -811,7 +811,121 @@ app.delete('/api/cleanup-leads', async (req, res) => {
   }
 });
 
+// --- INBOUND CALLS ---
+
+// Get stored inbound calls for a user
+app.get('/api/inbound-calls/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('inbound_calls')
+      .select('*')
+      .eq('user_id', userId)
+      .order('call_date', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, calls: data || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message, calls: [] });
+  }
+});
+
+// Sync inbound calls from Bolna API and persist to Supabase
+app.post('/api/inbound-calls/sync/:userId', async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+    // Get user's API key
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('bolna_api_key, bolna_agent_id')
+      .eq('user_id', userId)
+      .single();
+
+    if (userError || !user || !user.bolna_api_key) {
+      return res.status(400).json({ success: false, message: 'User API key not found' });
+    }
+
+    // Fetch inbound calls from Bolna API
+    const bolnaRes = await fetch('https://api.bolna.ai/executions?call_direction=inbound', {
+      headers: { 'Authorization': `Bearer ${user.bolna_api_key}` }
+    });
+
+    if (!bolnaRes.ok) {
+      const errText = await bolnaRes.text();
+      console.error('[Inbound Sync] Bolna API error:', bolnaRes.status, errText);
+      return res.status(502).json({ success: false, message: `Bolna API error: ${bolnaRes.status}` });
+    }
+
+    const bolnaData = await bolnaRes.json();
+    const calls = Array.isArray(bolnaData) ? bolnaData : [];
+    
+    if (calls.length === 0) {
+      // Return existing stored calls
+      const { data: existing } = await supabase
+        .from('inbound_calls')
+        .select('*')
+        .eq('user_id', userId)
+        .order('call_date', { ascending: false });
+      return res.json({ success: true, calls: existing || [], synced: 0 });
+    }
+
+    // Upsert calls into database
+    let syncedCount = 0;
+    for (const call of calls) {
+      if (!call.execution_id) continue;
+
+      // Generate reason from summary
+      let reason = 'Inbound Call';
+      if (call.summary) {
+        const words = call.summary.split(/\s+/).filter(w => w.length > 2);
+        if (words.length >= 2) {
+          // Capitalize first letter of each word
+          reason = words.slice(0, 2).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        } else if (words.length === 1) {
+          reason = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+        }
+      }
+
+      const record = {
+        user_id: userId,
+        execution_id: call.execution_id,
+        caller_name: call.recipient_name || call.caller_name || 'Anonymous',
+        caller_phone: call.recipient_phone_number || call.caller_phone || 'Unknown',
+        agent_name: call.agent_name || 'Default Agent',
+        agent_id: call.agent_id || user.bolna_agent_id || '',
+        call_date: call.created_at || new Date().toISOString(),
+        summary: call.summary || '',
+        transcript: call.transcript || '',
+        recording_url: call.telephony_data?.recording_url || call.recording_url || '',
+        reason: reason,
+        status: call.status || 'completed'
+      };
+
+      const { error: upsertError } = await supabase
+        .from('inbound_calls')
+        .upsert(record, { onConflict: 'execution_id' });
+
+      if (!upsertError) syncedCount++;
+      else console.error('[Inbound Sync] Upsert error:', upsertError.message);
+    }
+
+    // Return all stored calls
+    const { data: allCalls } = await supabase
+      .from('inbound_calls')
+      .select('*')
+      .eq('user_id', userId)
+      .order('call_date', { ascending: false });
+
+    res.json({ success: true, calls: allCalls || [], synced: syncedCount });
+  } catch (err) {
+    console.error('[Inbound Sync] Error:', err.message);
+    res.status(500).json({ success: false, message: err.message, calls: [] });
+  }
+});
+
 // --- EDUCATION DASHBOARD ---
+
 
 app.get('/api/education/dashboard-data/:userId', async (req, res) => {
   const { userId } = req.params;

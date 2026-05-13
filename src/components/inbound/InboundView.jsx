@@ -2,8 +2,102 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Panel, PanelHead } from '../ui/Panel';
 import { DatePicker } from '../ui/DatePicker';
 import { 
-  PhoneIncoming, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, RefreshCw, CalendarDays, PhoneCall, Megaphone
+  PhoneIncoming, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, 
+  RefreshCw, CalendarDays, PhoneCall, Megaphone, X, FileText, Play, Clock
 } from 'lucide-react';
+
+const SummaryModal = ({ call, isOpen, onClose }) => {
+  if (!isOpen || !call) return null;
+
+  return (
+    <div className="modal-overlay" style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+      padding: '20px'
+    }}>
+      <div className="modal-content" style={{
+        backgroundColor: '#0a0a0c', border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: '16px', width: '100%', maxWidth: '600px', maxHeight: '85vh',
+        overflowY: 'auto', position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+      }}>
+        <button onClick={onClose} style={{
+          position: 'absolute', top: '16px', right: '16px', color: 'white',
+          background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5
+        }}><X size={20} /></button>
+
+        <div style={{ padding: '32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <div style={{
+              width: '40px', height: '40px', borderRadius: '10px',
+              backgroundColor: 'rgba(59,130,246,0.1)', color: '#3b82f6',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}><PhoneIncoming size={20} /></div>
+            <div>
+              <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'white', margin: 0 }}>Call Summary</h2>
+              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+                {call.caller_name || 'Anonymous'} • {new Date(call.call_date).toLocaleString()}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Reason Tag */}
+            <div>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Reason</div>
+              <span className="spill s-blue" style={{ fontSize: '12px', padding: '4px 10px' }}>{call.reason || 'Inbound Call'}</span>
+            </div>
+
+            {/* Summary Text */}
+            <div>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overview</div>
+              <div style={{ 
+                fontSize: '14px', lineHeight: '1.6', color: 'rgba(255,255,255,0.8)',
+                padding: '16px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.05)'
+              }}>
+                {call.summary || 'No summary available for this call.'}
+              </div>
+            </div>
+
+            {/* Transcript */}
+            {call.transcript && (
+              <div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Transcript</div>
+                <div style={{ 
+                  fontSize: '13px', lineHeight: '1.6', color: 'rgba(255,255,255,0.6)',
+                  padding: '16px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px',
+                  maxHeight: '200px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.03)'
+                }}>
+                  {call.transcript}
+                </div>
+              </div>
+            )}
+
+            {/* Recording */}
+            {call.recording_url && (
+              <div style={{ marginTop: '10px' }}>
+                <a 
+                  href={call.recording_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '12px 20px', backgroundColor: 'rgba(59,130,246,0.1)',
+                    borderRadius: '12px', color: '#3b82f6', fontSize: '14px',
+                    fontWeight: '500', transition: 'all 0.2s', textDecoration: 'none'
+                  }}
+                >
+                  <Play size={16} fill="currentColor" /> Listen to Recording
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const InboundView = ({ 
   inboundCalls, 
@@ -14,6 +108,8 @@ export const InboundView = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [searchDate, setSearchDate] = useState('');
+  const [selectedCall, setSelectedCall] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const ROWS_PER_PAGE = 7;
 
   // Refresh on mount if empty
@@ -27,7 +123,7 @@ export const InboundView = ({
   const filteredData = useMemo(() => {
     return inboundCalls.filter(c => {
       if (!searchDate) return true;
-      const callDate = new Date(c.created_at).toISOString().split('T')[0];
+      const callDate = new Date(c.call_date || c.created_at).toISOString().split('T')[0];
       return callDate === searchDate;
     });
   }, [inboundCalls, searchDate]);
@@ -42,13 +138,9 @@ export const InboundView = ({
     return filteredData.slice(currentPage * ROWS_PER_PAGE, (currentPage + 1) * ROWS_PER_PAGE);
   }, [filteredData, currentPage]);
 
-  const getReason = (call) => {
-    if (call.summary) {
-      const words = call.summary.split(' ').filter(w => w.length > 0);
-      if (words.length >= 2) return `${words[0]} ${words[1]}`;
-      return call.summary.slice(0, 20);
-    }
-    return "Inbound Call";
+  const handleReasonClick = (call) => {
+    setSelectedCall(call);
+    setIsModalOpen(true);
   };
 
   const navItems = [
@@ -64,7 +156,12 @@ export const InboundView = ({
 
   return (
     <div className="details-page-container">
-      
+      <SummaryModal 
+        call={selectedCall} 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+      />
+
       {/* Page Heading Section */}
       <div className="details-header-section">
         <h1 className="details-main-heading">Inbound Calls</h1>
@@ -154,17 +251,22 @@ export const InboundView = ({
                         {currentRows.map((c, i) => (
                           <tr key={c.execution_id || i}>
                             <td className="td-num">{currentPage * ROWS_PER_PAGE + i + 1}</td>
-                            <td className="td-name">{c.recipient_name || 'Anonymous'}</td>
-                            <td className="td-phone">{c.recipient_phone_number}</td>
+                            <td className="td-name">{c.caller_name || 'Anonymous'}</td>
+                            <td className="td-phone">{c.caller_phone || 'Unknown'}</td>
                             <td className="td-name" style={{ fontSize: '12px', opacity: 0.8 }}>
                               {c.agent_name || c.agent_id?.slice(0, 8) || 'N/A'}
                             </td>
                             <td className="td-phone" style={{ fontSize: '11px' }}>
-                              {new Date(c.created_at).toLocaleDateString()}
+                              {new Date(c.call_date || c.created_at).toLocaleDateString()}
                             </td>
                             <td>
-                              <span className="spill s-blue" style={{ fontSize: '10px' }}>
-                                {getReason(c)}
+                              <span 
+                                className="spill s-blue" 
+                                style={{ fontSize: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                onClick={() => handleReasonClick(c)}
+                              >
+                                {c.reason || 'Inbound Call'}
+                                <FileText size={10} style={{ opacity: 0.6 }} />
                               </span>
                             </td>
                           </tr>
@@ -237,6 +339,13 @@ export const InboundView = ({
         }
         .spin-anim {
           animation: spin 1s linear infinite;
+        }
+        .modal-overlay {
+          animation: fadeIn 0.2s ease-out;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
       `}} />
     </div>

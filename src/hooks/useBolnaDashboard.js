@@ -435,6 +435,19 @@ export function useBolnaDashboard() {
           }
           const scheduleRes = await axios.get(`${API_BASE_URL}/api/schedule/${user.userId}`);
           if (scheduleRes.data.success) setScheduledJobs(scheduleRes.data.jobs);
+
+          // Initial inbound sync/fetch
+          axios.post(`${API_BASE_URL}/api/inbound-calls/sync/${user.userId}`)
+            .then(res => {
+              if (res.data.success) setInboundCalls(res.data.calls || []);
+            })
+            .catch(() => {
+              axios.get(`${API_BASE_URL}/api/inbound-calls/${user.userId}`)
+                .then(res => {
+                  if (res.data.success) setInboundCalls(res.data.calls || []);
+                })
+                .catch(() => {});
+            });
         } catch (err) { }
       }
     };
@@ -445,8 +458,21 @@ export function useBolnaDashboard() {
   useEffect(() => {
     if (!user || !user.userId) return;
     const interval = setInterval(() => { fetchScheduledJobs(); }, 10000);
-    return () => clearInterval(interval);
-  }, [user, fetchScheduledJobs]);
+    const inboundInterval = setInterval(() => {
+      if (activeView === 'inbound') {
+        axios.post(`${API_BASE_URL}/api/inbound-calls/sync/${user.userId}`)
+          .then(res => {
+            if (res.data.success) setInboundCalls(res.data.calls || []);
+          })
+          .catch(() => {});
+      }
+    }, 30000); // Poll inbound every 30s when on inbound view
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(inboundInterval);
+    };
+  }, [user, fetchScheduledJobs, activeView]);
 
   // Watch for Running jobs to activate manual calling pipeline
   useEffect(() => {
@@ -590,12 +616,25 @@ export function useBolnaDashboard() {
     retryCalls,
     inboundCalls,
     refreshInbound: () => {
-      if (apiKey) {
+      if (user && user.userId) {
         setIsLoadingInbound(true);
-        fetchInboundCalls(apiKey).then(data => {
-          setInboundCalls(data);
-          setIsLoadingInbound(false);
-        });
+        axios.post(`${API_BASE_URL}/api/inbound-calls/sync/${user.userId}`)
+          .then(res => {
+            if (res.data.success) {
+              setInboundCalls(res.data.calls || []);
+            }
+            setIsLoadingInbound(false);
+          })
+          .catch(err => {
+            console.error('Inbound sync failed:', err);
+            // Fallback: try to get stored calls
+            axios.get(`${API_BASE_URL}/api/inbound-calls/${user.userId}`)
+              .then(res => {
+                if (res.data.success) setInboundCalls(res.data.calls || []);
+              })
+              .catch(() => {});
+            setIsLoadingInbound(false);
+          });
       }
     },
     isLoadingInbound
