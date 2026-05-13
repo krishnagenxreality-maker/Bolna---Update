@@ -1158,6 +1158,10 @@ app.post('/api/schedule', async (req, res) => {
     }
   } catch (e) { }
 
+  // Determine if this is an immediate call
+  const isImmediate = new Date(scheduledAt) <= new Date();
+  const jobStatus = isImmediate ? 'Running' : (req.body.status || 'Scheduled');
+
   const newJobToInsert = {
     id: Date.now().toString(),
     user_id: userId,
@@ -1167,7 +1171,7 @@ app.post('/api/schedule', async (req, res) => {
     contacts: contacts,
     scheduled_at: scheduledAt,
     api_key: apiKey,
-    status: 'Scheduled',
+    status: jobStatus,
     created_at: new Date().toISOString()
   };
 
