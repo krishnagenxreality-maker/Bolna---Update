@@ -1252,7 +1252,10 @@ const startScheduler = () => {
   }, 30000); // Check every 30 seconds
 };
 
-startScheduler();
+// Only start scheduler when running as standalone server (not serverless)
+if (require.main === module) {
+  startScheduler();
+}
 
 // Update Job Status
 app.post('/api/schedule/status', async (req, res) => {
@@ -1312,7 +1315,9 @@ const backfillCampaigns = async () => {
   }
 };
 
-setTimeout(backfillCampaigns, 5000);
+if (require.main === module) {
+  setTimeout(backfillCampaigns, 5000);
+}
 // --- CUSTOM AGENTS ---
 
 app.get('/api/custom-agents/:userId', async (req, res) => {
@@ -1375,6 +1380,12 @@ app.get('/api/custom-agents-all', async (req, res) => {
   }
 });
 
-app.listen(PORT, HOST, () => {
-  console.log(`Server running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
-});
+// Only start listening when running as standalone server
+if (require.main === module) {
+  app.listen(PORT, HOST, () => {
+    console.log(`Server running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
+  });
+}
+
+// Export for serverless usage
+module.exports = app;
