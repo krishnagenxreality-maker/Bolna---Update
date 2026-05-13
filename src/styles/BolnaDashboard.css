@@ -165,10 +165,9 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 14px;
   padding: 0;
-  /* Changed to 0 to allow full-width headers/tables and check*/
   backdrop-filter: blur(6px);
   position: relative;
-  /* overflow: hidden removed to prevent cutting off dropdowns */
+  overflow: visible !important; /* Force visible to prevent cutting off dropdowns */
 }
 
 .panel::before {
@@ -245,8 +244,33 @@ body {
 }
 
 .field-input:focus {
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.04), 0 0 14px rgba(255, 255, 255, 0.04);
+  border-color: rgba(255,255,255,0.25);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.04), 0 0 14px rgba(255,255,255,0.04);
+}
+
+/* Native Date/Time Picker Styling */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.4);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.8;
+}
+
+input[type="date"].field-input,
+input[type="time"].field-input {
+  color-scheme: dark;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 9px;
+  padding: 10px 14px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  color: #fff;
 }
 
 /* Drop zone */
@@ -298,6 +322,7 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   border-top-left-radius: 14px;
   border-top-right-radius: 14px;
+  overflow: visible; /* Prevent clipping DatePicker dropdown */
 }
 
 .count-chip {
@@ -1325,22 +1350,42 @@ body {
 .schedule-date-input,
 .schedule-time-input {
   width: 100%;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  padding: 11px 14px;
+  padding: 10px 14px;
   color: rgba(255, 255, 255, 0.85);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Outfit', sans-serif;
   font-size: 13px;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   color-scheme: dark;
+}
+
+.schedule-date-input:hover,
+.schedule-time-input:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .schedule-date-input:focus,
 .schedule-time-input:focus {
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.03), 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Specific styling for the time icon to match others */
+.schedule-time-input::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.3);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.schedule-time-input::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.7;
 }
 
 /* Session Info */

@@ -262,7 +262,7 @@ export function useBolnaDashboard() {
 
     // Credit validation
     if (credits <= 0) {
-      alert("Insufficient credits. Please upgrade your plan or add credits to continue.");
+      // alert("Insufficient credits. Please upgrade your plan or add credits to continue.");
       return;
     }
 

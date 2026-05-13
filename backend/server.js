@@ -96,8 +96,11 @@ app.post('/api/login', async (req, res) => {
 
     if (passwordMatch) {
       // Session Control: Single device login
-      // If user is already logged in elsewhere and didn't check "logout other devices"
-      if (user.device_session && !req.body.forceLogout && userId !== 'AdminGenx') {
+      // Restriction applies only to Starter Plan. Growth and Pro Plans allow multiple devices.
+      const currentPlan = user.selected_plan || 'Starter';
+      const isRestrictedPlan = currentPlan === 'Starter';
+
+      if (isRestrictedPlan && user.device_session && !req.body.forceLogout && userId !== 'AdminGenx') {
         return res.status(403).json({ 
           success: false, 
           message: 'This account is already logged in on another device. Please logout from other device or click Logout Other Devices.',

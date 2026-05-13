@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Wand2, PenTool, Loader, Bot, Sparkles, Mic2 } from 'lucide-react';
+import { X, Wand2, PenTool, Loader, Bot, Sparkles, Mic2, ChevronDown } from 'lucide-react';
 import { DEEPSEEK_API_KEY } from '../../utils/constants';
 import { fetchVoices } from '../../services/api';
 
@@ -371,23 +371,39 @@ export const CreateAgentModal = ({ isOpen, onClose, apiKey, onAgentCreated }) =>
               Loading available voices...
             </div>
           ) : (
-            <select
-              className="field-input"
-              style={{ background: 'rgba(255,255,255,0.02)', cursor: 'pointer' }}
-              value={selectedVoice?.id || ''}
-              onChange={(e) => {
-                const voice = voices.find(v => v.id === e.target.value);
-                if (voice) setSelectedVoice(voice);
-              }}
-            >
-              {voices.length === 0 ? (
-                <option value="">No voices available (using fallback)</option>
-              ) : (
-                voices.map(v => (
-                  <option key={v.id} value={v.id}>{v.name}</option>
-                ))
-              )}
-            </select>
+            <div style={{ position: 'relative' }}>
+              <select
+                className="field-input"
+                style={{ 
+                  background: 'rgba(255,255,255,0.03)', 
+                  cursor: 'pointer',
+                  appearance: 'none',
+                  width: '100%',
+                  paddingRight: '40px',
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }}
+                value={selectedVoice?.id || ''}
+                onChange={(e) => {
+                  const voice = voices.find(v => v.id === e.target.value);
+                  if (voice) setSelectedVoice(voice);
+                }}
+              >
+                {voices.length === 0 ? (
+                  <option value="" style={{ background: '#121212' }}>No voices available (using fallback)</option>
+                ) : (
+                  voices.map(v => (
+                    <option key={v.id} value={v.id} style={{ background: '#121212', color: '#fff' }}>{v.name}</option>
+                  ))
+                )}
+              </select>
+              <div style={{ 
+                position: 'absolute', right: '14px', top: '50%', 
+                transform: 'translateY(-50%)', pointerEvents: 'none',
+                color: 'rgba(255,255,255,0.3)'
+              }}>
+                <ChevronDown size={14} />
+              </div>
+            </div>
           )}
         </div>
 

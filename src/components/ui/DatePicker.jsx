@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { CalendarDays, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import './DatePicker.css';
 
 export const DatePicker = ({ value, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 
   const [currentDate, setCurrentDate] = useState(() => {
     if (value) {
@@ -28,13 +30,33 @@ export const DatePicker = ({ value, onChange }) => {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
+      if (containerRef.current && !containerRef.current.contains(e.target) && !e.target.closest('.cal-popup')) {
         setIsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const updateCoords = () => {
+        const rect = containerRef.current.getBoundingClientRect();
+        setCoords({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+          width: rect.width
+        });
+      };
+      updateCoords();
+      window.addEventListener('resize', updateCoords);
+      window.addEventListener('scroll', updateCoords, true);
+      return () => {
+        window.removeEventListener('resize', updateCoords);
+        window.removeEventListener('scroll', updateCoords, true);
+      };
+    }
+  }, [isOpen]);
 
   const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
@@ -96,15 +118,30 @@ export const DatePicker = ({ value, onChange }) => {
 
   return (
     <div className="custom-datepicker" ref={containerRef}>
-      <div className="search-box" onClick={() => setIsOpen(!isOpen)}>
-        <span className="search-icon"><CalendarDays size={14} /></span>
-        <div className="search-input-text">
-          {value || "Select Date"}
+      <div 
+        className={`datepicker-trigger ${isOpen ? 'open' : ''}`} 
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="datepicker-label-wrap">
+          <CalendarDays size={14} className="datepicker-icon" />
+          <span className="datepicker-value">
+            {value || "Select Date"}
+          </span>
         </div>
+        <ChevronDown size={14} className={`datepicker-caret ${isOpen ? 'rotated' : ''}`} />
       </div>
       
-      {isOpen && (
-        <div className="cal-popup">
+       {isOpen && createPortal(
+        <div 
+          className="cal-popup"
+          style={{
+            position: 'absolute',
+            top: `${coords.top + 8}px`,
+            left: `${coords.left + coords.width - 260}px`, // Align to right like original CSS
+            zIndex: 10001
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="cal-header">
             <button className="cal-nav-btn" onClick={handlePrevMonth}><ChevronLeft size={16} /></button>
             <div className="cal-month-title">
@@ -141,7 +178,8 @@ export const DatePicker = ({ value, onChange }) => {
               Today
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

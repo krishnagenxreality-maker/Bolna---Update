@@ -219,7 +219,7 @@ export const CampaignView = ({
         </p>
       </div>
 
-      <div className="campaign-layout-wrapper">
+      <div className="campaign-layout-wrapper" style={{ display: 'flex', gridTemplateColumns: 'none', height: 'auto', overflow: 'visible' }}>
         
         {/* LEFT COLUMN: Navigation & Metrics */}
         <div className="leads-left-column">

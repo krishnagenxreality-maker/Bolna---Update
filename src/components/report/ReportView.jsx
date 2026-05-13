@@ -5,6 +5,7 @@ import { Download, Sparkles, Loader2, CalendarDays, PhoneCall, ListTodo, BarChar
 import { generateDailyReportWithDeepSeek } from '../../services/api';
 import { DEEPSEEK_API_KEY } from '../../utils/constants';
 import { useAuth } from '../../context/AuthContext';
+import { LockedFeatureModal } from '../ui/LockedFeatureModal';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 import jsPDF from 'jspdf';
@@ -200,6 +201,7 @@ export const ReportView = ({
   const { user } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [report, setReport] = useState(null);
+  const [showLockModal, setShowLockModal] = useState(false);
 
   const activeContacts = useMemo(() =>
     agentId ? contacts.filter(c => c.agentId === agentId) : contacts,
@@ -251,7 +253,7 @@ export const ReportView = ({
   const handleGenerate = async () => {
     // Plan validation
     if (user?.selectedPlan === 'Starter') {
-      alert("Daily AI Report generation is not available on the Starter Plan. Please upgrade to the Growth or Pro Plan to unlock automated reporting.");
+      setShowLockModal(true);
       return;
     }
 
@@ -505,6 +507,12 @@ Do not include any time-based metrics. Focus only on call counts, lead quality, 
         </div>
 
       </div>
+      <LockedFeatureModal 
+        isOpen={showLockModal} 
+        onClose={() => setShowLockModal(false)} 
+        featureName="AI Report Generation" 
+        planRequired="Growth" 
+      />
     </div>
   );
 };

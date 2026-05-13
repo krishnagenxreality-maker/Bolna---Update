@@ -7,6 +7,7 @@ import { useBolnaDashboard } from './hooks/useBolnaDashboard';
 // Layout
 import { Header } from './components/layout/Header';
 import { SmokeBackground } from './components/layout/SmokeBackground';
+import { LockedFeatureModal } from './components/ui/LockedFeatureModal';
 
 // Dashboard Components
 import { ConfigPanel } from './components/dashboard/ConfigPanel';
@@ -30,6 +31,8 @@ import { CampaignView } from './components/campaign/CampaignView';
 
 import { Sidebar } from './components/layout/Sidebar';
 import { Dropdown } from './components/ui/Dropdown';
+import { DatePicker } from './components/ui/DatePicker';
+import { TimePicker } from './components/ui/TimePicker';
 import { ListTodo, BarChart, Users, ClipboardList, ArrowRight, CalendarDays, Clock, FileText, Megaphone } from 'lucide-react';
 
 export default function BolnaDashboard() {
@@ -65,6 +68,8 @@ export default function BolnaDashboard() {
   } = useBolnaDashboard();
 
   // Local state for Call Manager scheduling UI
+  const [showLockModal, setShowLockModal] = useState(false);
+  const [lockFeatureName, setLockFeatureName] = useState('');
   const [campaignTitle, setCampaignTitle] = useState('');
   const [showCreateAgentModal, setShowCreateAgentModal] = useState(false);
   const [scheduleDate, setScheduleDate] = useState(searchDate || new Date().toISOString().split('T')[0]);
@@ -204,21 +209,17 @@ export default function BolnaDashboard() {
                         Schedule Date & Time
                       </label>
                       <div className="schedule-datetime-row">
-                        <div className="schedule-field">
-                          <input
-                            type="date"
-                            className="field-input schedule-date-input"
-                            value={scheduleDate}
-                            onChange={(e) => setScheduleDate(e.target.value)}
-                            min={new Date().toISOString().split('T')[0]}
+                        <div className="schedule-field" style={{ flex: 1 }}>
+                          <DatePicker 
+                            value={scheduleDate} 
+                            onChange={(val) => setScheduleDate(val)}
+                            placeholder="Select date"
                           />
                         </div>
-                        <div className="schedule-field">
-                          <input
-                            type="time"
-                            className="field-input schedule-time-input"
-                            value={scheduleTime}
-                            onChange={(e) => setScheduleTime(e.target.value)}
+                        <div className="schedule-field" style={{ width: '120px' }}>
+                          <TimePicker 
+                            value={scheduleTime} 
+                            onChange={(val) => setScheduleTime(val)}
                           />
                         </div>
                       </div>
@@ -264,9 +265,16 @@ export default function BolnaDashboard() {
                     {/* Action Row: Schedule button + Horizontal Navigation */}
                     <div className="mgr-action-row">
                       <div className="mgr-action-btn-wrap">
-                        <ActionBar 
+                         <ActionBar 
                           isCalling={isCalling} 
-                          startCalling={() => startCalling(campaignTitle, scheduleDate, scheduleTime)} 
+                          startCalling={() => {
+                            if (credits <= 0) {
+                              setLockFeatureName('Outreach Credits');
+                              setShowLockModal(true);
+                              return;
+                            }
+                            startCalling(campaignTitle, scheduleDate, scheduleTime);
+                          }} 
                           contactsCount={sessionContacts.length} 
                         />
                       </div>
@@ -413,7 +421,12 @@ export default function BolnaDashboard() {
         apiKey={apiKey}
         onAgentCreated={addCustomAgent}
       />
+      <LockedFeatureModal 
+        isOpen={showLockModal} 
+        onClose={() => setShowLockModal(false)} 
+        featureName={lockFeatureName} 
+        planRequired="Growth" 
+      />
     </div>
   );
 }
-

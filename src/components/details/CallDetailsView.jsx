@@ -9,6 +9,7 @@ import {
   CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, RotateCcw, Megaphone 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { LockedFeatureModal } from '../ui/LockedFeatureModal';
 
 export const CallDetailsView = ({ 
   contacts, 
@@ -25,6 +26,7 @@ export const CallDetailsView = ({
   const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedForRetry, setSelectedForRetry] = useState([]);
+  const [showLockModal, setShowLockModal] = useState(false);
   const ROWS_PER_PAGE = 7;
 
   // Reset page when filters change
@@ -247,7 +249,7 @@ export const CallDetailsView = ({
                       <button
                         onClick={() => {
                           if (user?.selectedPlan === 'Starter') {
-                            alert("AI Retry Calling is not available on the Starter Plan. Please upgrade to the Growth Plan to unlock this feature.");
+                            setShowLockModal(true);
                             return;
                           }
                           handleRetryCalls();
@@ -404,6 +406,12 @@ export const CallDetailsView = ({
           </div>
         </div>
       </div>
+      <LockedFeatureModal 
+        isOpen={showLockModal} 
+        onClose={() => setShowLockModal(false)} 
+        featureName="AI Retry Calling" 
+        planRequired="Growth" 
+      />
     </div>
   );
 };

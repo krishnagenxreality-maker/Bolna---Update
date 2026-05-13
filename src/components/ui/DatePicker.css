@@ -1,5 +1,59 @@
 .custom-datepicker {
   position: relative;
+  width: 100%;
+}
+
+.datepicker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.datepicker-trigger:hover, 
+.datepicker-trigger.open {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.datepicker-label-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.datepicker-icon {
+  color: rgba(255, 255, 255, 0.4);
+  transition: color 0.2s;
+}
+
+.datepicker-trigger:hover .datepicker-icon,
+.datepicker-trigger.open .datepicker-icon {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.datepicker-value {
+  color: rgba(255, 255, 255, 0.85);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.datepicker-caret {
+  color: rgba(255, 255, 255, 0.3);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.datepicker-caret.rotated {
+  transform: rotate(180deg);
 }
 
 .search-input-text {
@@ -13,18 +67,14 @@
 }
 
 .cal-popup {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
   width: 260px;
-  background: rgba(18, 18, 18, 0.7);
+  background: rgba(18, 18, 18, 0.85);
   backdrop-filter: blur(24px);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: 12px;
   padding: 16px;
-  z-index: 9999;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02) inset;
-  animation: cal-pop 0.2s ease-out forwards;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  animation: cal-pop 0.2s cubic-bezier(0.16,1,0.3,1) forwards;
 }
 
 @keyframes cal-pop {
