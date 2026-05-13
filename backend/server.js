@@ -1,4 +1,4 @@
-if (process.env.NODE_ENV !== 'production') {
+if (!process.env.NETLIFY) {
   require('dotenv').config();
 }
 const express = require('express');
