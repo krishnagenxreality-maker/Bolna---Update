@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 import { Shield, LogIn, CheckCircle2, X, Phone, ArrowRight, Check, ChevronDown } from 'lucide-react';
@@ -325,10 +325,29 @@ export default function PricingPage() {
             onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(167,139,250,0.28), rgba(52,211,153,0.22))'; e.currentTarget.style.boxShadow = '0 0 28px rgba(167,139,250,0.45), inset 0 1px 0 rgba(255,255,255,0.12)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(167,139,250,0.15), rgba(52,211,153,0.15))'; e.currentTarget.style.boxShadow = '0 0 16px rgba(167,139,250,0.25), inset 0 1px 0 rgba(255,255,255,0.08)'; }}
           >✦ Pricing</button>
-          <button
-            onClick={() => navigate('/login', { state: { from: '/pricing' } })} className="logout-btn"
-            style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 20px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Outfit, sans-serif', fontSize: 14, fontWeight: 500, transition: 'all 0.2s' }}
-          ><LogIn size={16} /> Login</button>
+          <Link 
+            to="/login" 
+            state={{ from: '/pricing' }} 
+            className="logout-btn" 
+            style={{ 
+              background: 'rgba(255,255,255,0.05)', 
+              color: '#fff', 
+              border: '1px solid rgba(255,255,255,0.1)', 
+              padding: '8px 20px', 
+              borderRadius: 8, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 8, 
+              cursor: 'pointer', 
+              fontFamily: 'Outfit, sans-serif', 
+              fontSize: 14, 
+              fontWeight: 500, 
+              transition: 'all 0.2s',
+              textDecoration: 'none'
+            }}
+          >
+            <LogIn size={16} /> Login
+          </Link>
         </div>
       </header>
 

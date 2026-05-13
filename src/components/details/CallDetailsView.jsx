@@ -6,7 +6,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell 
 } from 'recharts';
 import { 
-  CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, RotateCcw, Megaphone 
+  CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, RotateCcw, Megaphone, PhoneIncoming 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { LockedFeatureModal } from '../ui/LockedFeatureModal';
@@ -120,6 +120,7 @@ export const CallDetailsView = ({
     { id: 'details', label: 'Call Details', icon: <ListTodo size={18} /> },
     { id: 'responses', label: 'Responses', icon: <BarChart3 size={18} /> },
     { id: 'leads', label: 'Leads', icon: <Users size={18} /> },
+    { id: 'inbound', label: 'Inbound', icon: <PhoneIncoming size={18} /> },
     { id: 'campaign', label: 'Campaign', icon: <Megaphone size={18} /> },
     { id: 'report', label: 'Report', icon: <ClipboardList size={18} /> }
   ];

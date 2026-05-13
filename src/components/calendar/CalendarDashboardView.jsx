@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Phone, TrendingUp, CheckCircle, XCircle, Users, Award, Star, ListTodo, BarChart, ClipboardList, ArrowRight, Megaphone } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Phone, TrendingUp, CheckCircle, XCircle, Users, Award, Star, ListTodo, BarChart, ClipboardList, ArrowRight, Megaphone, PhoneIncoming } from 'lucide-react';
 import { Dropdown } from '../ui/Dropdown';
 import { DatePicker } from '../ui/DatePicker';
 import { VisualAnalytics } from './VisualAnalytics';
@@ -162,6 +162,7 @@ export const CalendarDashboardView = ({
     { id: 'details', label: 'Call Details', icon: <ListTodo size={22} />, color: '#3b82f6' },
     { id: 'responses', label: 'Responses', icon: <BarChart size={22} />, color: '#7dffb3' },
     { id: 'leads', label: 'Leads', icon: <Users size={22} />, color: '#f5c842' },
+    { id: 'inbound', label: 'Inbound', icon: <PhoneIncoming size={22} />, color: '#60a5fa' },
     { id: 'campaign', label: 'Campaign', icon: <Megaphone size={22} />, color: '#ec4899' },
     { id: 'report', label: 'Report', icon: <ClipboardList size={22} />, color: '#a855f7' }
   ];

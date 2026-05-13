@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   Shield, LogIn, ArrowRight, CheckCircle2,
   Users, BarChart3, Zap, X, PhoneCall, TrendingUp,
@@ -559,9 +559,29 @@ export default function HomePage() {
             >
               ✦ Pricing
             </button>
-          <button onClick={() => navigate('/login', { state: { from: '/' } })} className="logout-btn" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 20px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontFamily: 'Outfit, sans-serif', fontSize: '14px', fontWeight: '500', transition: 'all 0.2s' }}>
+          <Link 
+            to="/login" 
+            state={{ from: '/' }} 
+            className="logout-btn" 
+            style={{ 
+              background: 'rgba(255,255,255,0.05)', 
+              color: '#fff', 
+              border: '1px solid rgba(255,255,255,0.1)', 
+              padding: '8px 20px', 
+              borderRadius: '8px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              cursor: 'pointer', 
+              fontFamily: 'Outfit, sans-serif', 
+              fontSize: '14px', 
+              fontWeight: '500', 
+              transition: 'all 0.2s',
+              textDecoration: 'none'
+            }}
+          >
             <LogIn size={16} /> Login
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -870,9 +890,14 @@ export default function HomePage() {
             <h2 style={{ color: '#fff', fontSize: '24px', marginBottom: '8px' }}>Get Started with Calling Gen</h2>
             <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px', marginBottom: '40px' }}>Choose how you'd like to proceed with our service.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <button onClick={() => { handleCloseJoin(); navigate('/login', { state: { from: '/?join=true' } }); }} className="btn-call" style={{ width: '100%', padding: '16px', justifyContent: 'center' }}>
+              <Link 
+                to="/login" 
+                state={{ from: '/?join=true' }} 
+                className="btn-call" 
+                style={{ width: '100%', padding: '16px', justifyContent: 'center', textDecoration: 'none' }}
+              >
                 Already have an account
-              </button>
+              </Link>
               <button onClick={() => navigate('/pricing')} className="nav-btn" style={{ width: '100%', padding: '16px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)' }}>
                 New User? Contact Admin
               </button>

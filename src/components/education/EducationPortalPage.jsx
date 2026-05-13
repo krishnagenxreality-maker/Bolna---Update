@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { SmokeBackground } from '../layout/SmokeBackground';
 import { 
   Shield, LogIn, ArrowRight, Zap, BarChart3, Users, X, UserPlus
@@ -119,12 +119,13 @@ export default function EducationPortalPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <button 
-                onClick={() => navigate('/login')}
+              <Link 
+                to="/login"
                 className="panel" 
                 style={{ 
                   padding: '20px 24px', textAlign: 'left', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.05)',
-                  transition: 'all 0.2s', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', gap: '16px'
+                  transition: 'all 0.2s', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', gap: '16px',
+                  textDecoration: 'none'
                 }}
                 onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
                 onMouseOut={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
@@ -137,7 +138,7 @@ export default function EducationPortalPage() {
                   <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>Sign in to your existing account</p>
                 </div>
                 <ArrowRight size={18} style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.1)' }} />
-              </button>
+              </Link>
 
               <button 
                 onClick={() => navigate('/pricing')}

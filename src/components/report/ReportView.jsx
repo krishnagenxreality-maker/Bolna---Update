@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Panel } from '../ui/Panel';
 import { DatePicker } from '../ui/DatePicker';
-import { Download, Sparkles, Loader2, CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, UserCheck, UserMinus, PhoneForwarded, Megaphone } from 'lucide-react';
+import { Download, Sparkles, Loader2, CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, UserCheck, UserMinus, PhoneForwarded, Megaphone, PhoneIncoming } from 'lucide-react';
 import { generateDailyReportWithDeepSeek } from '../../services/api';
 import { DEEPSEEK_API_KEY } from '../../utils/constants';
 import { useAuth } from '../../context/AuthContext';
@@ -376,6 +376,7 @@ Do not include any time-based metrics. Focus only on call counts, lead quality, 
     { id: 'details', label: 'Call Details', icon: <ListTodo size={18} /> },
     { id: 'responses', label: 'Responses', icon: <BarChart3 size={18} /> },
     { id: 'leads', label: 'Leads', icon: <Users size={18} /> },
+    { id: 'inbound', label: 'Inbound', icon: <PhoneIncoming size={18} /> },
     { id: 'campaign', label: 'Campaign', icon: <Megaphone size={18} /> },
     { id: 'report', label: 'Report', icon: <ClipboardList size={18} /> }
   ];

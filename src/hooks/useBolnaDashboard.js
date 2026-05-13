@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { BATCH_SIZE, BATCH_DELAY_MS, POLL_INTERVAL_MS } from "../utils/constants";
 import { sleep } from "../utils/helpers";
-import { makeCall, fetchExecutionStatus, analyzeSummaryWithDeepSeek } from "../services/api";
+import { makeCall, fetchExecutionStatus, analyzeSummaryWithDeepSeek, fetchInboundCalls } from "../services/api";
 import { parseContacts as parseContactsLogic } from "../services/fileService";
 import { DEEPSEEK_API_KEY } from "../utils/constants";
 import { useAuth } from "../context/AuthContext";
@@ -32,6 +32,8 @@ export function useBolnaDashboard() {
   const [scheduledJobs, setScheduledJobs] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [callStartTime, setCallStartTime] = useState(null);
+  const [inboundCalls, setInboundCalls] = useState([]);
+  const [isLoadingInbound, setIsLoadingInbound] = useState(false);
 
   // --- REFS ---
   const contactsRef  = useRef([]);
@@ -585,6 +587,17 @@ export function useBolnaDashboard() {
     fetchScheduledJobs,
     callStartTime,
     addCustomAgent,
-    retryCalls
+    retryCalls,
+    inboundCalls,
+    refreshInbound: () => {
+      if (apiKey) {
+        setIsLoadingInbound(true);
+        fetchInboundCalls(apiKey).then(data => {
+          setInboundCalls(data);
+          setIsLoadingInbound(false);
+        });
+      }
+    },
+    isLoadingInbound
   };
 }

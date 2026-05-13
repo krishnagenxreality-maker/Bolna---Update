@@ -183,3 +183,18 @@ Return ONLY valid JSON. Example:
     };
   }
 }
+
+export async function fetchInboundCalls(key) {
+  if (!key) return [];
+  try {
+    const res = await fetch("https://api.bolna.ai/executions?call_direction=inbound", {
+      headers: { "Authorization": `Bearer ${key}` }
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.error("Failed to fetch inbound calls:", err);
+    return [];
+  }
+}

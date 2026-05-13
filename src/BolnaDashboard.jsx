@@ -28,12 +28,13 @@ import { LeadsView } from './components/leads/LeadsView';
 import { CalendarDashboardView } from './components/calendar/CalendarDashboardView';
 import { ReportView } from './components/report/ReportView';
 import { CampaignView } from './components/campaign/CampaignView';
+import { InboundView } from './components/inbound/InboundView';
 
 import { Sidebar } from './components/layout/Sidebar';
 import { Dropdown } from './components/ui/Dropdown';
 import { DatePicker } from './components/ui/DatePicker';
 import { TimePicker } from './components/ui/TimePicker';
-import { ListTodo, BarChart, Users, ClipboardList, ArrowRight, CalendarDays, Clock, FileText, Megaphone } from 'lucide-react';
+import { ListTodo, BarChart, Users, ClipboardList, ArrowRight, CalendarDays, Clock, FileText, Megaphone, PhoneIncoming } from 'lucide-react';
 
 export default function BolnaDashboard() {
   const {
@@ -64,7 +65,10 @@ export default function BolnaDashboard() {
     callStartTime,
     addCustomAgent,
     retryCalls,
-    setAvailableAgents
+    setAvailableAgents,
+    inboundCalls,
+    refreshInbound,
+    isLoadingInbound
   } = useBolnaDashboard();
 
   // Local state for Call Manager scheduling UI
@@ -111,10 +115,11 @@ export default function BolnaDashboard() {
     { id: 'responses', label: 'Responses', icon: <BarChart size={20} />, color: '#7dffb3' },
     { id: 'leads', label: 'Leads', icon: <Users size={20} />, color: '#f5c842' },
     { id: 'campaign', label: 'Campaign', icon: <Megaphone size={20} />, color: '#ec4899' },
+    { id: 'inbound', label: 'Inbound', icon: <PhoneIncoming size={20} />, color: '#60a5fa' },
     { id: 'report', label: 'Report', icon: <ClipboardList size={20} />, color: '#a855f7' }
   ];
 
-  const isFullWidthView = activeView === 'calendar' || activeView === 'manager' || activeView === 'details' || activeView === 'responses' || activeView === 'leads' || activeView === 'campaign' || activeView === 'report';
+  const isFullWidthView = activeView === 'calendar' || activeView === 'manager' || activeView === 'details' || activeView === 'responses' || activeView === 'leads' || activeView === 'campaign' || activeView === 'report' || activeView === 'inbound';
 
   return (
     <div className="app-container" style={{ flexDirection: 'column', gap: 0, paddingRight: 0 }}>
@@ -395,6 +400,16 @@ export default function BolnaDashboard() {
                 searchDate={searchDate}
                 setSearchDate={setSearchDate}
                 agentId={agentId}
+                activeView={activeView}
+                setActiveView={setActiveView}
+              />
+            )}
+
+            {activeView === 'inbound' && (
+              <InboundView
+                inboundCalls={inboundCalls}
+                isLoading={isLoadingInbound}
+                onRefresh={refreshInbound}
                 activeView={activeView}
                 setActiveView={setActiveView}
               />

@@ -2591,6 +2591,7 @@ input[type="time"].field-input {
 }
 
 .campaign-right-column {
+  flex: 1;
   height: 100% !important;
   max-height: 620px !important;
   margin: 0;

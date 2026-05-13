@@ -4,7 +4,7 @@ import { DatePicker } from '../ui/DatePicker';
 import { DEEPSEEK_API_KEY } from '../../utils/constants';
 import { 
   CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, 
-  Download, X, FileText, Megaphone, Zap, CheckCircle2, Activity, Bot
+  Download, X, FileText, Megaphone, Zap, CheckCircle2, Activity, Bot, PhoneIncoming
 } from 'lucide-react';
 
 // Helper: generate campaign-level AI summary using DeepSeek
@@ -66,6 +66,7 @@ export const CampaignView = ({
     { id: 'details', label: 'Call Details', icon: <ListTodo size={18} /> },
     { id: 'responses', label: 'Responses', icon: <BarChart3 size={18} /> },
     { id: 'leads', label: 'Leads', icon: <Users size={18} /> },
+    { id: 'inbound', label: 'Inbound', icon: <PhoneIncoming size={18} /> },
     { id: 'campaign', label: 'Campaign', icon: <Megaphone size={18} /> },
     { id: 'report', label: 'Report', icon: <ClipboardList size={18} /> }
   ];
@@ -222,7 +223,7 @@ export const CampaignView = ({
       <div className="campaign-layout-wrapper" style={{ display: 'flex', gridTemplateColumns: 'none', height: 'auto', overflow: 'visible' }}>
         
         {/* LEFT COLUMN: Navigation & Metrics */}
-        <div className="leads-left-column">
+        <div className="leads-left-column" style={{ width: '280px', flexShrink: 0 }}>
           <div className="details-nav-matrix">
             {navItems.map((item) => (
               <div 
@@ -281,7 +282,7 @@ export const CampaignView = ({
         </div>
 
         {/* RIGHT COLUMN: Campaigns Table */}
-        <div className="campaign-right-column">
+        <div className="campaign-right-column" style={{ flex: 1, minWidth: 0 }}>
           <Panel>
             <PanelHead>
               <div className="panel-label" style={{marginBottom:0}}>

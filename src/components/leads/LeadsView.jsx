@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import { 
   CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, Download, 
-  Tag, Layers, CheckCircle2, PhoneOff, X, Play, FileText, Mic, Megaphone
+  Tag, Layers, CheckCircle2, PhoneOff, X, Play, FileText, Mic, Megaphone, PhoneIncoming
 } from 'lucide-react';
 
 export const LeadsView = ({ 
@@ -99,6 +99,7 @@ export const LeadsView = ({
     { id: 'details', label: 'Call Details', icon: <ListTodo size={18} /> },
     { id: 'responses', label: 'Responses', icon: <BarChart3 size={18} /> },
     { id: 'leads', label: 'Leads', icon: <Users size={18} /> },
+    { id: 'inbound', label: 'Inbound', icon: <PhoneIncoming size={18} /> },
     { id: 'campaign', label: 'Campaign', icon: <Megaphone size={18} /> },
     { id: 'report', label: 'Report', icon: <ClipboardList size={18} /> }
   ];

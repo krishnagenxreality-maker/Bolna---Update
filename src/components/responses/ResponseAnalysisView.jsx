@@ -6,7 +6,7 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
 import { 
-  CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, Megaphone 
+  CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, Megaphone, PhoneIncoming 
 } from 'lucide-react';
 
 export const ResponseAnalysisView = ({ 
@@ -77,6 +77,7 @@ export const ResponseAnalysisView = ({
     { id: 'details', label: 'Call Details', icon: <ListTodo size={18} /> },
     { id: 'responses', label: 'Responses', icon: <BarChart3 size={18} /> },
     { id: 'leads', label: 'Leads', icon: <Users size={18} /> },
+    { id: 'inbound', label: 'Inbound', icon: <PhoneIncoming size={18} /> },
     { id: 'campaign', label: 'Campaign', icon: <Megaphone size={18} /> },
     { id: 'report', label: 'Report', icon: <ClipboardList size={18} /> }
   ];
