@@ -861,30 +861,8 @@ app.post('/api/inbound-calls/sync/:userId', async (req, res) => {
     const calls = Array.isArray(bolnaData) ? bolnaData : [];
     console.log(`[Inbound Sync] Found ${calls.length} calls in Bolna API for user ${userId}`);
     
-    if (calls.length === 0) {
-      // Return existing stored calls
-      const { data: existing, error: fetchStoredError } = await supabase
-        .from('inbound_calls')
-        .select('*')
-        .eq('user_id', userId)
-        .order('call_date', { ascending: false });
-      
-      if (fetchStoredError) {
-        console.error('[Inbound Sync] Error fetching existing calls:', fetchStoredError.message);
-        // If table doesn't exist, this is where it will likely fail first
-        if (fetchStoredError.code === '42P01') {
-          return res.status(500).json({ success: false, message: 'Database table inbound_calls not found. Please create it using the provided SQL.' });
-        }
-      }
-      return res.json({ success: true, calls: existing || [], synced: 0 });
-    }
-
-    // Upsert calls into database
-    let syncedCount = 0;
-    for (const call of calls) {
-      if (!call.execution_id) continue;
-
-      // Generate reason from summary
+    // Map Bolna data directly to the format expected by the frontend
+    const mappedCalls = calls.map(call => {
       let reason = 'Inbound Call';
       if (call.summary) {
         const words = call.summary.split(/\s+/).filter(w => w.length > 2);
@@ -895,8 +873,7 @@ app.post('/api/inbound-calls/sync/:userId', async (req, res) => {
         }
       }
 
-      const record = {
-        user_id: userId,
+      return {
         execution_id: call.execution_id,
         caller_name: call.recipient_name || call.caller_name || 'Anonymous',
         caller_phone: call.recipient_phone_number || call.caller_phone || 'Unknown',
@@ -909,30 +886,36 @@ app.post('/api/inbound-calls/sync/:userId', async (req, res) => {
         reason: reason,
         status: call.status || 'completed'
       };
+    });
 
-      const { error: upsertError } = await supabase
+    if (calls.length === 0) {
+      // Fallback: check Supabase for any history
+      const { data: existing } = await supabase
         .from('inbound_calls')
-        .upsert(record, { onConflict: 'execution_id' });
+        .select('*')
+        .eq('user_id', userId)
+        .order('call_date', { ascending: false });
+      return res.json({ success: true, calls: existing || [], synced: 0 });
+    }
 
-      if (!upsertError) {
-        syncedCount++;
-      } else {
-        console.error(`[Inbound Sync] Upsert error for execution ${call.execution_id}:`, upsertError.message);
+    // Attempt background sync to Supabase (non-blocking)
+    (async () => {
+      try {
+        for (const record of mappedCalls) {
+          const { error: upsertError } = await supabase
+            .from('inbound_calls')
+            .upsert({ ...record, user_id: userId }, { onConflict: 'execution_id' });
+          if (upsertError && upsertError.code !== '42P01') {
+            console.error(`[Inbound Sync] Background upsert error for ${record.execution_id}:`, upsertError.message);
+          }
+        }
+      } catch (e) {
+        console.error('[Inbound Sync] Background sync failed:', e.message);
       }
-    }
+    })();
 
-    // Return all stored calls
-    const { data: allCalls, error: finalFetchError } = await supabase
-      .from('inbound_calls')
-      .select('*')
-      .eq('user_id', userId)
-      .order('call_date', { ascending: false });
-
-    if (finalFetchError) {
-      console.error('[Inbound Sync] Final fetch error:', finalFetchError.message);
-    }
-
-    res.json({ success: true, calls: allCalls || [], synced: syncedCount });
+    // Return the mapped calls from Bolna directly!
+    res.json({ success: true, calls: mappedCalls, synced: mappedCalls.length });
   } catch (err) {
     console.error('[Inbound Sync] Critical Error:', err.message);
     res.status(500).json({ success: false, message: `Internal server error: ${err.message}`, calls: [] });
