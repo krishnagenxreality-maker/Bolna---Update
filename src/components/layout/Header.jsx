@@ -1,12 +1,13 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Zap } from 'lucide-react';
+import { LogOut, Zap, HelpCircle } from 'lucide-react';
+import { useTutorial } from '../../context/TutorialContext';
 
 export const Header = ({ activeView, setActiveView, credits }) => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
-
+  const { startTutorial } = useTutorial();
   const isDemoUser = user?.userType === 'demo';
 
   return (
@@ -91,47 +92,74 @@ export const Header = ({ activeView, setActiveView, credits }) => {
             </div>
           )}
 
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: '11px',
-            fontWeight: '700',
-            color: 'rgba(255,255,255,0.5)',
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            padding: '6px 14px',
-            borderRadius: '100px',
-            textTransform: 'uppercase',
-            letterSpacing: '1px'
-          }}>
-            {user?.selectedPlan || 'Starter'} PLAN
-          </div>
+          <div className="hdr-plan-info" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '11px',
+              fontWeight: '700',
+              color: 'rgba(255,255,255,0.5)',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              padding: '6px 14px',
+              borderRadius: '100px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
+            }}>
+              {user?.selectedPlan || 'Starter'} PLAN
+            </div>
 
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: '12px',
-            fontWeight: '600',
-            letterSpacing: '0.5px',
-            color: credits > 0 ? '#7dffb3' : '#ff7070',
-            background: credits > 0 ? 'rgba(125, 255, 179, 0.06)' : 'rgba(255, 112, 112, 0.06)',
-            border: `1px solid ${credits > 0 ? 'rgba(125, 255, 179, 0.15)' : 'rgba(255, 112, 112, 0.15)'}`,
-            padding: '6px 14px',
-            borderRadius: '100px',
-            backdropFilter: 'blur(8px)',
-            textShadow: credits > 0 ? '0 0 10px rgba(125, 255, 179, 0.3)' : '0 0 10px rgba(255, 112, 112, 0.3)',
-            transition: 'all 0.3s ease'
-          }}>
-            <Zap size={13} />
-            <span>{credits}</span>
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: '400', fontSize: '10px', letterSpacing: '1px', textTransform: 'uppercase' }}>credits</span>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '12px',
+              fontWeight: '600',
+              letterSpacing: '0.5px',
+              color: credits > 0 ? '#7dffb3' : '#ff7070',
+              background: credits > 0 ? 'rgba(125, 255, 179, 0.06)' : 'rgba(255, 112, 112, 0.06)',
+              border: `1px solid ${credits > 0 ? 'rgba(125, 255, 179, 0.15)' : 'rgba(255, 112, 112, 0.15)'}`,
+              padding: '6px 14px',
+              borderRadius: '100px',
+              backdropFilter: 'blur(8px)',
+              textShadow: credits > 0 ? '0 0 10px rgba(125, 255, 179, 0.3)' : '0 0 10px rgba(255, 112, 112, 0.3)',
+              transition: 'all 0.3s ease'
+            }}>
+              <Zap size={13} />
+              <span>{credits}</span>
+              <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: '400', fontSize: '10px', letterSpacing: '1px', textTransform: 'uppercase' }}>credits</span>
+            </div>
           </div>
 
           {/* Upgrade Button */}
+          <button
+            onClick={() => startTutorial(false)}
+            className="hdr-tutorial-btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontFamily: "'Outfit', sans-serif",
+              fontSize: '12px',
+              fontWeight: '600',
+              letterSpacing: '0.5px',
+              color: '#6366f1',
+              background: 'rgba(99, 102, 241, 0.1)',
+              border: '1px solid rgba(99, 102, 241, 0.2)',
+              padding: '6px 14px',
+              borderRadius: '100px',
+              backdropFilter: 'blur(8px)',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            <HelpCircle size={14} />
+            Tutorial
+          </button>
+
           <button
             onClick={() => navigate('/upgrade')}
             style={{

@@ -387,7 +387,7 @@ Do not include any time-based metrics. Focus only on call counts, lead quality, 
 
         {/* ── LEFT COLUMN ── */}
         <div className="report-left-column">
-          <div className="details-nav-matrix">
+          <div className="details-nav-matrix sidebar-nav">
             {navItems.map((item) => (
               <div
                 key={item.id}
@@ -400,7 +400,7 @@ Do not include any time-based metrics. Focus only on call counts, lead quality, 
             ))}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginTop: '20px', width: '100%' }}>
+          <div className="report-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginTop: '20px', width: '100%' }}>
             {[
               { icon: <PhoneCall size={14} />, color: '#6366f1', value: total,         label: 'Total Calls'    },
               { icon: <UserCheck size={14} />, color: '#4ade80', value: interested,    label: 'Interested'     },
@@ -439,6 +439,7 @@ Do not include any time-based metrics. Focus only on call counts, lead quality, 
                   <DatePicker value={searchDate} onChange={setSearchDate} />
 
                   <button
+                    className="generate-report-btn"
                     onClick={handleGenerate}
                     disabled={isGenerating || total === 0}
                     style={{ background: isGenerating ? 'rgba(139,92,246,0.2)' : 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)', border: 'none', padding: '10px 24px', borderRadius: '10px', color: '#fff', fontSize: '14px', fontWeight: '700', cursor: (isGenerating || total === 0) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: isGenerating ? 'none' : '0 4px 15px rgba(99,102,241,0.2)', transition: 'all 0.3s ease', opacity: total === 0 ? 0.5 : 1, whiteSpace: 'nowrap' }}

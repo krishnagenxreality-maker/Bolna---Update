@@ -77,7 +77,7 @@ export const InboundView = ({
         
         {/* LEFT COLUMN: Navigation Matrix */}
         <div className="details-left-column" style={{ width: '280px', flexShrink: 0 }}>
-          <div className="details-nav-matrix">
+          <div className="details-nav-matrix sidebar-nav">
             {navItems.map((item) => (
               <div 
                 key={item.id}
@@ -107,7 +107,7 @@ export const InboundView = ({
         {/* MAIN CONTENT: Table */}
         <div className="details-main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
           
-          <div className="details-table-section" style={{ width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
+          <div className="details-table-section inbound-table-section" style={{ width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
             <Panel>
               <PanelHead>
                 <div className="panel-label" style={{marginBottom:0}}>
@@ -118,7 +118,7 @@ export const InboundView = ({
                   <button 
                     onClick={onRefresh}
                     disabled={isLoading}
-                    className="nav-btn"
+                    className="nav-btn inbound-refresh-btn"
                     style={{
                       padding: '6px 12px',
                       borderRadius: '6px',

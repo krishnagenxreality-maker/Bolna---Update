@@ -175,7 +175,7 @@ export const LeadsView = ({
         
         {/* LEFT COLUMN: Navigation & Metrics */}
         <div className="leads-left-column" style={{ width: '280px', flexShrink: 0 }}>
-          <div className="details-nav-matrix">
+          <div className="details-nav-matrix sidebar-nav">
             {navItems.map((item) => (
               <div 
                 key={item.id}
@@ -308,7 +308,7 @@ export const LeadsView = ({
                             <td className="td-phone">{c.phone}</td>
                             <td>
                               <span 
-                                className="category-cell-clickable"
+                                className="category-cell-clickable lead-category-badge"
                                 onClick={() => handleCategoryClick(c)}
                                 title="Click to view details"
                               >

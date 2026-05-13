@@ -140,7 +140,7 @@ export const CallDetailsView = ({
         
         {/* LEFT COLUMN: Navigation Grid */}
         <div className="details-left-column" style={{ width: '280px', flexShrink: 0 }}>
-          <div className="details-nav-matrix">
+          <div className="details-nav-matrix sidebar-nav">
             {navItems.map((item) => (
               <div 
                 key={item.id}
@@ -226,7 +226,7 @@ export const CallDetailsView = ({
 
                 {/* Retry Controls */}
                 {retryEligible.length > 0 && onRetryCalls && (
-                  <div style={{
+                  <div className="details-retry-section" style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '8px 12px', marginBottom: '8px',
                     background: 'rgba(59, 130, 246, 0.05)',
@@ -248,6 +248,7 @@ export const CallDetailsView = ({
                     </div>
                     {selectedForRetry.length > 0 && (
                       <button
+                        className="retry-calls-btn"
                         onClick={() => {
                           if (user?.selectedPlan === 'Starter') {
                             setShowLockModal(true);

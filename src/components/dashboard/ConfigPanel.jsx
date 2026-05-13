@@ -25,7 +25,7 @@ export const ConfigPanel = ({ apiKey, agentId, setAgentId, availableAgents = [] 
                 {apiKey ? '••••••••' + apiKey.slice(-4) : 'Not configured'}
               </div>
             </div>
-            <div className="field">
+            <div className="field agent-selector-wrapper">
               <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <UserCheck size={14} /> Bolna Agent
               </label>

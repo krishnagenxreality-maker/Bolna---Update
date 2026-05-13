@@ -3,11 +3,15 @@ import './styles/BolnaDashboard.css';
 
 // Hooks
 import { useBolnaDashboard } from './hooks/useBolnaDashboard';
+import { useAuth } from './context/AuthContext';
 
 // Layout
 import { Header } from './components/layout/Header';
 import { SmokeBackground } from './components/layout/SmokeBackground';
 import { LockedFeatureModal } from './components/ui/LockedFeatureModal';
+import { TutorialProvider } from './context/TutorialContext';
+import { TutorialTooltip } from './components/ui/TutorialTooltip';
+import axios from 'axios';
 
 // Dashboard Components
 import { ConfigPanel } from './components/dashboard/ConfigPanel';
@@ -37,6 +41,7 @@ import { TimePicker } from './components/ui/TimePicker';
 import { ListTodo, BarChart, Users, ClipboardList, ArrowRight, CalendarDays, Clock, FileText, Megaphone, PhoneIncoming } from 'lucide-react';
 
 export default function BolnaDashboard() {
+  const { user } = useAuth();
   const {
     apiKey, setApiKey,
     agentId, setAgentId,
@@ -122,326 +127,331 @@ export default function BolnaDashboard() {
   const isFullWidthView = activeView === 'calendar' || activeView === 'manager' || activeView === 'details' || activeView === 'responses' || activeView === 'leads' || activeView === 'campaign' || activeView === 'report' || activeView === 'inbound';
 
   return (
-    <div className="app-container" style={{ flexDirection: 'column', gap: 0, paddingRight: 0 }}>
-      <SmokeBackground />
-      <Header activeView={activeView} setActiveView={setActiveView} credits={credits} />
+    <TutorialProvider activeView={activeView} user={user}>
+      <div className="app-container" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', gap: 0, paddingRight: 0 }}>
+        <SmokeBackground />
+        <Header activeView={activeView} setActiveView={setActiveView} credits={credits} />
 
-      <CompletionModal isOpen={showDone} onClose={handleCloseModal} />
+        <CompletionModal isOpen={showDone} onClose={handleCloseModal} />
+        <TutorialTooltip />
 
-      <div style={{ display: 'flex', flex: 1, gap: isFullWidthView ? '0px' : '20px', paddingRight: isFullWidthView ? '0px' : '20px', position: 'relative', zIndex: 1 }}>
-        {!isFullWidthView && (
-          <Sidebar activeView={activeView} setActiveView={setActiveView} />
-        )}
+        <div style={{ display: 'flex', flex: 1, gap: isFullWidthView ? '0px' : '20px', paddingRight: isFullWidthView ? '0px' : '20px', position: 'relative', zIndex: 1, overflow: 'hidden' }}>
+          {!isFullWidthView && (
+            <Sidebar activeView={activeView} setActiveView={setActiveView} />
+          )}
 
-        <div className="main-content" style={isFullWidthView ? { maxWidth: '100%', padding: '0 20px' } : {}}>
-          <main className="main">
-            {activeView === 'calendar' && (
-              <CalendarDashboardView
-                contacts={allContacts}
-                agentId={agentId}
-                setAgentId={setAgentId}
-                availableAgents={availableAgents}
-                setSearchDate={setSearchDate}
-                setActiveView={setActiveView}
-              />
-            )}
+          <div className="main-content" style={isFullWidthView ? { maxWidth: '100%', flex: 1, padding: '0 20px', overflow: 'auto' } : { flex: 1, overflow: 'auto' }}>
+            <main className="main" style={{ width: '100%' }}>
+              {activeView === 'calendar' && (
+                <CalendarDashboardView
+                  contacts={allContacts}
+                  agentId={agentId}
+                  setAgentId={setAgentId}
+                  availableAgents={availableAgents}
+                  setSearchDate={setSearchDate}
+                  setActiveView={setActiveView}
+                />
+              )}
 
-            {activeView === 'manager' && (
-              <>
-                <div className="manager-page-wrapper">
-                  
-                  {/* === LEFT PANEL: Scheduling & Control === */}
-                  <div className="manager-left-panel">
+              {activeView === 'manager' && (
+                <>
+                  <div className="manager-page-wrapper">
                     
-                    {/* Campaign Title */}
-                    <div className="mgr-section">
-                      <label className="mgr-section-label">
-                        <FileText size={14} />
-                        Campaign Title
-                      </label>
-                      <input
-                        type="text"
-                        className="field-input campaign-title-input"
-                        placeholder="Enter Campaign Title"
-                        value={campaignTitle}
-                        onChange={(e) => setCampaignTitle(e.target.value)}
-                      />
-                    </div>
-
-                    {/* Agent Selection */}
-                    <div className="mgr-section">
-                      <label className="mgr-section-label">
-                        <Users size={14} />
-                        Select Agent
-                      </label>
-                      {availableAgents.length > 0 ? (
-                        <Dropdown
-                          value={agentId}
-                          onChange={(val) => {
-                            if (val === '__other__') {
-                              setShowCreateAgentModal(true);
-                            } else {
-                              setAgentId(val);
-                            }
-                          }}
-                          options={[
-                            ...availableAgents.map(agent => ({
-                              label: agent.name,
-                              value: `${agent.name}::${agent.id}`
-                            })),
-                            { label: '＋ Other (Create Agent)', value: '__other__' }
-                          ]}
+                    {/* === LEFT PANEL: Scheduling & Control === */}
+                    <div className="manager-left-panel">
+                      
+                      {/* Campaign Title */}
+                      <div className="mgr-section">
+                        <label className="mgr-section-label">
+                          <FileText size={14} />
+                          Campaign Title
+                        </label>
+                        <input
+                          type="text"
+                          className="field-input campaign-title-input"
+                          placeholder="Enter Campaign Title"
+                          value={campaignTitle}
+                          onChange={(e) => setCampaignTitle(e.target.value)}
                         />
-                      ) : (
-                        <div className="field-input read-only" style={{ 
-                          background: 'rgba(255, 255, 255, 0.03)', 
-                          color: 'rgba(255, 255, 255, 0.5)',
-                          fontSize: '0.85rem',
-                          padding: '0.6rem',
-                          borderRadius: '0.5rem',
-                          border: '1px solid rgba(255, 255, 255, 0.05)',
-                          fontFamily: 'monospace'
-                        }}>
-                          {availableAgents.length === 1 ? availableAgents[0].name : (agentId ? agentId.split('::')[0] : 'Not configured')}
+                      </div>
+
+                      {/* Agent Selection */}
+                      <div className="mgr-section agent-selector-wrapper">
+                        <label className="mgr-section-label">
+                          <Users size={14} />
+                          Select Agent
+                        </label>
+                        {availableAgents.length > 0 ? (
+                          <Dropdown
+                            value={agentId}
+                            onChange={(val) => {
+                              if (val === '__other__') {
+                                setShowCreateAgentModal(true);
+                              } else {
+                                setAgentId(val);
+                              }
+                            }}
+                            options={[
+                              ...availableAgents.map(agent => ({
+                                label: agent.name,
+                                value: `${agent.name}::${agent.id}`
+                              })),
+                              { label: '＋ Other (Create Agent)', value: '__other__' }
+                            ]}
+                          />
+                        ) : (
+                          <div className="field-input read-only" style={{ 
+                            background: 'rgba(255, 255, 255, 0.03)', 
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            fontSize: '0.85rem',
+                            padding: '0.6rem',
+                            borderRadius: '0.5rem',
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            fontFamily: 'monospace'
+                          }}>
+                            {availableAgents.length === 1 ? availableAgents[0].name : (agentId ? agentId.split('::')[0] : 'Not configured')}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Date & Time Selection */}
+                      <div className="mgr-section">
+                        <label className="mgr-section-label">
+                          <CalendarDays size={14} />
+                          Schedule Date & Time
+                        </label>
+                        <div className="schedule-datetime-row">
+                          <div className="schedule-field" style={{ flex: 1 }}>
+                            <DatePicker 
+                              value={scheduleDate} 
+                              onChange={(val) => setScheduleDate(val)}
+                              placeholder="Select date"
+                            />
+                          </div>
+                          <div className="schedule-field" style={{ width: '120px' }}>
+                            <TimePicker 
+                              value={scheduleTime} 
+                              onChange={(val) => setScheduleTime(val)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Upload Section */}
+                      <div className="mgr-section file-upload-section">
+                        <UploadPanel handleFile={handleFileWithTracking} />
+                      </div>
+
+                      {/* Agent Script Panel */}
+                      <AgentScriptPanel agentId={agentId} apiKey={apiKey} availableAgents={availableAgents} />
+
+                      {/* Uploaded Sheets Info */}
+                      {uploadCount > 0 && (
+                        <div className="mgr-session-info">
+                          <div className="session-info-row">
+                            <span className="session-info-label">Sheets Uploaded Today</span>
+                            <span className="session-info-value">{uploadCount}</span>
+                          </div>
+                          <div className="session-info-row">
+                            <span className="session-info-label">Last Upload</span>
+                            <span className="session-info-value">{lastUploadTime}</span>
+                          </div>
+                          <div className="session-info-row">
+                            <span className="session-info-label">Contacts Loaded</span>
+                            <span className="session-info-value">{sessionContacts.length}</span>
+                          </div>
                         </div>
                       )}
                     </div>
 
-                    {/* Date & Time Selection */}
-                    <div className="mgr-section">
-                      <label className="mgr-section-label">
-                        <CalendarDays size={14} />
-                        Schedule Date & Time
-                      </label>
-                      <div className="schedule-datetime-row">
-                        <div className="schedule-field" style={{ flex: 1 }}>
-                          <DatePicker 
-                            value={scheduleDate} 
-                            onChange={(val) => setScheduleDate(val)}
-                            placeholder="Select date"
+                    {/* === RIGHT PANEL: Contacts, Actions & Monitoring === */}
+                    <div className="manager-right-panel">
+                      
+                      {/* Contacts Table */}
+                      <ContactsTable 
+                        contacts={sessionContacts} 
+                        isCalling={isCalling}
+                        stopCalling={stopCalling}
+                      />
+
+                      {/* Action Row: Schedule button + Horizontal Navigation */}
+                      <div className="mgr-action-row">
+                        <div className="mgr-action-btn-wrap schedule-section">
+                           <ActionBar 
+                            isCalling={isCalling} 
+                            startCalling={() => {
+                              if (credits <= 0) {
+                                setLockFeatureName('Outreach Credits');
+                                setShowLockModal(true);
+                                return;
+                              }
+                              startCalling(campaignTitle, scheduleDate, scheduleTime);
+                            }} 
+                            contactsCount={sessionContacts.length} 
                           />
                         </div>
-                        <div className="schedule-field" style={{ width: '120px' }}>
-                          <TimePicker 
-                            value={scheduleTime} 
-                            onChange={(val) => setScheduleTime(val)}
-                          />
+
+                        <div className="mgr-nav-horizontal">
+                          {managerQuickNavItems.map((item) => (
+                            <button
+                              key={item.id}
+                              className={`mgr-nav-compact-item ${isShining ? 'shining' : ''}`}
+                              onClick={() => handleNavClick(item.id)}
+                              style={{ '--nav-accent': item.color }}
+                            >
+                              <div className="mgr-nav-compact-icon">{item.icon}</div>
+                              <span className="mgr-nav-compact-label">{item.label}</span>
+                            </button>
+                          ))}
                         </div>
                       </div>
+
+                      <CallFlowVisualization contacts={sessionContacts} agentId={agentId} isCalling={isCalling} callStartTime={callStartTime} />
                     </div>
-
-                    {/* Upload Section */}
-                    <div className="mgr-section">
-                      <UploadPanel handleFile={handleFileWithTracking} />
-                    </div>
-
-                    {/* Agent Script Panel */}
-                    <AgentScriptPanel agentId={agentId} apiKey={apiKey} availableAgents={availableAgents} />
-
-                    {/* Uploaded Sheets Info */}
-                    {uploadCount > 0 && (
-                      <div className="mgr-session-info">
-                        <div className="session-info-row">
-                          <span className="session-info-label">Sheets Uploaded Today</span>
-                          <span className="session-info-value">{uploadCount}</span>
-                        </div>
-                        <div className="session-info-row">
-                          <span className="session-info-label">Last Upload</span>
-                          <span className="session-info-value">{lastUploadTime}</span>
-                        </div>
-                        <div className="session-info-row">
-                          <span className="session-info-label">Contacts Loaded</span>
-                          <span className="session-info-value">{sessionContacts.length}</span>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
-                  {/* === RIGHT PANEL: Contacts, Actions & Monitoring === */}
-                  <div className="manager-right-panel">
-                    
-                    {/* Contacts Table */}
-                    <ContactsTable 
-                      contacts={sessionContacts} 
-                      isCalling={isCalling}
-                      stopCalling={stopCalling}
-                    />
-
-                    {/* Action Row: Schedule button + Horizontal Navigation */}
-                    <div className="mgr-action-row">
-                      <div className="mgr-action-btn-wrap">
-                         <ActionBar 
-                          isCalling={isCalling} 
-                          startCalling={() => {
-                            if (credits <= 0) {
-                              setLockFeatureName('Outreach Credits');
-                              setShowLockModal(true);
-                              return;
-                            }
-                            startCalling(campaignTitle, scheduleDate, scheduleTime);
-                          }} 
-                          contactsCount={sessionContacts.length} 
-                        />
-                      </div>
-
-                      <div className="mgr-nav-horizontal">
-                        {managerQuickNavItems.map((item) => (
-                          <button
-                            key={item.id}
-                            className={`mgr-nav-compact-item ${isShining ? 'shining' : ''}`}
-                            onClick={() => handleNavClick(item.id)}
-                            style={{ '--nav-accent': item.color }}
-                          >
-                            <div className="mgr-nav-compact-icon">{item.icon}</div>
-                            <span className="mgr-nav-compact-label">{item.label}</span>
-                          </button>
+                {/* Scheduled Calls Section - FULL WIDTH BELOW PANELS */}
+                {scheduledJobs && scheduledJobs.filter(j => j.status === 'Scheduled').length > 0 && (
+                  <div className="mgr-scheduled-section-full">
+                      <h3 className="mgr-section-title">
+                        <Clock size={18} />
+                        Scheduled Calls
+                      </h3>
+                      <div className="scheduled-jobs-list">
+                        {scheduledJobs.filter(j => j.status === 'Scheduled').map((job) => (
+                          <div key={job.id} className="scheduled-job-card">
+                            <div className="job-card-main">
+                              <div className="job-info">
+                                <span className="job-campaign">{job.campaignTitle}</span>
+                                <span className="job-agent">{job.agentName}</span>
+                              </div>
+                              <div className="job-timing">
+                                <div className="job-date">
+                                  <CalendarDays size={12} />
+                                  {new Date(job.scheduledAt).toLocaleDateString()}
+                                </div>
+                                <div className="job-time">
+                                  <Clock size={12} />
+                                  {new Date(job.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </div>
+                              <div className={`job-status status-${job.status.toLowerCase()}`}>
+                                {job.status}
+                              </div>
+                              {job.status === 'Scheduled' && (
+                                <button 
+                                  className="job-cancel-btn"
+                                  onClick={() => deleteScheduledJob(job.id)}
+                                  title="Cancel Schedule"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
+                  )}
+                </>
+              )}
 
-                    <CallFlowVisualization contacts={sessionContacts} agentId={agentId} isCalling={isCalling} callStartTime={callStartTime} />
-                  </div>
-                </div>
+              {activeView === 'details' && (
+                <CallDetailsView 
+                  contacts={allContacts}
+                  searchDate={searchDate}
+                  setSearchDate={setSearchDate}
+                  detailsStatusTab={detailsStatusTab}
+                  setDetailsStatusTab={setDetailsStatusTab}
+                  showProgress={showProgress}
+                  stats={stats}
+                  logs={logs}
+                  showDone={showDone}
+                  doneSummary={doneSummary}
+                  activeView={activeView}
+                  setActiveView={setActiveView}
+                  onRetryCalls={retryCalls}
+                  isCalling={isCalling}
+                />
+              )}
 
-              {/* Scheduled Calls Section - FULL WIDTH BELOW PANELS */}
-              {scheduledJobs && scheduledJobs.filter(j => j.status === 'Scheduled').length > 0 && (
-                <div className="mgr-scheduled-section-full">
-                    <h3 className="mgr-section-title">
-                      <Clock size={18} />
-                      Scheduled Calls
-                    </h3>
-                    <div className="scheduled-jobs-list">
-                      {scheduledJobs.filter(j => j.status === 'Scheduled').map((job) => (
-                        <div key={job.id} className="scheduled-job-card">
-                          <div className="job-card-main">
-                            <div className="job-info">
-                              <span className="job-campaign">{job.campaignTitle}</span>
-                              <span className="job-agent">{job.agentName}</span>
-                            </div>
-                            <div className="job-timing">
-                              <div className="job-date">
-                                <CalendarDays size={12} />
-                                {new Date(job.scheduledAt).toLocaleDateString()}
-                              </div>
-                              <div className="job-time">
-                                <Clock size={12} />
-                                {new Date(job.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                            </div>
-                            <div className={`job-status status-${job.status.toLowerCase()}`}>
-                              {job.status}
-                            </div>
-                            {job.status === 'Scheduled' && (
-                              <button 
-                                className="job-cancel-btn"
-                                onClick={() => deleteScheduledJob(job.id)}
-                                title="Cancel Schedule"
-                              >
-                                ×
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
+              {activeView === 'responses' && (
+                <ResponseAnalysisView 
+                  contacts={allContacts}
+                  responseTab={responseTab}
+                  setResponseTab={setResponseTab}
+                  searchDate={searchDate}
+                  setSearchDate={setSearchDate}
+                  stats={stats}
+                  activeView={activeView}
+                  setActiveView={setActiveView}
+                  onRetryCalls={retryCalls}
+                  isCalling={isCalling}
+                />
+              )}
 
-            {activeView === 'details' && (
-              <CallDetailsView 
-                contacts={allContacts}
-                searchDate={searchDate}
-                setSearchDate={setSearchDate}
-                detailsStatusTab={detailsStatusTab}
-                setDetailsStatusTab={setDetailsStatusTab}
-                showProgress={showProgress}
-                stats={stats}
-                logs={logs}
-                showDone={showDone}
-                doneSummary={doneSummary}
-                activeView={activeView}
-                setActiveView={setActiveView}
-                onRetryCalls={retryCalls}
-                isCalling={isCalling}
-              />
-            )}
+              {activeView === 'leads' && (
+                <LeadsView 
+                  contacts={allContacts}
+                  searchDate={searchDate}
+                  setSearchDate={setSearchDate}
+                  stats={stats}
+                  activeView={activeView}
+                  setActiveView={setActiveView}
+                  apiKey={apiKey}
+                />
+              )}
 
-            {activeView === 'responses' && (
-              <ResponseAnalysisView 
-                contacts={allContacts}
-                responseTab={responseTab}
-                setResponseTab={setResponseTab}
-                searchDate={searchDate}
-                setSearchDate={setSearchDate}
-                stats={stats}
-                activeView={activeView}
-                setActiveView={setActiveView}
-                onRetryCalls={retryCalls}
-                isCalling={isCalling}
-              />
-            )}
-            {activeView === 'leads' && (
-              <LeadsView 
-                contacts={allContacts}
-                searchDate={searchDate}
-                setSearchDate={setSearchDate}
-                stats={stats}
-                activeView={activeView}
-                setActiveView={setActiveView}
-                apiKey={apiKey}
-              />
-            )}
-            {activeView === 'campaign' && (
-              <CampaignView
-                contacts={allContacts}
-                campaigns={campaigns}
-                searchDate={searchDate}
-                setSearchDate={setSearchDate}
-                agentId={agentId}
-                activeView={activeView}
-                setActiveView={setActiveView}
-              />
-            )}
+              {activeView === 'campaign' && (
+                <CampaignView
+                  contacts={allContacts}
+                  campaigns={campaigns}
+                  searchDate={searchDate}
+                  setSearchDate={setSearchDate}
+                  agentId={agentId}
+                  activeView={activeView}
+                  setActiveView={setActiveView}
+                />
+              )}
 
-            {activeView === 'inbound' && (
-              <InboundView
-                inboundCalls={inboundCalls}
-                isLoading={isLoadingInbound}
-                onRefresh={refreshInbound}
-                activeView={activeView}
-                setActiveView={setActiveView}
-              />
-            )}
-            {activeView === 'report' && (
-              <ReportView
-                contacts={allContacts}
-                agentId={agentId}
-                searchDate={searchDate}
-                setSearchDate={setSearchDate}
-                stats={stats}
-                activeView={activeView}
-                setActiveView={setActiveView}
-              />
-            )}
-          </main>
+              {activeView === 'inbound' && (
+                <InboundView
+                  inboundCalls={inboundCalls}
+                  isLoading={isLoadingInbound}
+                  onRefresh={refreshInbound}
+                  activeView={activeView}
+                  setActiveView={setActiveView}
+                />
+              )}
+              {activeView === 'report' && (
+                <ReportView
+                  contacts={allContacts}
+                  agentId={agentId}
+                  searchDate={searchDate}
+                  setSearchDate={setSearchDate}
+                  stats={stats}
+                  activeView={activeView}
+                  setActiveView={setActiveView}
+                />
+              )}
+            </main>
+          </div>
         </div>
-      </div>
 
-      {/* Create Agent Modal */}
-      <CreateAgentModal
-        isOpen={showCreateAgentModal}
-        onClose={() => setShowCreateAgentModal(false)}
-        apiKey={apiKey}
-        onAgentCreated={addCustomAgent}
-      />
-      <LockedFeatureModal 
-        isOpen={showLockModal} 
-        onClose={() => setShowLockModal(false)} 
-        featureName={lockFeatureName} 
-        planRequired="Growth" 
-      />
-    </div>
+        {/* Create Agent Modal */}
+        <CreateAgentModal
+          isOpen={showCreateAgentModal}
+          onClose={() => setShowCreateAgentModal(false)}
+          apiKey={apiKey}
+          onAgentCreated={addCustomAgent}
+        />
+        <LockedFeatureModal 
+          isOpen={showLockModal} 
+          onClose={() => setShowLockModal(false)} 
+          featureName={lockFeatureName} 
+          planRequired="Growth" 
+        />
+      </div>
+    </TutorialProvider>
   );
 }

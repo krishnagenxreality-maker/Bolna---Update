@@ -97,7 +97,7 @@ export const ResponseAnalysisView = ({
         
         {/* LEFT COLUMN: Navigation & Metrics */}
         <div className="responses-left-column" style={{ width: '280px', flexShrink: 0 }}>
-          <div className="details-nav-matrix">
+          <div className="details-nav-matrix sidebar-nav">
             {navItems.map((item) => (
               <div 
                 key={item.id}
@@ -169,7 +169,7 @@ export const ResponseAnalysisView = ({
               </PanelHead>
 
               <div className="panel-body">
-                <div className="details-tabs">
+                <div className="details-tabs response-tab-switcher">
                   <button
                     className={`tab-btn ${!responseTab ? 'active' : ''}`}
                     onClick={() => setResponseTab(null)}

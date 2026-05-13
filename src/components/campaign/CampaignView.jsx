@@ -224,7 +224,7 @@ export const CampaignView = ({
         
         {/* LEFT COLUMN: Navigation & Metrics */}
         <div className="leads-left-column" style={{ width: '280px', flexShrink: 0 }}>
-          <div className="details-nav-matrix">
+          <div className="details-nav-matrix sidebar-nav">
             {navItems.map((item) => (
               <div 
                 key={item.id}
@@ -309,7 +309,7 @@ export const CampaignView = ({
             </PanelHead>
 
             <div className="panel-body">
-              <div className="details-table-scroll-container" style={{ flex: '0 0 auto', maxHeight: 'none' }}>
+              <div className="details-table-scroll-container campaign-table-section" style={{ flex: '0 0 auto', maxHeight: 'none' }}>
                 <div className="table-wrap">
                   <table className="ct">
                     <thead>
@@ -357,7 +357,7 @@ export const CampaignView = ({
                               </span>
                             </td>
                             <td>
-                              <span style={{
+                              <span className="campaign-status-badge" style={{
                                 display: 'inline-block',
                                 padding: '3px 10px',
                                 borderRadius: '100px',
