@@ -859,14 +859,23 @@ app.post('/api/inbound-calls/sync/:userId', async (req, res) => {
 
     const bolnaData = await bolnaRes.json();
     const calls = Array.isArray(bolnaData) ? bolnaData : [];
+    console.log(`[Inbound Sync] Found ${calls.length} calls in Bolna API for user ${userId}`);
     
     if (calls.length === 0) {
       // Return existing stored calls
-      const { data: existing } = await supabase
+      const { data: existing, error: fetchStoredError } = await supabase
         .from('inbound_calls')
         .select('*')
         .eq('user_id', userId)
         .order('call_date', { ascending: false });
+      
+      if (fetchStoredError) {
+        console.error('[Inbound Sync] Error fetching existing calls:', fetchStoredError.message);
+        // If table doesn't exist, this is where it will likely fail first
+        if (fetchStoredError.code === '42P01') {
+          return res.status(500).json({ success: false, message: 'Database table inbound_calls not found. Please create it using the provided SQL.' });
+        }
+      }
       return res.json({ success: true, calls: existing || [], synced: 0 });
     }
 
@@ -880,7 +889,6 @@ app.post('/api/inbound-calls/sync/:userId', async (req, res) => {
       if (call.summary) {
         const words = call.summary.split(/\s+/).filter(w => w.length > 2);
         if (words.length >= 2) {
-          // Capitalize first letter of each word
           reason = words.slice(0, 2).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
         } else if (words.length === 1) {
           reason = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
@@ -906,21 +914,28 @@ app.post('/api/inbound-calls/sync/:userId', async (req, res) => {
         .from('inbound_calls')
         .upsert(record, { onConflict: 'execution_id' });
 
-      if (!upsertError) syncedCount++;
-      else console.error('[Inbound Sync] Upsert error:', upsertError.message);
+      if (!upsertError) {
+        syncedCount++;
+      } else {
+        console.error(`[Inbound Sync] Upsert error for execution ${call.execution_id}:`, upsertError.message);
+      }
     }
 
     // Return all stored calls
-    const { data: allCalls } = await supabase
+    const { data: allCalls, error: finalFetchError } = await supabase
       .from('inbound_calls')
       .select('*')
       .eq('user_id', userId)
       .order('call_date', { ascending: false });
 
+    if (finalFetchError) {
+      console.error('[Inbound Sync] Final fetch error:', finalFetchError.message);
+    }
+
     res.json({ success: true, calls: allCalls || [], synced: syncedCount });
   } catch (err) {
-    console.error('[Inbound Sync] Error:', err.message);
-    res.status(500).json({ success: false, message: err.message, calls: [] });
+    console.error('[Inbound Sync] Critical Error:', err.message);
+    res.status(500).json({ success: false, message: `Internal server error: ${err.message}`, calls: [] });
   }
 });
 
