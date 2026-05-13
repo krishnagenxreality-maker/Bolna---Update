@@ -846,20 +846,50 @@ app.post('/api/inbound-calls/sync/:userId', async (req, res) => {
       return res.status(400).json({ success: false, message: 'User API key not found' });
     }
 
-    // Fetch inbound calls from Bolna API
-    const bolnaRes = await fetch('https://api.bolna.ai/executions?call_direction=inbound', {
-      headers: { 'Authorization': `Bearer ${user.bolna_api_key}` }
-    });
-
-    if (!bolnaRes.ok) {
-      const errText = await bolnaRes.text();
-      console.error('[Inbound Sync] Bolna API error:', bolnaRes.status, errText);
-      return res.status(502).json({ success: false, message: `Bolna API error: ${bolnaRes.status}` });
+    // Fetch inbound calls from all agents assigned to the user
+    let allBolnaCalls = [];
+    let agentIds = [];
+    
+    try {
+      if (user.bolna_agent_id) {
+        const parsed = JSON.parse(user.bolna_agent_id);
+        if (Array.isArray(parsed)) {
+          agentIds = parsed.map(a => a.id).filter(id => id);
+        } else if (typeof parsed === 'object' && parsed.id) {
+          agentIds = [parsed.id];
+        } else {
+          agentIds = [user.bolna_agent_id];
+        }
+      }
+    } catch (e) {
+      if (user.bolna_agent_id) agentIds = [user.bolna_agent_id];
     }
 
-    const bolnaData = await bolnaRes.json();
-    const calls = Array.isArray(bolnaData) ? bolnaData : [];
-    console.log(`[Inbound Sync] Found ${calls.length} calls in Bolna API for user ${userId}`);
+    if (agentIds.length === 0) {
+      console.warn(`[Inbound Sync] No agent IDs found for user ${userId}`);
+    }
+
+    for (const agentId of agentIds) {
+      try {
+        const bolnaRes = await fetch(`https://api.bolna.ai/agent/${agentId}/executions?call_type=inbound`, {
+          headers: { 'Authorization': `Bearer ${user.bolna_api_key}` }
+        });
+
+        if (bolnaRes.ok) {
+          const agentCalls = await bolnaRes.json();
+          if (Array.isArray(agentCalls)) {
+            allBolnaCalls = [...allBolnaCalls, ...agentCalls];
+          }
+        } else {
+          console.error(`[Inbound Sync] Bolna API error for agent ${agentId}:`, bolnaRes.status);
+        }
+      } catch (err) {
+        console.error(`[Inbound Sync] Fetch failed for agent ${agentId}:`, err.message);
+      }
+    }
+
+    const calls = allBolnaCalls;
+    console.log(`[Inbound Sync] Found total ${calls.length} calls in Bolna API for user ${userId}`);
     
     // Map Bolna data directly to the format expected by the frontend
     const mappedCalls = calls.map(call => {
@@ -874,11 +904,11 @@ app.post('/api/inbound-calls/sync/:userId', async (req, res) => {
       }
 
       return {
-        execution_id: call.execution_id,
+        execution_id: call.id || call.execution_id,
         caller_name: call.recipient_name || call.caller_name || 'Anonymous',
         caller_phone: call.recipient_phone_number || call.caller_phone || 'Unknown',
-        agent_name: call.agent_name || 'Default Agent',
-        agent_id: call.agent_id || user.bolna_agent_id || '',
+        agent_name: call.agent_name || 'Inbound Agent',
+        agent_id: call.agent_id || '',
         call_date: call.created_at || new Date().toISOString(),
         summary: call.summary || '',
         transcript: call.transcript || '',
