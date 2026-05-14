@@ -26,18 +26,28 @@ export const LeadsView = ({
   const ROWS_PER_PAGE = 7;
 
   // Filter by date
-  const filteredContacts = useMemo(() => contacts.filter(c => !searchDate || c.date === searchDate), [contacts, searchDate]);
+  const filteredContacts = useMemo(() => {
+    return contacts.filter(c => {
+      if (!searchDate) return true;
+      const contactDate = c.date ? c.date.split('T')[0] : '';
+      return contactDate === searchDate;
+    });
+  }, [contacts, searchDate]);
   
-  // Get all contacts that have a leadCategory (completed calls with AI analysis)
+  // Get all contacts that have a leadCategory or classification (completed calls with AI analysis)
   const categorizedContacts = useMemo(() => {
-    return filteredContacts.filter(c => c.leadCategory && c.leadCategory !== '');
+    return filteredContacts.filter(c => {
+      const category = c.leadCategory || c.classification;
+      return category && category !== '' && category.toLowerCase() !== 'no response';
+    });
   }, [filteredContacts]);
 
   // Dynamic unique categories
   const uniqueCategories = useMemo(() => {
     const cats = new Set();
     categorizedContacts.forEach(c => {
-      if (c.leadCategory) cats.add(c.leadCategory);
+      const category = c.leadCategory || c.classification;
+      if (category) cats.add(category);
     });
     return Array.from(cats).sort();
   }, [categorizedContacts]);
@@ -45,7 +55,7 @@ export const LeadsView = ({
   // Filter by selected category
   const filteredLeads = useMemo(() => {
     if (!selectedCategory) return categorizedContacts;
-    return categorizedContacts.filter(c => c.leadCategory === selectedCategory);
+    return categorizedContacts.filter(c => (c.leadCategory || c.classification) === selectedCategory);
   }, [categorizedContacts, selectedCategory]);
 
   // Reset page when filters change
@@ -62,8 +72,9 @@ export const LeadsView = ({
   const classificationData = useMemo(() => {
     const counts = {};
     categorizedContacts.forEach(c => {
-      if (c.leadCategory) {
-        counts[c.leadCategory] = (counts[c.leadCategory] || 0) + 1;
+      const category = c.leadCategory || c.classification;
+      if (category) {
+        counts[category] = (counts[category] || 0) + 1;
       }
     });
     return Object.keys(counts)
@@ -75,8 +86,12 @@ export const LeadsView = ({
   // Leads per day trend
   const leadsTrendData = useMemo(() => {
     const counts = {};
-    contacts.filter(c => c.leadCategory && c.leadCategory !== '').forEach(c => {
-      counts[c.date] = (counts[c.date] || 0) + 1;
+    contacts.filter(c => {
+      const category = c.leadCategory || c.classification;
+      return category && category !== '' && category.toLowerCase() !== 'no response';
+    }).forEach(c => {
+      const d = c.date ? c.date.split('T')[0] : '';
+      if (d) counts[d] = (counts[d] || 0) + 1;
     });
     return Object.keys(counts).sort().slice(-7).map(date => ({ date, count: counts[date] }));
   }, [contacts]);
@@ -109,7 +124,7 @@ export const LeadsView = ({
     setModalData({
       name: contact.name,
       phone: contact.phone,
-      category: contact.leadCategory,
+      category: contact.leadCategory || contact.classification,
       summary: contact.summary || 'No summary available.',
       recordingUrl: contact.recordingUrl || null,
       loading: false
@@ -312,10 +327,10 @@ export const LeadsView = ({
                                 onClick={() => handleCategoryClick(c)}
                                 title="Click to view details"
                               >
-                                {c.leadCategory || 'PENDING'}
+                                {c.leadCategory || c.classification || 'PENDING'}
                               </span>
                             </td>
-                            <td className="td-phone" style={{ fontSize: '11px' }}>{c.date}</td>
+                            <td className="td-phone" style={{ fontSize: '11px' }}>{c.date ? c.date.split('T')[0] : '-'}</td>
                           </tr>
                         ))}
                       </tbody>

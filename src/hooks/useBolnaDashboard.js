@@ -108,6 +108,7 @@ export function useBolnaDashboard() {
         axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`).then(res => {
           if (res.data && res.data.length > 0) {
             setContacts(res.data);
+            contactsRef.current = res.data; // Keep ref in sync
           }
         });
       }
@@ -514,9 +515,8 @@ export function useBolnaDashboard() {
     }
   }, [scheduledJobs, isCalling, apiKey, dispatchNextBatch, addLog, setAgentId]);
 
-  // Auto-select first response tab
   useEffect(() => {
-    if (activeView === "responses" && !responseTab && contacts.length > 0) {
+    if (activeView === "responses" && responseTab === "" && contacts.length > 0) {
       const uniqueResponses = Array.from(new Set(contacts.map(c => c.response).filter(r => r))).sort();
       if (uniqueResponses.length > 0) {
         setResponseTab(uniqueResponses[0]);

@@ -38,7 +38,8 @@ export const CallDetailsView = ({
   const filteredData = useMemo(() => {
     return contacts.filter(c => {
       const statusMatch = detailsStatusTab === 'all' || c.status === detailsStatusTab;
-      const dateMatch = !searchDate || c.date === searchDate;
+      const contactDate = c.date ? c.date.split('T')[0] : '';
+      const dateMatch = !searchDate || contactDate === searchDate;
       return statusMatch && dateMatch;
     });
   }, [contacts, detailsStatusTab, searchDate]);
@@ -48,14 +49,14 @@ export const CallDetailsView = ({
     return filteredData.filter(c => {
       const resp = (c.response || '').toLowerCase();
       const status = (c.status || '').toLowerCase();
-      return resp.includes('no answer') || resp.includes('no_answer') || resp.includes('busy') || status === 'failed';
+      return resp.includes('busy') || status === 'busy';
     });
   }, [filteredData]);
 
   const isRetryEligible = (contact) => {
     const resp = (contact.response || '').toLowerCase();
     const status = (contact.status || '').toLowerCase();
-    return resp.includes('no answer') || resp.includes('no_answer') || resp.includes('busy') || status === 'failed';
+    return resp.includes('busy') || status === 'busy';
   };
 
   const toggleRetrySelect = (id) => {
@@ -243,7 +244,7 @@ export const CallDetailsView = ({
                       <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
                         {selectedForRetry.length > 0 
                           ? `${selectedForRetry.length} selected` 
-                          : `${retryEligible.length} retry-eligible (Busy/No Answer)`}
+                          : `${retryEligible.length} retry-eligible (Busy)`}
                       </span>
                     </div>
                     {selectedForRetry.length > 0 && (
@@ -313,7 +314,7 @@ export const CallDetailsView = ({
                               <StatusPill status={c.status} />
                             </td>
                             <td className="td-response">{c.response || "-"}</td>
-                            <td className="td-phone" style={{ fontSize: '11px' }}>{c.date}</td>
+                            <td className="td-phone" style={{ fontSize: '11px' }}>{c.date ? c.date.split('T')[0] : '-'}</td>
                           </tr>
                         ))}
                       </tbody>

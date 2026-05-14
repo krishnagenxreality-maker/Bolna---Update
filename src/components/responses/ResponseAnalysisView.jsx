@@ -25,8 +25,17 @@ export const ResponseAnalysisView = ({
   const [currentPage, setCurrentPage] = useState(0);
   const ROWS_PER_PAGE = 7;
 
-  const filteredContacts = useMemo(() => contacts.filter(c => !searchDate || c.date === searchDate), [contacts, searchDate]);
-  const uniqueResponses = useMemo(() => Array.from(new Set(filteredContacts.map(c => c.response).filter(r => r))).sort(), [filteredContacts]);
+  const filteredContacts = useMemo(() => {
+    return contacts.filter(c => {
+      if (!searchDate) return true;
+      const contactDate = c.date ? c.date.split('T')[0] : '';
+      return contactDate === searchDate;
+    });
+  }, [contacts, searchDate]);
+
+  const uniqueResponses = useMemo(() => {
+    return Array.from(new Set(filteredContacts.map(c => c.response).filter(r => r))).sort();
+  }, [filteredContacts]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -252,7 +261,7 @@ export const ResponseAnalysisView = ({
                               <StatusPill status={c.status} />
                             </td>
                             <td className="td-response">{c.response || "-"}</td>
-                            <td className="td-phone" style={{ fontSize: '11px' }}>{c.date}</td>
+                            <td className="td-phone" style={{ fontSize: '11px' }}>{c.date ? c.date.split('T')[0] : '-'}</td>
                             <td></td>
                           </tr>
                         ))}
