@@ -40,6 +40,445 @@
         ]
       }
     },
+    "/demo_requests": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.company"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.website"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.business_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.use_cases"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.call_volume"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.languages"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.current_process"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.demo_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.demo_time"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.timezone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/demo_requests"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "demo_requests"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.demo_requests"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "demo_requests"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.company"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.website"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.business_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.use_cases"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.call_volume"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.languages"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.current_process"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.demo_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.demo_time"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.timezone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "demo_requests"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.company"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.website"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.business_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.use_cases"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.call_volume"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.languages"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.current_process"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.demo_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.demo_time"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.timezone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.demo_requests.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.demo_requests"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "demo_requests"
+        ]
+      }
+    },
+    "/scheduled_jobs": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.campaign_title"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.agent_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.agent_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.contacts"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.scheduled_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.api_key"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/scheduled_jobs"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "scheduled_jobs"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.scheduled_jobs"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "scheduled_jobs"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.campaign_title"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.agent_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.agent_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.contacts"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.scheduled_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.api_key"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "scheduled_jobs"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.campaign_title"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.agent_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.agent_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.contacts"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.scheduled_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.api_key"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.scheduled_jobs.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.scheduled_jobs"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "scheduled_jobs"
+        ]
+      }
+    },
     "/contacts": {
       "get": {
         "parameters": [
@@ -75,6 +514,21 @@
           },
           {
             "$ref": "#/parameters/rowFilter.contacts.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.contacts.recording_url"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.contacts.call_direction"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.contacts.agent_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.contacts.agent_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.contacts.call_reason"
           },
           {
             "$ref": "#/parameters/select"
@@ -173,6 +627,21 @@
             "$ref": "#/parameters/rowFilter.contacts.created_at"
           },
           {
+            "$ref": "#/parameters/rowFilter.contacts.recording_url"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.contacts.call_direction"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.contacts.agent_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.contacts.agent_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.contacts.call_reason"
+          },
+          {
             "$ref": "#/parameters/preferReturn"
           }
         ],
@@ -221,6 +690,21 @@
             "$ref": "#/parameters/rowFilter.contacts.created_at"
           },
           {
+            "$ref": "#/parameters/rowFilter.contacts.recording_url"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.contacts.call_direction"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.contacts.agent_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.contacts.agent_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.contacts.call_reason"
+          },
+          {
             "$ref": "#/parameters/body.contacts"
           },
           {
@@ -266,6 +750,9 @@
           },
           {
             "$ref": "#/parameters/rowFilter.leads.student_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.leads.lead_source"
           },
           {
             "$ref": "#/parameters/select"
@@ -358,6 +845,9 @@
             "$ref": "#/parameters/rowFilter.leads.student_id"
           },
           {
+            "$ref": "#/parameters/rowFilter.leads.lead_source"
+          },
+          {
             "$ref": "#/parameters/preferReturn"
           }
         ],
@@ -398,6 +888,9 @@
           },
           {
             "$ref": "#/parameters/rowFilter.leads.student_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.leads.lead_source"
           },
           {
             "$ref": "#/parameters/body.leads"
@@ -953,6 +1446,230 @@
         ]
       }
     },
+    "/inbound_calls": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.execution_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.caller_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.caller_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.agent_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.agent_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.call_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.summary"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.transcript"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.recording_url"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.reason"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/inbound_calls"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "inbound_calls"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.inbound_calls"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "inbound_calls"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.execution_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.caller_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.caller_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.agent_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.agent_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.call_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.summary"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.transcript"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.recording_url"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.reason"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "inbound_calls"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.execution_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.caller_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.caller_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.agent_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.agent_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.call_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.summary"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.transcript"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.recording_url"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.reason"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.inbound_calls.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.inbound_calls"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "inbound_calls"
+        ]
+      }
+    },
     "/reports": {
       "get": {
         "parameters": [
@@ -1245,6 +1962,203 @@
         },
         "tags": [
           "appointments"
+        ]
+      }
+    },
+    "/campaigns": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.campaign_title"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.campaign_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.uploaded_sheet_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.total_calls"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.selected_agent"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.campaign_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.credits_used"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.updated_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/campaigns"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "campaigns"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.campaigns"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "campaigns"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.campaign_title"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.campaign_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.uploaded_sheet_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.total_calls"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.selected_agent"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.campaign_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.credits_used"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.updated_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "campaigns"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.campaign_title"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.campaign_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.uploaded_sheet_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.total_calls"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.selected_agent"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.campaign_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.credits_used"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.campaigns.updated_at"
+          },
+          {
+            "$ref": "#/parameters/body.campaigns"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "campaigns"
         ]
       }
     },
@@ -1592,6 +2506,33 @@
             "$ref": "#/parameters/rowFilter.users.user_type"
           },
           {
+            "$ref": "#/parameters/rowFilter.users.selected_plan"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.total_credits"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.used_credits"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.remaining_credits"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.active_sessions"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.report_usage_weekly"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.report_usage_monthly"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.campaign_count"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.device_session"
+          },
+          {
             "$ref": "#/parameters/select"
           },
           {
@@ -1691,6 +2632,33 @@
             "$ref": "#/parameters/rowFilter.users.user_type"
           },
           {
+            "$ref": "#/parameters/rowFilter.users.selected_plan"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.total_credits"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.used_credits"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.remaining_credits"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.active_sessions"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.report_usage_weekly"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.report_usage_monthly"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.campaign_count"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.device_session"
+          },
+          {
             "$ref": "#/parameters/preferReturn"
           }
         ],
@@ -1742,6 +2710,33 @@
             "$ref": "#/parameters/rowFilter.users.user_type"
           },
           {
+            "$ref": "#/parameters/rowFilter.users.selected_plan"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.total_credits"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.used_credits"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.remaining_credits"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.active_sessions"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.report_usage_weekly"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.report_usage_monthly"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.campaign_count"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.users.device_session"
+          },
+          {
             "$ref": "#/parameters/body.users"
           },
           {
@@ -1757,9 +2752,327 @@
           "users"
         ]
       }
+    },
+    "/custom_agents": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.agent_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.script"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.script_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.bolna_agent_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.voice_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.voice_name"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/custom_agents"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "custom_agents"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.custom_agents"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "custom_agents"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.agent_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.script"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.script_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.bolna_agent_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.voice_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.voice_name"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "custom_agents"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.agent_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.script"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.script_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.bolna_agent_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.voice_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.custom_agents.voice_name"
+          },
+          {
+            "$ref": "#/parameters/body.custom_agents"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "custom_agents"
+        ]
+      }
     }
   },
   "definitions": {
+    "demo_requests": {
+      "required": [
+        "id",
+        "full_name",
+        "company",
+        "email",
+        "phone"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "full_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "company": {
+          "format": "text",
+          "type": "string"
+        },
+        "email": {
+          "format": "text",
+          "type": "string"
+        },
+        "phone": {
+          "format": "text",
+          "type": "string"
+        },
+        "website": {
+          "format": "text",
+          "type": "string"
+        },
+        "business_type": {
+          "format": "text",
+          "type": "string"
+        },
+        "use_cases": {
+          "format": "jsonb"
+        },
+        "call_volume": {
+          "format": "text",
+          "type": "string"
+        },
+        "languages": {
+          "format": "jsonb"
+        },
+        "current_process": {
+          "format": "text",
+          "type": "string"
+        },
+        "demo_date": {
+          "format": "text",
+          "type": "string"
+        },
+        "demo_time": {
+          "format": "text",
+          "type": "string"
+        },
+        "timezone": {
+          "format": "text",
+          "type": "string"
+        },
+        "notes": {
+          "format": "text",
+          "type": "string"
+        },
+        "status": {
+          "default": "Pending",
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "CURRENT_TIMESTAMP",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "scheduled_jobs": {
+      "required": [
+        "id",
+        "campaign_title",
+        "agent_id",
+        "contacts",
+        "scheduled_at",
+        "api_key",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "text",
+          "type": "string"
+        },
+        "user_id": {
+          "description": "Note:\nThis is a Foreign Key to `users.user_id`.<fk table='users' column='user_id'/>",
+          "format": "text",
+          "type": "string"
+        },
+        "campaign_title": {
+          "format": "text",
+          "type": "string"
+        },
+        "agent_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "agent_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "contacts": {
+          "format": "jsonb"
+        },
+        "scheduled_at": {
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "api_key": {
+          "format": "text",
+          "type": "string"
+        },
+        "status": {
+          "default": "Scheduled",
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "contacts": {
       "required": [
         "id"
@@ -1812,6 +3125,27 @@
           "default": "now()",
           "format": "timestamp with time zone",
           "type": "string"
+        },
+        "recording_url": {
+          "format": "text",
+          "type": "string"
+        },
+        "call_direction": {
+          "default": "outbound",
+          "format": "text",
+          "type": "string"
+        },
+        "agent_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "agent_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "call_reason": {
+          "format": "text",
+          "type": "string"
         }
       },
       "type": "object"
@@ -1861,6 +3195,11 @@
         "student_id": {
           "description": "Note:\nThis is a Foreign Key to `students.id`.<fk table='students' column='id'/>",
           "format": "uuid",
+          "type": "string"
+        },
+        "lead_source": {
+          "default": "outbound",
+          "format": "text",
           "type": "string"
         }
       },
@@ -2020,6 +3359,77 @@
       },
       "type": "object"
     },
+    "inbound_calls": {
+      "required": [
+        "id",
+        "user_id",
+        "execution_id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "integer",
+          "type": "integer"
+        },
+        "user_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "execution_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "caller_name": {
+          "default": "Anonymous",
+          "format": "text",
+          "type": "string"
+        },
+        "caller_phone": {
+          "format": "text",
+          "type": "string"
+        },
+        "agent_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "agent_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "call_date": {
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "summary": {
+          "format": "text",
+          "type": "string"
+        },
+        "transcript": {
+          "format": "text",
+          "type": "string"
+        },
+        "recording_url": {
+          "format": "text",
+          "type": "string"
+        },
+        "reason": {
+          "default": "Inbound Call",
+          "format": "text",
+          "type": "string"
+        },
+        "status": {
+          "default": "completed",
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "reports": {
       "required": [
         "id"
@@ -2084,6 +3494,68 @@
           "type": "string"
         },
         "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "campaigns": {
+      "required": [
+        "id",
+        "campaign_title",
+        "campaign_date",
+        "campaign_status"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "text",
+          "type": "string"
+        },
+        "user_id": {
+          "description": "Note:\nThis is a Foreign Key to `users.user_id`.<fk table='users' column='user_id'/>",
+          "format": "text",
+          "type": "string"
+        },
+        "campaign_title": {
+          "format": "text",
+          "type": "string"
+        },
+        "campaign_date": {
+          "format": "text",
+          "type": "string"
+        },
+        "uploaded_sheet_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "total_calls": {
+          "default": 0,
+          "format": "integer",
+          "type": "integer"
+        },
+        "selected_agent": {
+          "format": "text",
+          "type": "string"
+        },
+        "campaign_status": {
+          "default": "Scheduled",
+          "format": "text",
+          "type": "string"
+        },
+        "credits_used": {
+          "default": 0,
+          "format": "integer",
+          "type": "integer"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
           "default": "now()",
           "format": "timestamp with time zone",
           "type": "string"
@@ -2228,6 +3700,102 @@
           "default": "regular",
           "format": "text",
           "type": "string"
+        },
+        "selected_plan": {
+          "default": "Starter",
+          "format": "text",
+          "type": "string"
+        },
+        "total_credits": {
+          "default": 2000,
+          "format": "integer",
+          "type": "integer"
+        },
+        "used_credits": {
+          "default": 0,
+          "format": "integer",
+          "type": "integer"
+        },
+        "remaining_credits": {
+          "default": 2000,
+          "format": "integer",
+          "type": "integer"
+        },
+        "active_sessions": {
+          "default": 0,
+          "format": "integer",
+          "type": "integer"
+        },
+        "report_usage_weekly": {
+          "default": 0,
+          "format": "integer",
+          "type": "integer"
+        },
+        "report_usage_monthly": {
+          "default": 0,
+          "format": "integer",
+          "type": "integer"
+        },
+        "campaign_count": {
+          "default": 0,
+          "format": "integer",
+          "type": "integer"
+        },
+        "device_session": {
+          "format": "text",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "custom_agents": {
+      "required": [
+        "id",
+        "agent_name",
+        "script",
+        "script_type",
+        "bolna_agent_id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "integer",
+          "type": "integer"
+        },
+        "user_id": {
+          "description": "Note:\nThis is a Foreign Key to `users.user_id`.<fk table='users' column='user_id'/>",
+          "format": "text",
+          "type": "string"
+        },
+        "agent_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "script": {
+          "format": "text",
+          "type": "string"
+        },
+        "script_type": {
+          "default": "manual",
+          "format": "text",
+          "type": "string"
+        },
+        "bolna_agent_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "voice_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "voice_name": {
+          "format": "text",
+          "type": "string"
         }
       },
       "type": "object"
@@ -2327,6 +3895,186 @@
       "in": "query",
       "type": "string"
     },
+    "body.demo_requests": {
+      "name": "demo_requests",
+      "description": "demo_requests",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/demo_requests"
+      }
+    },
+    "rowFilter.demo_requests.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.full_name": {
+      "name": "full_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.company": {
+      "name": "company",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.email": {
+      "name": "email",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.phone": {
+      "name": "phone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.website": {
+      "name": "website",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.business_type": {
+      "name": "business_type",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.use_cases": {
+      "name": "use_cases",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.call_volume": {
+      "name": "call_volume",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.languages": {
+      "name": "languages",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.current_process": {
+      "name": "current_process",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.demo_date": {
+      "name": "demo_date",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.demo_time": {
+      "name": "demo_time",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.timezone": {
+      "name": "timezone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.notes": {
+      "name": "notes",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.demo_requests.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.scheduled_jobs": {
+      "name": "scheduled_jobs",
+      "description": "scheduled_jobs",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/scheduled_jobs"
+      }
+    },
+    "rowFilter.scheduled_jobs.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.scheduled_jobs.user_id": {
+      "name": "user_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.scheduled_jobs.campaign_title": {
+      "name": "campaign_title",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.scheduled_jobs.agent_id": {
+      "name": "agent_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.scheduled_jobs.agent_name": {
+      "name": "agent_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.scheduled_jobs.contacts": {
+      "name": "contacts",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.scheduled_jobs.scheduled_at": {
+      "name": "scheduled_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.scheduled_jobs.api_key": {
+      "name": "api_key",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.scheduled_jobs.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.scheduled_jobs.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
     "body.contacts": {
       "name": "contacts",
       "description": "contacts",
@@ -2402,6 +4150,36 @@
       "in": "query",
       "type": "string"
     },
+    "rowFilter.contacts.recording_url": {
+      "name": "recording_url",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.contacts.call_direction": {
+      "name": "call_direction",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.contacts.agent_id": {
+      "name": "agent_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.contacts.agent_name": {
+      "name": "agent_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.contacts.call_reason": {
+      "name": "call_reason",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
     "body.leads": {
       "name": "leads",
       "description": "leads",
@@ -2461,6 +4239,12 @@
     },
     "rowFilter.leads.student_id": {
       "name": "student_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.leads.lead_source": {
+      "name": "lead_source",
       "required": false,
       "in": "query",
       "type": "string"
@@ -2654,6 +4438,99 @@
       "in": "query",
       "type": "string"
     },
+    "body.inbound_calls": {
+      "name": "inbound_calls",
+      "description": "inbound_calls",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/inbound_calls"
+      }
+    },
+    "rowFilter.inbound_calls.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.inbound_calls.user_id": {
+      "name": "user_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.inbound_calls.execution_id": {
+      "name": "execution_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.inbound_calls.caller_name": {
+      "name": "caller_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.inbound_calls.caller_phone": {
+      "name": "caller_phone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.inbound_calls.agent_name": {
+      "name": "agent_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.inbound_calls.agent_id": {
+      "name": "agent_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.inbound_calls.call_date": {
+      "name": "call_date",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.inbound_calls.summary": {
+      "name": "summary",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.inbound_calls.transcript": {
+      "name": "transcript",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.inbound_calls.recording_url": {
+      "name": "recording_url",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.inbound_calls.reason": {
+      "name": "reason",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.inbound_calls.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.inbound_calls.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
     "body.reports": {
       "name": "reports",
       "description": "reports",
@@ -2734,6 +4611,81 @@
     },
     "rowFilter.appointments.created_at": {
       "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.campaigns": {
+      "name": "campaigns",
+      "description": "campaigns",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/campaigns"
+      }
+    },
+    "rowFilter.campaigns.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.campaigns.user_id": {
+      "name": "user_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.campaigns.campaign_title": {
+      "name": "campaign_title",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.campaigns.campaign_date": {
+      "name": "campaign_date",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.campaigns.uploaded_sheet_name": {
+      "name": "uploaded_sheet_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.campaigns.total_calls": {
+      "name": "total_calls",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.campaigns.selected_agent": {
+      "name": "selected_agent",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.campaigns.campaign_status": {
+      "name": "campaign_status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.campaigns.credits_used": {
+      "name": "credits_used",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.campaigns.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.campaigns.updated_at": {
+      "name": "updated_at",
       "required": false,
       "in": "query",
       "type": "string"
@@ -2905,6 +4857,123 @@
     },
     "rowFilter.users.user_type": {
       "name": "user_type",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.users.selected_plan": {
+      "name": "selected_plan",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.users.total_credits": {
+      "name": "total_credits",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.users.used_credits": {
+      "name": "used_credits",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.users.remaining_credits": {
+      "name": "remaining_credits",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.users.active_sessions": {
+      "name": "active_sessions",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.users.report_usage_weekly": {
+      "name": "report_usage_weekly",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.users.report_usage_monthly": {
+      "name": "report_usage_monthly",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.users.campaign_count": {
+      "name": "campaign_count",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.users.device_session": {
+      "name": "device_session",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.custom_agents": {
+      "name": "custom_agents",
+      "description": "custom_agents",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/custom_agents"
+      }
+    },
+    "rowFilter.custom_agents.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.custom_agents.user_id": {
+      "name": "user_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.custom_agents.agent_name": {
+      "name": "agent_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.custom_agents.script": {
+      "name": "script",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.custom_agents.script_type": {
+      "name": "script_type",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.custom_agents.bolna_agent_id": {
+      "name": "bolna_agent_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.custom_agents.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.custom_agents.voice_id": {
+      "name": "voice_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.custom_agents.voice_name": {
+      "name": "voice_name",
       "required": false,
       "in": "query",
       "type": "string"

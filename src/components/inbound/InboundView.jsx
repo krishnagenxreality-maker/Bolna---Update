@@ -1,9 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Panel, PanelHead } from '../ui/Panel';
 import { DatePicker } from '../ui/DatePicker';
+import { analyzeSummaryWithDeepSeek } from '../../services/api';
+import { DEEPSEEK_API_KEY } from '../../utils/constants';
 import { 
   PhoneIncoming, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, 
-  RefreshCw, CalendarDays, PhoneCall, Megaphone, X, FileText, Play, Clock
+  RefreshCw, CalendarDays, PhoneCall, Megaphone, X, FileText, Play, Clock, Phone, User
 } from 'lucide-react';
 
 const SummaryModal = ({ call, isOpen, onClose }) => {
@@ -99,6 +101,107 @@ const SummaryModal = ({ call, isOpen, onClose }) => {
   );
 };
 
+const InboundCard = ({ call, onClick, onTitleGenerated }) => {
+  const [aiTitle, setAiTitle] = useState(call.reason || '');
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    const generateTitle = async () => {
+      const isGeneric = !call.reason || 
+                        call.reason.toLowerCase() === 'conversation' || 
+                        call.reason.toLowerCase() === 'inbound call';
+
+      if (isGeneric && call.summary && DEEPSEEK_API_KEY) {
+        setIsGenerating(true);
+        try {
+          const title = await analyzeSummaryWithDeepSeek(DEEPSEEK_API_KEY, call.summary);
+          // Try to limit to 2 words if it's too long
+          const words = title.split(' ');
+          const finalTitle = words.length > 2 ? words.slice(0, 2).join(' ') : title;
+          setAiTitle(finalTitle);
+          if (onTitleGenerated) onTitleGenerated(call.execution_id, finalTitle);
+        } catch (e) {
+          console.error("Failed to generate AI title", e);
+        } finally {
+          setIsGenerating(false);
+        }
+      }
+    };
+    generateTitle();
+  }, [call.reason, call.summary]);
+
+  return (
+    <div 
+      className="inbound-grid-card" 
+      onClick={() => onClick(call)}
+      style={{
+        background: 'rgba(255, 255, 255, 0.03)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        borderRadius: '16px',
+        padding: '20px',
+        cursor: 'pointer',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+        e.currentTarget.style.transform = 'translateY(-4px)';
+        e.currentTarget.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.3)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{
+          width: '32px', height: '32px', borderRadius: '8px',
+          background: 'rgba(96, 165, 250, 0.1)', color: '#60a5fa',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <PhoneIncoming size={16} />
+        </div>
+        <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.2)', fontFamily: 'JetBrains Mono' }}>
+          {new Date(call.call_date || call.created_at).toLocaleDateString()}
+        </div>
+      </div>
+
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Phone size={12} style={{ color: 'rgba(255, 255, 255, 0.3)' }} />
+          <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.4)', fontFamily: 'JetBrains Mono' }}>
+            {call.caller_phone || 'Unknown'}
+          </span>
+        </div>
+      </div>
+
+      <div style={{ 
+        marginTop: 'auto', 
+        paddingTop: '16px', 
+        borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <span style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255, 255, 255, 0.2)' }}>Outcome</span>
+          <span className="spill s-blue" style={{ fontSize: '10px', fontWeight: '600' }}>
+            {isGenerating ? 'Analyzing...' : (aiTitle || 'Inbound Call')}
+          </span>
+        </div>
+        <FileText size={14} style={{ color: 'rgba(255, 255, 255, 0.2)' }} />
+      </div>
+    </div>
+  );
+};
+
 export const InboundView = ({ 
   inboundCalls, 
   isLoading, 
@@ -110,7 +213,7 @@ export const InboundView = ({
   const [searchDate, setSearchDate] = useState('');
   const [selectedCall, setSelectedCall] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const ROWS_PER_PAGE = 7;
+  const CARDS_PER_PAGE = 8;
 
   // Refresh on mount if empty
   useEffect(() => {
@@ -133,12 +236,12 @@ export const InboundView = ({
     setCurrentPage(0);
   }, [searchDate]);
 
-  const totalPages = Math.ceil(filteredData.length / ROWS_PER_PAGE);
-  const currentRows = useMemo(() => {
-    return filteredData.slice(currentPage * ROWS_PER_PAGE, (currentPage + 1) * ROWS_PER_PAGE);
+  const totalPages = Math.ceil(filteredData.length / CARDS_PER_PAGE);
+  const currentCards = useMemo(() => {
+    return filteredData.slice(currentPage * CARDS_PER_PAGE, (currentPage + 1) * CARDS_PER_PAGE);
   }, [filteredData, currentPage]);
 
-  const handleReasonClick = (call) => {
+  const handleCardClick = (call) => {
     setSelectedCall(call);
     setIsModalOpen(true);
   };
@@ -164,9 +267,9 @@ export const InboundView = ({
 
       {/* Page Heading Section */}
       <div className="details-header-section">
-        <h1 className="details-main-heading">Inbound Calls</h1>
+        <h1 className="details-main-heading">Inbound Experience</h1>
         <p className="details-sub-heading">
-          Track and monitor all incoming calls. Review agent assignments, call dates, and concise reasoning for each interaction.
+          A visual grid of all incoming customer interactions. AI-powered summaries provide instant context for every call.
         </p>
       </div>
 
@@ -187,29 +290,17 @@ export const InboundView = ({
             ))}
           </div>
 
-          {/* Metrics Snapshot */}
-          <div className="details-metrics-grid">
-            <div className="mini-metric-card">
-              <div className="metric-icon-wrap" style={{ color: '#3b82f6' }}>
-                <PhoneIncoming size={14} />
-              </div>
-              <div className="metric-info">
-                <div className="metric-value">{inboundCalls.length}</div>
-                <div className="metric-label">Total Inbound</div>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* MAIN CONTENT: Table */}
+        {/* MAIN CONTENT: Grid */}
         <div className="details-main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
           
-          <div className="details-table-section inbound-table-section" style={{ width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
+          <div className="inbound-grid-section" style={{ width: '100%', maxWidth: '1200px', margin: '0 auto' }}>
             <Panel>
               <PanelHead>
                 <div className="panel-label" style={{marginBottom:0}}>
                   <span className="label-dot" />
-                  Inbound Call Log
+                  Live Inbound Feed
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <button 
@@ -233,98 +324,75 @@ export const InboundView = ({
                 </div>
               </PanelHead>
 
-              <div className="panel-body">
-                <div className="details-table-scroll-container" style={{ flex: '0 0 auto', maxHeight: 'none' }}>
-                  <div className="table-wrap">
-                    <table className="ct">
-                      <thead>
-                        <tr>
-                          <th>#</th>
-                          <th>Name</th>
-                          <th>Phone Number</th>
-                          <th>Agent Name</th>
-                          <th>Date</th>
-                          <th>Reason</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {currentRows.map((c, i) => (
-                          <tr key={c.execution_id || i}>
-                            <td className="td-num">{currentPage * ROWS_PER_PAGE + i + 1}</td>
-                            <td className="td-name">{c.caller_name || 'Anonymous'}</td>
-                            <td className="td-phone">{c.caller_phone || 'Unknown'}</td>
-                            <td className="td-name" style={{ fontSize: '12px', opacity: 0.8 }}>
-                              {c.agent_name || c.agent_id?.slice(0, 8) || 'N/A'}
-                            </td>
-                            <td className="td-phone" style={{ fontSize: '11px' }}>
-                              {new Date(c.call_date || c.created_at).toLocaleDateString()}
-                            </td>
-                            <td>
-                              <span 
-                                className="spill s-blue" 
-                                style={{ fontSize: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                onClick={() => handleReasonClick(c)}
-                              >
-                                {c.reason || 'Inbound Call'}
-                                <FileText size={10} style={{ opacity: 0.6 }} />
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {filteredData.length === 0 && !isLoading && (
-                      <div className="no-data" style={{ padding: '40px', textAlign: 'center', opacity: 0.5 }}>
-                        No inbound calls found.
-                      </div>
-                    )}
-                    {isLoading && filteredData.length === 0 && (
-                      <div className="no-data" style={{ padding: '40px', textAlign: 'center', opacity: 0.5 }}>
-                        Fetching inbound data...
-                      </div>
-                    )}
+              <div className="panel-body" style={{ padding: '24px' }}>
+                {isLoading && filteredData.length === 0 ? (
+                  <div style={{ padding: '80px 0', textAlign: 'center', color: 'rgba(255, 255, 255, 0.3)' }}>
+                    <RefreshCw size={32} className="spin-anim" style={{ marginBottom: '16px' }} />
+                    <div>Syncing with Bolna AI...</div>
                   </div>
-                </div>
+                ) : filteredData.length === 0 ? (
+                  <div style={{ padding: '80px 0', textAlign: 'center', color: 'rgba(255, 255, 255, 0.2)' }}>
+                    <PhoneIncoming size={32} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                    <div>No inbound interactions found for this period.</div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', 
+                      gap: '20px',
+                      marginBottom: '24px'
+                    }}>
+                      {currentCards.map((call, i) => (
+                        <InboundCard 
+                          key={call.execution_id || i} 
+                          call={call} 
+                          onClick={handleCardClick} 
+                        />
+                      ))}
+                    </div>
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between', 
-                    marginTop: '12px',
-                    padding: '0 4px 12px'
-                  }}>
-                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono' }}>
-                      Showing {currentPage * ROWS_PER_PAGE + 1}-{Math.min((currentPage + 1) * ROWS_PER_PAGE, filteredData.length)} of {filteredData.length}
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                        disabled={currentPage === 0}
-                        className="nav-btn"
-                        style={{ 
-                          padding: '6px', borderRadius: '6px', 
-                          opacity: currentPage === 0 ? 0.3 : 1,
-                          cursor: currentPage === 0 ? 'not-allowed' : 'pointer'
-                        }}
-                      >
-                        <ChevronLeft size={16} />
-                      </button>
-                      <button 
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
-                        disabled={currentPage === totalPages - 1}
-                        className="nav-btn"
-                        style={{ 
-                          padding: '6px', borderRadius: '6px', 
-                          opacity: currentPage === totalPages - 1 ? 0.3 : 1,
-                          cursor: currentPage === totalPages - 1 ? 'not-allowed' : 'pointer'
-                        }}
-                      >
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
-                  </div>
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between', 
+                        paddingTop: '20px',
+                        borderTop: '1px solid rgba(255,255,255,0.05)'
+                      }}>
+                        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono' }}>
+                          Showing {currentPage * CARDS_PER_PAGE + 1}-{Math.min((currentPage + 1) * CARDS_PER_PAGE, filteredData.length)} of {filteredData.length}
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button 
+                            onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                            disabled={currentPage === 0}
+                            className="nav-btn"
+                            style={{ 
+                              padding: '8px', borderRadius: '8px', 
+                              opacity: currentPage === 0 ? 0.3 : 1,
+                              cursor: currentPage === 0 ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            <ChevronLeft size={18} />
+                          </button>
+                          <button 
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                            disabled={currentPage === totalPages - 1}
+                            className="nav-btn"
+                            style={{ 
+                              padding: '8px', borderRadius: '8px', 
+                              opacity: currentPage === totalPages - 1 ? 0.3 : 1,
+                              cursor: currentPage === totalPages - 1 ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            <ChevronRight size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </Panel>

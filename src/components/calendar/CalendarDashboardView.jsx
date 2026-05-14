@@ -7,6 +7,7 @@ import './CalendarDashboardView.css';
 
 export const CalendarDashboardView = ({ 
   contacts, 
+  inboundCalls = [],
   agentId, 
   setAgentId, 
   availableAgents, 
@@ -89,7 +90,13 @@ export const CalendarDashboardView = ({
     const dateStr = formatDateString(day);
     const dayContacts = activeContacts.filter(c => c.date === dateStr);
     
-    if (dayContacts.length === 0) return null;
+    // Inbound calls for this day
+    const dayInbound = inboundCalls.filter(c => {
+      const callDate = new Date(c.call_date || c.created_at).toISOString().split('T')[0];
+      return callDate === dateStr;
+    });
+    
+    if (dayContacts.length === 0 && dayInbound.length === 0) return null;
 
     const total = dayContacts.length;
     const completed = dayContacts.filter(c => c.status === 'completed' || c.status === 'called').length;
@@ -112,7 +119,12 @@ export const CalendarDashboardView = ({
       (c.response?.toLowerCase().includes('reschedule'))
     ).length;
 
-    return { total, completed, busy, interested, notInterested, rescheduled };
+    return { 
+      total, completed, busy, interested, notInterested, rescheduled,
+      hasInbound: dayInbound.length > 0,
+      inboundCount: dayInbound.length,
+      hasOutbound: dayContacts.length > 0
+    };
   };
 
   const renderCells = () => {
@@ -144,11 +156,18 @@ export const CalendarDashboardView = ({
         >
           <div className="cdv-cell-header">
             <span className="cdv-day-num">{i}</span>
-            {stats && (
-              <span className="cdv-call-count">
-                <Phone size={10} /> {stats.total}
-              </span>
-            )}
+            <div className="cdv-markers-wrap" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+              {stats?.hasOutbound && (
+                <span className="cdv-call-count outbound" style={{ color: '#7dffb3', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                  <Phone size={8} /> {stats.total}
+                </span>
+              )}
+              {stats?.hasInbound && (
+                <span className="cdv-call-count inbound" style={{ color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                  <PhoneIncoming size={8} /> {stats.inboundCount}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       );

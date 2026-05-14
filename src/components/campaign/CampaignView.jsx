@@ -76,9 +76,19 @@ export const CampaignView = ({
     if (!campaigns || campaigns.length === 0) return [];
 
     return campaigns.map(camp => {
-      // We still use contacts to get real-time call counts if possible
-      // but the core data comes from the campaign record
-      const matchedContacts = contacts.filter(c => c.agentId === camp.agentId || c.agentName === camp.agentName);
+      const rawAgent = camp.agentName || 'Default Agent';
+      const campAgentId = camp.agentId || (rawAgent.includes('::') ? rawAgent : '');
+      const campAgentName = rawAgent.includes('::') ? rawAgent.split('::')[0] : rawAgent;
+
+      // Extract just the ID part for robust matching
+      const campIdOnly = campAgentId.includes('::') ? campAgentId.split('::')[1] : campAgentId;
+
+      const matchedContacts = contacts.filter(c => {
+        const cIdOnly = (c.agentId || '').includes('::') ? c.agentId.split('::')[1] : c.agentId;
+        const cNameOnly = (c.agentName || '').includes('::') ? c.agentName.split('::')[0] : (c.agentName || '');
+        
+        return (campIdOnly && cIdOnly === campIdOnly) || (campAgentName && cNameOnly === campAgentName);
+      });
       
       const completedCalls = matchedContacts.filter(c => c.status === 'called' || c.status === 'completed').length;
       const noAnswer = matchedContacts.filter(c => (c.status || '').includes('no answer') || (c.response || '').includes('no answer')).length;
@@ -107,8 +117,8 @@ export const CampaignView = ({
         busy,
         failed,
         creditsUsed: camp.creditsUsed || creditsUsed,
-        agentName: camp.agentName || 'Default Agent',
-        agentId: camp.agentId || '',
+        agentName: campAgentName,
+        agentId: campAgentId,
         status: displayStatus,
         callSummaries,
         contacts: matchedContacts,

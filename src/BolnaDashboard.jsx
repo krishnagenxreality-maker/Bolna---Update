@@ -145,6 +145,7 @@ export default function BolnaDashboard() {
               {activeView === 'calendar' && (
                 <CalendarDashboardView
                   contacts={allContacts}
+                  inboundCalls={inboundCalls}
                   agentId={agentId}
                   setAgentId={setAgentId}
                   availableAgents={availableAgents}

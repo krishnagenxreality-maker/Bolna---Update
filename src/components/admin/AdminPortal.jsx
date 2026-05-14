@@ -939,10 +939,9 @@ export default function AdminPortal() {
                           />
                         ) : (
                           <select
-                            className="field-input"
+                            className="field-input select-custom"
                             value={formData.selectedPlan}
                             onChange={e => setFormData(prev => ({ ...prev, selectedPlan: e.target.value }))}
-                            style={{ appearance: 'auto' }}
                           >
                             <option value="Starter">Starter (2k Credits)</option>
                             <option value="Growth">Growth (6k Credits)</option>
@@ -962,10 +961,9 @@ export default function AdminPortal() {
                           />
                         ) : (
                           <select
-                            className="field-input"
+                            className="field-input select-custom"
                             value={formData.userType}
                             onChange={e => setFormData(prev => ({ ...prev, userType: e.target.value }))}
-                            style={{ appearance: 'auto' }}
                           >
                             <option value="regular">Regular</option>
                             <option value="education">Education</option>

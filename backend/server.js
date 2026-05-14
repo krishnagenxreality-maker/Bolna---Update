@@ -903,10 +903,21 @@ app.post('/api/inbound-calls/sync/:userId', async (req, res) => {
         }
       }
 
+      // If Bolna returns a generic "Conversation" as summary or it was parsed as such
+      if (reason.toLowerCase() === 'conversation') reason = 'Inbound Call';
+
       return {
         execution_id: call.id || call.execution_id,
         caller_name: call.recipient_name || call.caller_name || 'Anonymous',
-        caller_phone: call.recipient_phone_number || call.caller_phone || 'Unknown',
+        caller_phone: 
+          call.telephony_data?.caller_id || 
+          call.telephony_data?.from_number ||
+          call.from || 
+          call.caller_number || 
+          call.phone_number || 
+          call.recipient_phone_number || 
+          call.caller_phone || 
+          'Unknown',
         agent_name: call.agent_name || 'Inbound Agent',
         agent_id: call.agent_id || '',
         call_date: call.created_at || new Date().toISOString(),
@@ -932,11 +943,50 @@ app.post('/api/inbound-calls/sync/:userId', async (req, res) => {
     (async () => {
       try {
         for (const record of mappedCalls) {
+          // Check if this execution already exists to avoid double deduction
+          const { data: existing } = await supabase
+            .from('inbound_calls')
+            .select('execution_id, status')
+            .eq('execution_id', record.execution_id)
+            .maybeSingle();
+
+          const isNew = !existing;
+          const isCompleted = record.status === 'completed' || record.status === 'called';
+          const wasNotCompleted = existing && existing.status !== 'completed' && existing.status !== 'called';
+
           const { error: upsertError } = await supabase
             .from('inbound_calls')
             .upsert({ ...record, user_id: userId }, { onConflict: 'execution_id' });
+          
           if (upsertError && upsertError.code !== '42P01') {
             console.error(`[Inbound Sync] Background upsert error for ${record.execution_id}:`, upsertError.message);
+          }
+
+          // Deduct credit if newly completed
+          if ((isNew && isCompleted) || (wasNotCompleted && isCompleted)) {
+            console.log(`[Credit Deduction] Deducting 1 credit for user ${userId} (Inbound Call: ${record.execution_id})`);
+            
+            const { data: userData } = await supabase
+              .from('users')
+              .select('remaining_credits, used_credits, credits')
+              .eq('user_id', userId)
+              .single();
+
+            if (userData) {
+              const currentRem = userData.remaining_credits !== undefined ? userData.remaining_credits : (userData.credits || 0);
+              const currentUsed = userData.used_credits || 0;
+
+              if (currentRem > 0) {
+                await supabase
+                  .from('users')
+                  .update({ 
+                    remaining_credits: currentRem - 1,
+                    used_credits: currentUsed + 1,
+                    credits: currentRem - 1
+                  })
+                  .eq('user_id', userId);
+              }
+            }
           }
         }
       } catch (e) {
@@ -1335,7 +1385,7 @@ app.post('/api/schedule', async (req, res) => {
         campaign_date: scheduledAt.split('T')[0],
         uploaded_sheet_name: req.body.sheetName || (contacts[0]?.sheetName) || 'N/A',
         total_calls: contacts.length,
-        selected_agent: agentName || 'Default Agent',
+        selected_agent: agentId || agentName || 'Default Agent',
         campaign_status: newJobToInsert.status,
         credits_used: 0
       }]);

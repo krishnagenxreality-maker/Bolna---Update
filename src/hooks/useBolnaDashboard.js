@@ -423,12 +423,21 @@ export function useBolnaDashboard() {
           if (contactsRes.data && contactsRes.data.length > 0) {
             const defaultAgentId = currentAgents.length > 0 ? `${currentAgents[0].name}::${currentAgents[0].id}` : '';
             const mappedContacts = contactsRes.data.map(c => {
+              let aId = defaultAgentId;
+              let aName = defaultAgentId.split('::')[0];
+
               if (c.id && c.id.includes('::')) {
                 const parts = c.id.split('::');
-                if (parts.length >= 3) return { ...c, agentId: `${parts[0]}::${parts[1]}` };
-                else if (parts.length === 2) return { ...c, agentId: parts[0] };
+                // Format is Name::ID::ContactId
+                if (parts.length >= 3) {
+                  aId = `${parts[0]}::${parts[1]}`;
+                  aName = parts[0];
+                } else if (parts.length === 2) {
+                  aId = parts[0]; // Legacy or simple format
+                  aName = parts[0].includes('::') ? parts[0].split('::')[0] : parts[0];
+                }
               }
-              return { ...c, agentId: defaultAgentId };
+              return { ...c, agentId: aId, agentName: aName };
             });
             setContacts(mappedContacts);
             contactsRef.current = mappedContacts;

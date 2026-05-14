@@ -67,7 +67,7 @@ export async function analyzeSummaryWithDeepSeek(apiKey, summary) {
         messages: [
           {
             role: "system",
-            content: "You are a call analysis assistant. Analyze the call summary and generate a short descriptive Category Title (2-5 words) that captures the primary outcome or intent of the call. Examples: Fee Payment Confirmed, Student Marked Present, Parent Requested Callback, Appointment Rescheduled, Product Interested, Complaint Registered, Follow-up Needed, Not Interested, Information Provided, Voicemail Left. Return ONLY the category title, nothing else."
+            content: "You are an AI call classifier. Analyze the provided inbound call summary and generate a highly specific and meaningful Category Tag (2-3 words) that describes the main purpose or outcome. Examples: Fee Inquiry, Support Request, Appointment Booking, Complaint Call, Product Question, General Feedback, Callback Requested, Information Provided. Return ONLY the category tag, nothing else."
           },
           {
             role: "user",
