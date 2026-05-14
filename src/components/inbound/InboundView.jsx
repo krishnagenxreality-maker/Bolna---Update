@@ -58,7 +58,7 @@ const SummaryModal = ({ call, isOpen, onClose }) => {
                 padding: '16px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px',
                 border: '1px solid rgba(255,255,255,0.05)'
               }}>
-                {call.summary || 'No summary available for this call.'}
+                {call.summary || call.call_summary || 'No summary available for this call.'}
               </div>
             </div>
 

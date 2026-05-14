@@ -921,8 +921,8 @@ app.post('/api/inbound-calls/sync/:userId', async (req, res) => {
         agent_name: call.agent_name || 'Inbound Agent',
         agent_id: call.agent_id || '',
         call_date: call.created_at || new Date().toISOString(),
-        summary: call.summary || '',
-        transcript: call.transcript || '',
+        summary: call.summary || call.call_summary || call.analysis?.summary || '',
+        transcript: call.transcript || call.call_transcript || call.analysis?.transcript || '',
         recording_url: call.telephony_data?.recording_url || call.recording_url || '',
         reason: reason,
         status: call.status || 'completed'
