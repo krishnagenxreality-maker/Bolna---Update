@@ -764,50 +764,62 @@ app.post('/api/contacts', async (req, res) => {
     // Handle dedicated leads table persistence
     const leadsToInsert = contactsToInsert
       .filter(c => (c.lead_category && c.lead_category !== "") || (c.classification && c.classification !== ""))
-      .map(c => ({
-        user_id: userId,
-        name: c.name,
-        phone: c.phone,
-        category: c.lead_category || c.classification,
-        classification: c.classification || c.lead_category, // Dual-mapping for safety
-        summary: c.summary,
-        status: c.status,
-        recording_url: c.recording_url,
-        campaign_id: c.campaign_id || null, // Assuming field exists in DB
-        call_date: c.call_date
-      }));
+      .map(c => {
+        // Build a minimal record that we are confident matches the core schema
+        const minimalLead = {
+          user_id: userId,
+          name: c.name || "N/A",
+          phone: c.phone || "N/A",
+          category: c.lead_category || c.classification || "Uncategorized",
+          summary: c.summary || "",
+          call_date: c.call_date || new Date().toISOString().split('T')[0],
+          lead_source: 'outbound'
+        };
+
+        // Build an extended record with requested metadata (may fail if columns are missing)
+        const extendedLead = {
+          ...minimalLead,
+          classification: c.classification || c.lead_category,
+          status: c.status || 'completed',
+          recording_url: c.recording_url,
+          campaign_id: c.campaign_id
+        };
+
+        return { minimalLead, extendedLead };
+      });
 
     if (leadsToInsert.length > 0) {
-      console.log(`Attempting to sync ${leadsToInsert.length} leads to Supabase...`);
-      try {
-        // Use upsert on leads table. Matching by user/phone/date.
-        // If this fails due to missing unique constraint, we'll log it clearly.
-        const { error: leadError } = await supabase
-          .from('leads')
-          .upsert(leadsToInsert, { 
-            onConflict: 'user_id,phone,call_date' 
-          });
-
-        if (leadError) {
-          console.error('CRITICAL: Leads storage failed (Supabase Error):', JSON.stringify(leadError, null, 2));
-          // Fallback: try simple insert if upsert with onConflict failed
-          console.log('Attempting fallback: simple insert...');
-          const { error: insertError } = await supabase.from('leads').insert(leadsToInsert);
-          if (insertError) {
-            console.error('Fallback insert also failed:', JSON.stringify(insertError, null, 2));
-          } else {
-            console.log('Fallback insert successful.');
+      console.log(`[LEADS_SYNC] Starting sync for ${leadsToInsert.length} potential leads...`);
+      
+      for (const { minimalLead, extendedLead } of leadsToInsert) {
+        try {
+          // Attempt 1: Extended insert (includes status, recording_url, etc.)
+          const { error: extError } = await supabase.from('leads').insert(extendedLead);
+          
+          if (!extError) {
+            console.log(`[LEADS_SYNC] SUCCESS: Extended lead stored for ${extendedLead.phone}`);
+            continue;
           }
-        } else {
-          console.log(`Successfully synced ${leadsToInsert.length} leads to Supabase.`);
+
+          console.warn(`[LEADS_SYNC] Extended insert failed for ${extendedLead.phone}, trying minimal fallback...`, extError.message);
+
+          // Attempt 2: Minimal insert (core columns only)
+          const { error: minError } = await supabase.from('leads').insert(minimalLead);
+          
+          if (minError) {
+            console.error(`[LEADS_SYNC] FATAL: Minimal fallback also failed for ${minimalLead.phone}:`, JSON.stringify(minError, null, 2));
+          } else {
+            console.log(`[LEADS_SYNC] SUCCESS: Minimal lead stored for ${minimalLead.phone}`);
+          }
+        } catch (err) {
+          console.error(`[LEADS_SYNC] UNEXPECTED_ERROR for ${minimalLead.phone}:`, err);
         }
-      } catch (dbErr) {
-        console.error('DB execution error during leads sync:', dbErr);
       }
     }
 
     res.json({ success: true, count: data.length });
   } catch (err) {
+    console.error('[API_CONTACTS_ERROR]', err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
