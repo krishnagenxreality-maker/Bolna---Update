@@ -34,6 +34,7 @@ export function useBolnaDashboard() {
   const [callStartTime, setCallStartTime] = useState(null);
   const [inboundCalls, setInboundCalls] = useState([]);
   const [isLoadingInbound, setIsLoadingInbound] = useState(false);
+  const [activeCampaignId, setActiveCampaignId] = useState(null);
 
   // --- REFS ---
   const contactsRef  = useRef([]);
@@ -102,6 +103,7 @@ export function useBolnaDashboard() {
       setDoneSummary(`${doneCount} call(s) completed successfully${failedCount > 0 ? `, ${failedCount} failed` : ""}.`);
       setIsCalling(false);
       setCallStartTime(null);
+      setActiveCampaignId(null);
       addLog(`All done. ${doneCount} called, ${failedCount} failed.`, "ok");
       
       if (user && user.userId) {
@@ -118,7 +120,7 @@ export function useBolnaDashboard() {
   const updateContactStatus = useCallback((id, status, response = "", leadCategory = "", summary = "", recordingUrl = "") => {
     const now = new Date().toISOString().split('T')[0];
     const updated = contactsRef.current.map(c => 
-      c.id === id ? { ...c, status, response, leadCategory, summary, recordingUrl: recordingUrl || c.recordingUrl || "", date: now } : c
+      c.id === id ? { ...c, status, response, leadCategory, summary, recordingUrl: recordingUrl || c.recordingUrl || "", date: now, campaignId: c.campaignId || activeCampaignId } : c
     );
     
     setContacts(updated);
@@ -496,6 +498,7 @@ export function useBolnaDashboard() {
       setShowProgress(true);
       setShowDone(false);
       setAgentId(runningJob.agentId);
+      setActiveCampaignId(runningJob.id);
       setSessionContacts(runningJob.contacts);
       
       // Populate manual queue

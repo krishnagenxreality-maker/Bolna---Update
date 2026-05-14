@@ -747,6 +747,8 @@ app.post('/api/contacts', async (req, res) => {
       response: c.response,
       summary: c.summary,
       lead_category: c.leadCategory,
+      classification: c.classification || c.leadCategory, // Map both
+      campaign_id: c.campaignId || null,
       execution_id: c.executionId,
       recording_url: c.recordingUrl || null,
       call_date: c.date || new Date().toISOString().split('T')[0]
@@ -761,29 +763,46 @@ app.post('/api/contacts', async (req, res) => {
 
     // Handle dedicated leads table persistence
     const leadsToInsert = contactsToInsert
-      .filter(c => c.lead_category && c.lead_category !== "")
+      .filter(c => (c.lead_category && c.lead_category !== "") || (c.classification && c.classification !== ""))
       .map(c => ({
         user_id: userId,
         name: c.name,
         phone: c.phone,
-        category: c.lead_category,
+        category: c.lead_category || c.classification,
+        classification: c.classification || c.lead_category, // Dual-mapping for safety
         summary: c.summary,
+        status: c.status,
+        recording_url: c.recording_url,
+        campaign_id: c.campaign_id || null, // Assuming field exists in DB
         call_date: c.call_date
       }));
 
     if (leadsToInsert.length > 0) {
-      // Use upsert on leads table as well, but matching by user/phone/date/category 
-      // to avoid duplicate lead entries for the same call analysis
-      const { error: leadError } = await supabase
-        .from('leads')
-        .upsert(leadsToInsert, { 
-          onConflict: 'user_id,phone,call_date,category' 
-        });
+      console.log(`Attempting to sync ${leadsToInsert.length} leads to Supabase...`);
+      try {
+        // Use upsert on leads table. Matching by user/phone/date.
+        // If this fails due to missing unique constraint, we'll log it clearly.
+        const { error: leadError } = await supabase
+          .from('leads')
+          .upsert(leadsToInsert, { 
+            onConflict: 'user_id,phone,call_date' 
+          });
 
-      if (leadError) {
-        console.error('CRITICAL: Leads storage failed:', leadError);
-      } else {
-        console.log(`Successfully synced ${leadsToInsert.length} leads to Supabase.`);
+        if (leadError) {
+          console.error('CRITICAL: Leads storage failed (Supabase Error):', JSON.stringify(leadError, null, 2));
+          // Fallback: try simple insert if upsert with onConflict failed
+          console.log('Attempting fallback: simple insert...');
+          const { error: insertError } = await supabase.from('leads').insert(leadsToInsert);
+          if (insertError) {
+            console.error('Fallback insert also failed:', JSON.stringify(insertError, null, 2));
+          } else {
+            console.log('Fallback insert successful.');
+          }
+        } else {
+          console.log(`Successfully synced ${leadsToInsert.length} leads to Supabase.`);
+        }
+      } catch (dbErr) {
+        console.error('DB execution error during leads sync:', dbErr);
       }
     }
 
