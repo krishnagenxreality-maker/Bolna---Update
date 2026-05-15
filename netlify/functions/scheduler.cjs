@@ -1,13 +1,15 @@
 const { schedule } = require('@netlify/functions');
 const { createClient } = require('@supabase/supabase-js');
 
+// Configuration
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
 const handler = async (event) => {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  console.log(' [CRON] Scheduler triggered...');
   
   if (!supabaseUrl || !supabaseKey) {
-    console.error('[Scheduler] Missing Supabase credentials');
-    return { statusCode: 500, body: 'Missing config' };
+    return { statusCode: 500, body: 'Missing environment variables' };
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey);
@@ -15,43 +17,40 @@ const handler = async (event) => {
   try {
     const now = new Date().toISOString();
     
-    const { data: jobsToRun, error: fetchError } = await supabase
+    // 1. Fetch pending jobs
+    const { data: jobs, error } = await supabase
       .from('scheduled_jobs')
-      .select('*')
+      .select('id, user_id')
       .eq('status', 'Scheduled')
       .lte('scheduled_at', now);
 
-    if (fetchError) throw fetchError;
+    if (error) throw error;
 
-    if (jobsToRun && jobsToRun.length > 0) {
-      const jobIds = jobsToRun.map(j => j.id);
-      
-      const { error: updateError } = await supabase
-        .from('scheduled_jobs')
-        .update({ status: 'Running' })
-        .in('id', jobIds);
-
-      if (updateError) throw updateError;
-
-      // Also sync to campaigns table
-      for (const job of jobsToRun) {
-        try {
-          await supabase
-            .from('campaigns')
-            .update({ campaign_status: 'Running', updated_at: now })
-            .eq('id', job.id);
-        } catch (e) { }
-      }
-
-      console.log(`[Scheduler] Triggered ${jobsToRun.length} job(s): ${jobIds.join(', ')}`);
+    if (!jobs || jobs.length === 0) {
+      return { statusCode: 200, body: 'No jobs to run.' };
     }
 
-    return { statusCode: 200, body: `Checked. Found ${jobsToRun?.length || 0} jobs to trigger.` };
+    console.log(` [CRON] Found ${jobs.length} jobs. Triggering execution...`);
+
+    // 2. Import CallService and execute
+    // Note: Netlify functions bundle dependencies. 
+    // We point to the service directly.
+    const callService = require('../../backend/src/services/call.service');
+
+    for (const job of jobs) {
+      try {
+        await callService.executeJob(job.id);
+      } catch (e) {
+        console.error(` [CRON] Job ${job.id} failed:`, e.message);
+      }
+    }
+
+    return { statusCode: 200, body: `Successfully triggered ${jobs.length} jobs.` };
   } catch (err) {
-    console.error('[Scheduler Error]:', err.message);
+    console.error(' [CRON] Fatal Error:', err.message);
     return { statusCode: 500, body: err.message };
   }
 };
 
-// Run every minute
+// Schedule to run every minute
 exports.handler = schedule('* * * * *', handler);
