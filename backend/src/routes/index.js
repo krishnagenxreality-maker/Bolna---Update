@@ -9,6 +9,7 @@ const sync = require('../controllers/sync.controller');
 const webhook = require('../controllers/webhook.controller');
 const admin = require('../controllers/admin.controller');
 const demo = require('../controllers/demo.controller');
+const request = require('../controllers/request.controller');
 
 // --- AUTH ---
 router.post('/login', auth.login);
@@ -19,9 +20,13 @@ router.post('/users/set-password/:userId', auth.setPassword);
 // --- ADMIN ---
 router.get('/users', admin.getAllUsers);
 router.post('/users', admin.createUser);
+router.put('/users/:userId', admin.updateUser);
 router.delete('/users/:userId', admin.deleteUser);
 router.get('/demo-requests', demo.getDemoRequests);
 router.post('/demo-requests', demo.submitDemoRequest);
+router.get('/requests', request.getAllRequests);
+router.post('/requests', request.submitRequest);
+router.delete('/requests/:id', request.deleteRequest);
 
 // --- USER & CONTACTS ---
 router.get('/user-config/:userId', user.getUserConfig);

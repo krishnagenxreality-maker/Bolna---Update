@@ -38,6 +38,41 @@ const createUser = async (req, res) => {
   }
 };
 
+const updateUser = async (req, res) => {
+  const { userId } = req.params;
+  const updateData = req.body;
+  try {
+    const toUpdate = {
+      organization: updateData.organization,
+      email: updateData.email,
+      bolna_api_key: updateData.bolnaApiKey,
+      bolna_agent_id: updateData.bolnaAgentId,
+      total_credits: updateData.totalCredits,
+      remaining_credits: updateData.remainingCredits,
+      credits: updateData.credits,
+      user_type: updateData.userType,
+      selected_plan: updateData.selectedPlan
+    };
+
+    // If password is provided, hash it
+    if (updateData.password && !updateData.password.startsWith('$2')) {
+      toUpdate.password = await bcrypt.hash(updateData.password, 10);
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(toUpdate)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, user: mapUser(data) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 const deleteUser = async (req, res) => {
   const { userId } = req.params;
   if (userId === 'AdminGenx') return res.status(403).json({ error: 'Cannot delete admin' });
@@ -53,5 +88,6 @@ const deleteUser = async (req, res) => {
 module.exports = {
   getAllUsers,
   createUser,
+  updateUser,
   deleteUser
 };

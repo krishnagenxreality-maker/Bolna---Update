@@ -87,12 +87,12 @@ export default function AdminPortal() {
       email: req?.email || '',
       bolnaApiKey: '',
       agents: [{ name: '', id: '' }],
-      credits: parseCreditsFromRequest(req?.creditsSelected) || 2000,
-      totalCredits: parseCreditsFromRequest(req?.creditsSelected) || 2000,
-      remainingCredits: parseCreditsFromRequest(req?.creditsSelected) || 2000,
+      credits: parseCreditsFromRequest(req?.creditsSelected) || 0,
+      totalCredits: parseCreditsFromRequest(req?.creditsSelected) || 0,
+      remainingCredits: parseCreditsFromRequest(req?.creditsSelected) || 0,
       usedCredits: 0,
       selectedPlan: req?.creditsSelected?.includes('Growth') ? 'Growth' : req?.creditsSelected?.includes('Pro') ? 'Pro' : 'Starter',
-      userType: req?.purposeType || 'regular'
+      userType: 'regular'
     });
     setError('');
     setSuccess('');
@@ -113,7 +113,7 @@ export default function AdminPortal() {
       email: req?.email || '',
       bolnaApiKey: '',
       agents: [{ name: '', id: '' }],
-      credits: 0, // Admin must manually enter credits
+      credits: 0,
       totalCredits: 0,
       remainingCredits: 0,
       usedCredits: 0,
@@ -163,8 +163,8 @@ export default function AdminPortal() {
     setFormData({ 
       userId: '', password: '', organization: '', email: '', 
       bolnaApiKey: '', agents: [{ name: '', id: '' }], 
-      credits: 2000, userType: 'regular',
-      selectedPlan: 'Starter', totalCredits: 2000, usedCredits: 0, remainingCredits: 2000
+      credits: 0, userType: 'regular',
+      selectedPlan: 'Starter', totalCredits: 0, usedCredits: 0, remainingCredits: 0
     });
     setError('');
     setSuccess('');
@@ -925,51 +925,25 @@ export default function AdminPortal() {
                     </div>
                   </div>
 
-                  {!createdFromDemoRequestId && (
-                    <div className="config-grid">
-                      <div className="field">
-                        <label className="field-label">Selected Plan</label>
-                        {createdFromRequestId ? (
-                          <input
-                            type="text"
-                            className="field-input"
-                            value={formData.selectedPlan}
-                            readOnly
-                            style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.4)', cursor: 'not-allowed' }}
-                          />
-                        ) : (
-                          <select
-                            className="field-input select-custom"
-                            value={formData.selectedPlan}
-                            onChange={e => setFormData(prev => ({ ...prev, selectedPlan: e.target.value }))}
-                          >
-                            <option value="Starter">Starter (2k Credits)</option>
-                            <option value="Growth">Growth (6k Credits)</option>
-                            <option value="Pro">Pro (15k Credits)</option>
-                          </select>
-                        )}
-                      </div>
-                      <div className="field">
-                        <label className="field-label">User Type</label>
-                        {createdFromRequestId ? (
-                          <input
-                            type="text"
-                            className="field-input"
-                            value="Regular"
-                            readOnly
-                            style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.4)', cursor: 'not-allowed' }}
-                          />
-                        ) : (
-                          <select
-                            className="field-input select-custom"
-                            value={formData.userType}
-                            onChange={e => setFormData(prev => ({ ...prev, userType: e.target.value }))}
-                          >
-                            <option value="regular">Regular</option>
-                            <option value="education">Education</option>
-                          </select>
-                        )}
-                      </div>
+                  {/* Simplified credits for Add form */}
+                  {showAddForm && (
+                    <div className="field">
+                      <label className="field-label">Total Credits</label>
+                      <input
+                        type="number"
+                        className="field-input"
+                        value={formData.totalCredits}
+                        onChange={e => {
+                          const val = parseInt(e.target.value, 10) || 0;
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            totalCredits: val,
+                            remainingCredits: val,
+                            credits: val
+                          }));
+                        }}
+                        placeholder="Enter total credits"
+                      />
                     </div>
                   )}
 
