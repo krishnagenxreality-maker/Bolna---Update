@@ -5,6 +5,7 @@ export async function makeCall(key, agId, phone, name = "") {
     body: JSON.stringify({ 
       agent_id: agId, 
       recipient_phone_number: phone,
+      callback_url: (import.meta.env.VITE_CALLBACK_URL || (window.location.origin + "/api/webhook/bolna")),
       user_variables: {
         customer_name: name || "Hello",
         name: name || "Hello",

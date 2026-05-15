@@ -70,6 +70,12 @@ export function useBolnaDashboard() {
         contacts: contactsToSave
       });
       console.log("LEADS UPDATED");
+      
+      // Refetch credits to keep UI in sync
+      const creditRes = await axios.get(`${API_BASE_URL}/api/user-credits/${user.userId}`);
+      if (creditRes.data.credits !== undefined) {
+        setCredits(creditRes.data.credits);
+      }
     } catch (err) {
       console.error("Failed to save contacts to DB", err);
     }
@@ -172,17 +178,7 @@ export function useBolnaDashboard() {
           updateContactStatus(contact.id, finalStatus, sl, category, data.summary || "", recordingUrl); 
           addLog(`✓ ${sl.toUpperCase()}: ${contact.name}${category ? ` (${category})` : ""}`, "ok"); 
 
-          // Deduct credit only for successfully completed calls
-          if (sl === "completed") {
-            try {
-              const creditRes = await axios.post(`${API_BASE_URL}/api/user-credits/deduct/${user.userId}`);
-              if (creditRes.data.success) {
-                setCredits(creditRes.data.credits);
-              }
-            } catch (creditErr) {
-              console.error("Credit deduction failed", creditErr);
-            }
-          }
+          // Credit deduction is now handled on the backend via webhooks or the /api/contacts endpoint.
         }
         else if (["failed","error","cancelled"].includes(sl)) { 
           updateContactStatus(contact.id, "failed", sl); 

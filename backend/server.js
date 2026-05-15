@@ -24,6 +24,51 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 
+// Helper for AI analysis
+const analyzeSummaryWithDeepSeek = async (summary) => {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey || !summary) {
+    console.log('[AI_ANALYSIS] Skipping: No API key or summary');
+    return "Uncategorized";
+  }
+
+  try {
+    const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [
+          {
+            role: "system",
+            content: "You are an AI call classifier. Analyze the provided call summary and generate a highly specific and meaningful Category Tag (2-3 words) that describes the outcome. Examples: Fee Inquiry, Support Request, Appointment Booking, Interested, Not Interested, Callback Requested. Return ONLY the category tag, nothing else."
+          },
+          {
+            role: "user",
+            content: `Summary: ${summary}`
+          }
+        ],
+        temperature: 0.3
+      })
+    });
+
+    if (!res.ok) {
+      console.warn('[AI_ANALYSIS] DeepSeek API returned error:', res.status);
+      return "Uncategorized";
+    }
+    const data = await res.json();
+    const result = data.choices[0].message.content.trim();
+    return result.replace(/['"]/g, '').replace(/\.$/, '').slice(0, 60) || "Uncategorized";
+  } catch (err) {
+    console.error("[AI_ANALYSIS] Failed:", err.message);
+    return "Uncategorized";
+  }
+};
+
+
 // Helper to map DB row to API response (snake to camel)
 const mapUser = (user) => {
   if (!user) return null;
@@ -761,59 +806,18 @@ app.post('/api/contacts', async (req, res) => {
 
     if (error) throw error;
 
-    // Handle dedicated leads table persistence
-    const leadsToInsert = contactsToInsert
-      .filter(c => (c.lead_category && c.lead_category !== "") || (c.classification && c.classification !== ""))
-      .map(c => {
-        // Build a minimal record that we are confident matches the core schema
-        const minimalLead = {
-          user_id: userId,
-          name: c.name || "N/A",
-          phone: c.phone || "N/A",
-          category: c.lead_category || c.classification || "Uncategorized",
-          summary: c.summary || "",
-          call_date: c.call_date || new Date().toISOString().split('T')[0],
-          lead_source: 'outbound'
-        };
-
-        // Build an extended record with requested metadata (may fail if columns are missing)
-        const extendedLead = {
-          ...minimalLead,
-          classification: c.classification || c.lead_category,
-          status: c.status || 'completed',
-          recording_url: c.recording_url,
-          campaign_id: c.campaign_id
-        };
-
-        return { minimalLead, extendedLead };
-      });
-
-    if (leadsToInsert.length > 0) {
-      console.log(`[LEADS_SYNC] Starting sync for ${leadsToInsert.length} potential leads...`);
-      
-      for (const { minimalLead, extendedLead } of leadsToInsert) {
-        try {
-          // Attempt 1: Extended insert (includes status, recording_url, etc.)
-          const { error: extError } = await supabase.from('leads').insert(extendedLead);
-          
-          if (!extError) {
-            console.log(`[LEADS_SYNC] SUCCESS: Extended lead stored for ${extendedLead.phone}`);
-            continue;
-          }
-
-          console.warn(`[LEADS_SYNC] Extended insert failed for ${extendedLead.phone}, trying minimal fallback...`, extError.message);
-
-          // Attempt 2: Minimal insert (core columns only)
-          const { error: minError } = await supabase.from('leads').insert(minimalLead);
-          
-          if (minError) {
-            console.error(`[LEADS_SYNC] FATAL: Minimal fallback also failed for ${minimalLead.phone}:`, JSON.stringify(minError, null, 2));
-          } else {
-            console.log(`[LEADS_SYNC] SUCCESS: Minimal lead stored for ${minimalLead.phone}`);
-          }
-        } catch (err) {
-          console.error(`[LEADS_SYNC] UNEXPECTED_ERROR for ${minimalLead.phone}:`, err);
-        }
+    // Process each contact through the unified sync helper for leads, responses, and credits
+    for (const c of contactsToInsert) {
+      if (c.status === 'completed' || c.status === 'called' || c.lead_category) {
+        await syncCallResult({
+          userId: userId,
+          contactId: c.id,
+          executionId: c.execution_id,
+          status: c.status,
+          summary: c.summary,
+          category: c.lead_category,
+          recordingUrl: c.recording_url
+        });
       }
     }
 
@@ -823,6 +827,152 @@ app.post('/api/contacts', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+
+// SHARED HELPER: Unified Post-Call Data Sync
+const syncCallResult = async ({
+  userId,
+  executionId,
+  contactId, // Optional, can find via executionId
+  status,
+  summary,
+  category,
+  recordingUrl,
+  transcript,
+  forceDeduct = false
+}) => {
+  try {
+    console.log(`[SYNC_CALL] Processing ${executionId || contactId} for user ${userId}`);
+
+    // 1. Fetch current contact to check status (idempotency)
+    let contact = null;
+    if (executionId) {
+      const { data } = await supabase.from('contacts').select('*').eq('execution_id', executionId).maybeSingle();
+      contact = data;
+    } else if (contactId) {
+      const { data } = await supabase.from('contacts').select('*').eq('id', contactId).maybeSingle();
+      contact = data;
+    }
+
+    if (!contact && !contactId) {
+      console.warn(`[SYNC_CALL] No contact found for execution ${executionId}`);
+      return;
+    }
+
+    const currentStatus = contact?.status || 'Calling...';
+    const finalStatus = status || 'completed';
+    const finalCategory = category || contact?.lead_category || 'Uncategorized';
+    const finalSummary = summary || contact?.summary || '';
+    const finalRecordingUrl = recordingUrl || contact?.recording_url || '';
+
+    // 2. Update Contacts table
+    const updateData = {
+      status: finalStatus,
+      summary: finalSummary,
+      lead_category: finalCategory,
+      classification: finalCategory,
+      recording_url: finalRecordingUrl,
+      response: finalCategory
+    };
+
+    if (executionId) {
+      await supabase.from('contacts').update(updateData).eq('execution_id', executionId);
+    } else if (contactId) {
+      await supabase.from('contacts').update(updateData).eq('id', contactId);
+    }
+
+    // 3. Update Leads table if applicable
+    if (finalCategory !== 'Uncategorized' && finalCategory !== 'Not Interested' && finalCategory !== 'Busy' && finalCategory !== "") {
+      const leadData = {
+        user_id: userId,
+        name: contact?.name || "N/A",
+        phone: contact?.phone || "N/A",
+        category: finalCategory,
+        summary: finalSummary,
+        call_date: new Date().toISOString().split('T')[0],
+        lead_source: 'outbound'
+      };
+      await supabase.from('leads').insert(leadData);
+    }
+
+    // 4. Update Responses table (if exists)
+    try {
+      const responseRecord = {
+        execution_id: executionId || contact?.execution_id,
+        user_id: userId,
+        phone: contact?.phone || "N/A",
+        status: finalStatus,
+        summary: finalSummary,
+        transcript: transcript || "",
+        category: finalCategory,
+        created_at: new Date().toISOString()
+      };
+      const { error: resError } = await supabase.from('responses').insert(responseRecord);
+      if (resError && resError.code !== '42P01') console.error('[SYNC_CALL] Responses Error:', resError.message);
+    } catch (e) {}
+
+    // 5. Deduct Credit (Idempotency check)
+    const isCompleted = finalStatus === 'completed' || finalStatus === 'called';
+    const wasNotCompleted = currentStatus !== 'completed' && currentStatus !== 'called';
+
+    if (isCompleted && (wasNotCompleted || forceDeduct)) {
+      const { data: user } = await supabase.from('users').select('remaining_credits, used_credits, credits').eq('user_id', userId).single();
+      if (user) {
+        const rem = user.remaining_credits !== undefined ? user.remaining_credits : (user.credits || 0);
+        if (rem > 0) {
+          await supabase.from('users').update({
+            remaining_credits: rem - 1,
+            used_credits: (user.used_credits || 0) + 1,
+            credits: rem - 1
+          }).eq('user_id', userId);
+          console.log(`[SYNC_CALL] Credit deducted for ${userId}`);
+        }
+      }
+    }
+    console.log(`[SYNC_CALL] Completed successfully for ${executionId || contactId}`);
+  } catch (err) {
+    console.error('[SYNC_CALL_ERROR]', err.message);
+  }
+};
+
+// Bolna Webhook Handler
+app.post('/api/webhook/bolna', async (req, res) => {
+  const payload = req.body;
+  console.log('[WEBHOOK_RECEIVE] Incoming Bolna event:', JSON.stringify(payload, null, 2));
+
+  res.status(200).json({ status: 'received' });
+
+  const executionId = payload.execution_id || payload.id;
+  if (!executionId) return;
+
+  try {
+    const { data: contact } = await supabase.from('contacts').select('user_id, summary, lead_category').eq('execution_id', executionId).maybeSingle();
+    if (!contact) {
+      console.warn(`[WEBHOOK_IGNORE] Execution ID ${executionId} not found in contacts table.`);
+      return;
+    }
+
+    let summary = payload.summary || contact.summary || '';
+    let category = contact.lead_category || 'Uncategorized';
+    if (summary && (!category || category === 'Uncategorized')) {
+      category = await analyzeSummaryWithDeepSeek(summary);
+    }
+
+    await syncCallResult({
+      userId: contact.user_id,
+      executionId: executionId,
+      status: payload.status,
+      summary: summary,
+      category: category,
+      recordingUrl: payload.telephony_data?.recording_url || payload.recording_url,
+      transcript: payload.transcript
+    });
+  } catch (err) {
+    console.error('[WEBHOOK_ERROR]', err.message);
+  }
+});
+
+
 
 app.delete('/api/cleanup-leads', async (req, res) => {
   const oneMonthAgo = new Date();
