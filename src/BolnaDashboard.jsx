@@ -210,7 +210,7 @@ export default function BolnaDashboard() {
                             border: '1px solid rgba(255, 255, 255, 0.05)',
                             fontFamily: 'monospace'
                           }}>
-                            {availableAgents.length === 1 ? availableAgents[0].name : (agentId ? agentId.split('::')[0] : 'Not configured')}
+                            {availableAgents.length === 1 ? availableAgents[0].name : (agentId ? String(agentId).split('::')[0] : 'Not configured')}
                           </div>
                         )}
                       </div>

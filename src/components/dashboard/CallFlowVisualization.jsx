@@ -3,9 +3,9 @@ import { Phone, Users, CheckCircle, Clock, Zap, Target, XCircle, HelpCircle, Tim
 
 export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartTime }) => {
   const selectedAgentId = agentId?.split('::')[1];
-  const activeContacts = selectedAgentId 
-    ? contacts.filter(c => c.agentId === selectedAgentId || c.id?.includes(selectedAgentId))
-    : contacts;
+  const activeContacts = (selectedAgentId 
+    ? (contacts || []).filter(c => c && (c.agentId === selectedAgentId || c.id?.includes(selectedAgentId)))
+    : (contacts || [])) || [];
 
   const stats = {
     uploaded: activeContacts.length,
