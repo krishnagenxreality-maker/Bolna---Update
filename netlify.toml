@@ -10,7 +10,7 @@
 # Redirect /api/* calls to the serverless function
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
+  to = "/.netlify/functions/api/api/:splat"
   status = 200
 
 # SPA fallback - must come AFTER the API redirect
