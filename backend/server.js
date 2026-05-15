@@ -907,7 +907,7 @@ const syncCallResult = async ({
         category: finalCategory,
         created_at: new Date().toISOString()
       };
-      const { error: resError } = await supabase.from('responses').insert(responseRecord);
+      const { error: resError } = await supabase.from('responses').upsert(responseRecord, { onConflict: 'execution_id' });
       if (resError && resError.code !== '42P01') console.error('[SYNC_CALL] Responses Error:', resError.message);
     } catch (e) {}
 
