@@ -16,6 +16,7 @@ const mapUser = (user) => {
     totalCredits: user.total_credits || 0,
     usedCredits: user.used_credits || 0,
     remainingCredits: user.remaining_credits !== undefined ? user.remaining_credits : (user.credits || 0),
+    credits: user.remaining_credits !== undefined ? user.remaining_credits : (user.credits || 0),
     isFirstLogin: user.is_first_login,
     deviceSession: user.device_session,
     activeSessions: user.active_sessions || 0,
@@ -57,6 +58,7 @@ const mapResponse = (r) => {
     summary: r.summary,
     transcript: r.transcript,
     category: r.category,
+    credits: r.credits,
     date: r.date,
     createdAt: r.created_at
   };

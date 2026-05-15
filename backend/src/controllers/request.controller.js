@@ -1,3 +1,4 @@
+const { randomUUID } = require('crypto');
 const supabase = require('../services/supabase.service');
 
 const getAllRequests = async (req, res) => {
@@ -13,6 +14,7 @@ const getAllRequests = async (req, res) => {
 const submitRequest = async (req, res) => {
   const r = req.body;
   const requestToInsert = {
+    id: randomUUID(),
     name: r.name,
     organization_name: r.organizationName,
     email: r.email,
