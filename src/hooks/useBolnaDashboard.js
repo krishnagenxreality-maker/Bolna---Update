@@ -198,6 +198,31 @@ export function useBolnaDashboard() {
               executionIds: [contact.executionId] 
             }).then(() => {
               console.log(`[SYNC] Backend pipeline triggered for ${contact.executionId}`);
+              // Re-fetch contacts from DB after pipeline completes to get AI categories
+              setTimeout(() => {
+                axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`).then(res => {
+                  if (res.data && res.data.length > 0) {
+                    const defaultAgentId = agentId || '';
+                    const mappedContacts = res.data.map(c => {
+                      let aId = defaultAgentId;
+                      let aName = defaultAgentId.split('::')[0];
+                      if (c.id && c.id.includes('::')) {
+                        const parts = c.id.split('::');
+                        if (parts.length >= 3) { aId = `${parts[0]}::${parts[1]}`; aName = parts[0]; }
+                        else if (parts.length === 2) { aId = parts[0]; aName = parts[0]; }
+                      }
+                      return { ...c, agentId: aId, agentName: aName };
+                    });
+                    setContacts(mappedContacts);
+                    contactsRef.current = mappedContacts;
+                    console.log(`[SYNC] Contacts refreshed from DB (${mappedContacts.length} records)`);
+                  }
+                }).catch(() => {});
+                // Also refresh credits
+                axios.get(`${API_BASE_URL}/api/user-credits/${user.userId}`).then(res => {
+                  if (res.data.credits !== undefined) setCredits(res.data.credits);
+                }).catch(() => {});
+              }, 3000); // Wait 3s for backend pipeline to finish
             }).catch(e => console.error("[SYNC] Backend pipeline failed:", e.message));
           }
         }
@@ -655,6 +680,103 @@ export function useBolnaDashboard() {
     }
   };
 
+  // --- MANUAL REFRESH: Force re-fetch contacts from DB (for diagnostic panel) ---
+  const refreshContacts = useCallback(async () => {
+    if (!user || !user.userId) return { success: false, error: 'No user' };
+    const diagnostics = { steps: [], errors: [] };
+    
+    try {
+      // Step 1: Get contacts with execution IDs that need syncing
+      diagnostics.steps.push('Fetching contacts from DB...');
+      const contactsRes = await axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`);
+      const dbContacts = contactsRes.data || [];
+      diagnostics.steps.push(`Found ${dbContacts.length} contacts in DB`);
+      
+      // Step 2: Find contacts with execution IDs but no lead_category
+      const needSync = dbContacts.filter(c => c.executionId && (c.status === 'called' || c.status === 'completed') && !c.leadCategory);
+      diagnostics.steps.push(`${needSync.length} contacts need AI sync`);
+      
+      // Step 3: Trigger backend pipeline for unsynced contacts
+      if (needSync.length > 0) {
+        const execIds = needSync.map(c => c.executionId).filter(Boolean);
+        diagnostics.steps.push(`Triggering backend pipeline for ${execIds.length} execution(s)...`);
+        
+        try {
+          const syncRes = await axios.post(`${API_BASE_URL}/api/sync-outbound/${user.userId}`, { executionIds: execIds });
+          const syncData = syncRes.data;
+          diagnostics.steps.push(`Backend processed ${syncData.processed || 0} execution(s)`);
+          // Show per-execution results
+          if (syncData.results && Array.isArray(syncData.results)) {
+            for (const r of syncData.results) {
+              if (r.success && r.result && typeof r.result === 'object') {
+                diagnostics.steps.push(`  → ${r.executionId.slice(0,8)}… status="${r.result.status}" category="${r.result.category}" connected=${r.result.isConnected}`);
+              } else if (r.success) {
+                diagnostics.steps.push(`  → ${r.executionId.slice(0,8)}… processed OK`);
+              } else {
+                diagnostics.errors.push(`  → ${r.executionId.slice(0,8)}… FAILED: ${r.error}`);
+              }
+            }
+          }
+        } catch (syncErr) {
+          diagnostics.errors.push(`Backend sync failed: ${syncErr.response?.data?.error || syncErr.message}`);
+        }
+        
+        // Wait for backend to process
+        diagnostics.steps.push('Waiting 4s for backend to process...');
+        await new Promise(r => setTimeout(r, 4000));
+      }
+      
+      // Step 4: Re-fetch from DB
+      diagnostics.steps.push('Re-fetching contacts from DB...');
+      const refreshRes = await axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`);
+      const refreshedContacts = refreshRes.data || [];
+      
+      const withCategories = refreshedContacts.filter(c => c.leadCategory);
+      diagnostics.steps.push(`After sync: ${withCategories.length}/${refreshedContacts.length} contacts have AI categories`);
+      
+      // Step 5: Update state
+      if (refreshedContacts.length > 0) {
+        const defaultAgentId = agentId || '';
+        const mappedContacts = refreshedContacts.map(c => {
+          let aId = defaultAgentId;
+          let aName = defaultAgentId.split('::')[0];
+          if (c.id && c.id.includes('::')) {
+            const parts = c.id.split('::');
+            if (parts.length >= 3) { aId = `${parts[0]}::${parts[1]}`; aName = parts[0]; }
+            else if (parts.length === 2) { aId = parts[0]; aName = parts[0]; }
+          }
+          return { ...c, agentId: aId, agentName: aName };
+        });
+        setContacts(mappedContacts);
+        contactsRef.current = mappedContacts;
+        diagnostics.steps.push('✓ Contacts state updated');
+      }
+      
+      // Step 6: Refresh credits
+      const creditRes = await axios.get(`${API_BASE_URL}/api/user-credits/${user.userId}`);
+      if (creditRes.data.credits !== undefined) {
+        setCredits(creditRes.data.credits);
+        diagnostics.steps.push(`✓ Credits refreshed: ${creditRes.data.credits}`);
+      }
+
+      // Step 7: Refresh campaigns
+      try {
+        const campRes = await axios.get(`${API_BASE_URL}/api/campaigns/list/${user.userId}`);
+        if (campRes.data.success) {
+          setCampaigns(campRes.data.campaigns);
+          diagnostics.steps.push(`✓ Campaigns refreshed: ${campRes.data.campaigns.length}`);
+        }
+      } catch (e) {
+        diagnostics.errors.push(`Campaign refresh failed: ${e.message}`);
+      }
+      
+      return { success: true, diagnostics };
+    } catch (err) {
+      diagnostics.errors.push(`Fatal: ${err.message}`);
+      return { success: false, diagnostics };
+    }
+  }, [user, agentId]);
+
   // --- RETRY CALLS (Feature 6) ---
   const retryCalls = async (contactIds) => {
     if (!apiKey || !agentId || isCalling) return;
@@ -732,6 +854,7 @@ export function useBolnaDashboard() {
           });
       }
     },
-    isLoadingInbound
+    isLoadingInbound,
+    refreshContacts
   };
 }

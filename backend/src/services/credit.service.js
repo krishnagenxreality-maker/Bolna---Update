@@ -2,6 +2,7 @@ const supabase = require('./supabase.service');
 
 /**
  * Deduct 1 credit for a user (idempotent per execution_id)
+ * Uses ATOMIC update to prevent race conditions.
  */
 const deductCredit = async (userId, executionId = null) => {
   console.log(` [CREDIT] Attempting deduction for user: ${userId}${executionId ? ` (exec: ${executionId})` : ''}`);
@@ -15,12 +16,14 @@ const deductCredit = async (userId, executionId = null) => {
         .eq('execution_id', executionId)
         .single();
       
-      if (existing && existing.credits_deducted) {
+      if (existing && existing.credits_deducted === true) {
         console.log(` [CREDIT] Already deducted for execution ${executionId}. Skipping.`);
         return false;
       }
     }
 
+    // ATOMIC credit deduction — no read-then-write race condition
+    // Uses RPC or direct SQL-style atomic update via Supabase
     const { data: user, error: fetchError } = await supabase
       .from('users')
       .select('remaining_credits, used_credits, credits')
@@ -28,7 +31,7 @@ const deductCredit = async (userId, executionId = null) => {
       .single();
 
     if (fetchError || !user) {
-      console.error(` [CREDIT] User ${userId} lookup failed`);
+      console.error(` [CREDIT] User ${userId} lookup failed:`, fetchError?.message);
       return false;
     }
 
@@ -43,28 +46,36 @@ const deductCredit = async (userId, executionId = null) => {
     const newRemaining = currentRemaining - 1;
     const newUsed = currentUsed + 1;
 
-    const { error: updateError } = await supabase
+    // Atomic update: only update if remaining_credits hasn't changed (optimistic lock)
+    const { data: updated, error: updateError } = await supabase
       .from('users')
       .update({ 
         remaining_credits: newRemaining,
         used_credits: newUsed,
         credits: newRemaining // Legacy sync
       })
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('remaining_credits', currentRemaining) // Optimistic lock
+      .select('remaining_credits')
+      .single();
 
-    if (updateError) {
-      console.error(` [CREDIT] Update failed for ${userId}:`, updateError.message);
+    if (updateError || !updated) {
+      console.error(` [CREDIT] Atomic update failed for ${userId} (race condition or error):`, updateError?.message);
       return false;
     }
 
-    // Mark as deducted for idempotency (ignore error if column doesn't exist)
+    // Mark as deducted for idempotency
     if (executionId) {
-      await supabase
-        .from('responses')
-        .update({ credits_deducted: true })
-        .eq('execution_id', executionId)
-        .then(() => {})
-        .catch(() => {}); // Non-blocking — column may not exist yet
+      try {
+        await supabase
+          .from('responses')
+          .update({ credits_deducted: true })
+          .eq('execution_id', executionId);
+        console.log(` [CREDIT] Marked execution ${executionId} as credits_deducted`);
+      } catch (markErr) {
+        console.warn(` [CREDIT] Could not mark credits_deducted:`, markErr.message);
+        // Non-blocking — deduction already succeeded
+      }
     }
 
     console.log(` [CREDIT] ✓ Success! ${userId}: ${currentRemaining} -> ${newRemaining}`);

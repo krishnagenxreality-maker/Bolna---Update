@@ -73,7 +73,8 @@ export default function BolnaDashboard() {
     setAvailableAgents,
     inboundCalls,
     refreshInbound,
-    isLoadingInbound
+    isLoadingInbound,
+    refreshContacts
   } = useBolnaDashboard();
 
   // Local state for Call Manager scheduling UI
@@ -400,6 +401,7 @@ export default function BolnaDashboard() {
                   activeView={activeView}
                   setActiveView={setActiveView}
                   apiKey={apiKey}
+                  refreshContacts={refreshContacts}
                 />
               )}
 
@@ -412,6 +414,7 @@ export default function BolnaDashboard() {
                   agentId={agentId}
                   activeView={activeView}
                   setActiveView={setActiveView}
+                  refreshContacts={refreshContacts}
                 />
               )}
 

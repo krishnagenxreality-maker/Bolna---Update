@@ -29,13 +29,25 @@ const syncInbound = async (req, res) => {
 const syncOutbound = async (req, res) => {
   const { userId } = req.params;
   const { executionIds } = req.body;
+  console.log(`[SYNC-OUTBOUND] userId=${userId}, executionIds=${JSON.stringify(executionIds)}`);
+  
+  const results = [];
   try {
     for (const id of executionIds || []) {
-      await callService.processCallCompletion(id, userId, 'outbound');
+      try {
+        console.log(`[SYNC-OUTBOUND] Processing execution ${id}...`);
+        const result = await callService.processCallCompletion(id, userId, 'outbound');
+        results.push({ executionId: id, success: true, result: result || 'processed' });
+        console.log(`[SYNC-OUTBOUND] ✓ Execution ${id} completed`);
+      } catch (stepErr) {
+        console.error(`[SYNC-OUTBOUND] ✗ Execution ${id} failed:`, stepErr.message);
+        results.push({ executionId: id, success: false, error: stepErr.message });
+      }
     }
-    res.json({ success: true });
+    res.json({ success: true, processed: results.length, results });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(`[SYNC-OUTBOUND] Fatal error:`, err.message);
+    res.status(500).json({ error: err.message, results });
   }
 };
 

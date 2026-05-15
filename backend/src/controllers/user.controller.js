@@ -49,21 +49,26 @@ const saveContacts = async (req, res) => {
   if (!contacts || !Array.isArray(contacts)) return res.status(400).json({ error: "Invalid data" });
 
   try {
-    const dbContacts = contacts.map(c => ({
-      id: c.id,
-      user_id: userId,
-      name: c.name,
-      phone: c.phone,
-      status: c.status || 'pending',
-      response: c.response || null,
-      summary: c.summary || null,
-      lead_category: c.leadCategory || null,
-      recording_url: c.recordingUrl || null,
-      agent_id: c.agentId,
-      agent_name: c.agentName,
-      execution_id: c.executionId,
-      call_date: c.date || new Date().toISOString().split('T')[0]
-    }));
+    const dbContacts = contacts.map(c => {
+      const record = {
+        id: c.id,
+        user_id: userId,
+        name: c.name,
+        phone: c.phone,
+        status: c.status || 'pending',
+        response: c.response || null,
+        agent_id: c.agentId,
+        agent_name: c.agentName,
+        execution_id: c.executionId,
+        call_date: c.date || new Date().toISOString().split('T')[0]
+      };
+      // CRITICAL: Only overwrite these fields if the frontend actually has a value.
+      // Otherwise, the backend pipeline's AI classification gets wiped out.
+      if (c.leadCategory && c.leadCategory.length > 0) record.lead_category = c.leadCategory;
+      if (c.summary && c.summary.length > 0) record.summary = c.summary;
+      if (c.recordingUrl && c.recordingUrl.length > 0) record.recording_url = c.recordingUrl;
+      return record;
+    });
 
     const { data, error } = await supabase.from('contacts').upsert(dbContacts).select();
     if (error) throw error;

@@ -4,7 +4,7 @@ import { DatePicker } from '../ui/DatePicker';
 import { DEEPSEEK_API_KEY } from '../../utils/constants';
 import { 
   CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, 
-  Download, X, FileText, Megaphone, Zap, CheckCircle2, Activity, Bot, PhoneIncoming
+  Download, X, FileText, Megaphone, Zap, CheckCircle2, Activity, Bot, PhoneIncoming, RefreshCw, Terminal
 } from 'lucide-react';
 
 // Helper: generate campaign-level AI summary using DeepSeek
@@ -52,12 +52,16 @@ export const CampaignView = ({
   setSearchDate,
   agentId,
   activeView,
-  setActiveView
+  setActiveView,
+  refreshContacts
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [modalData, setModalData] = useState(null);
   const [aiSummary, setAiSummary] = useState('');
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [diagnosticLog, setDiagnosticLog] = useState([]);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const ROWS_PER_PAGE = 4;
 
   const navItems = [
@@ -219,6 +223,35 @@ export const CampaignView = ({
     document.body.removeChild(link);
   };
 
+  // Manual sync handler with full diagnostics
+  const handleManualSync = async () => {
+    if (!refreshContacts || isSyncing) return;
+    setIsSyncing(true);
+    setShowDiagnostics(true);
+    setDiagnosticLog([{ time: new Date().toLocaleTimeString(), msg: '🔄 Syncing campaign data...', type: 'info' }]);
+    
+    try {
+      const result = await refreshContacts();
+      if (result.diagnostics) {
+        const newLogs = result.diagnostics.steps.map(s => ({
+          time: new Date().toLocaleTimeString(), msg: s, type: 'step'
+        }));
+        const errorLogs = (result.diagnostics.errors || []).map(e => ({
+          time: new Date().toLocaleTimeString(), msg: `❌ ${e}`, type: 'error'
+        }));
+        setDiagnosticLog(prev => [
+          ...prev, ...newLogs, ...errorLogs,
+          { time: new Date().toLocaleTimeString(), msg: result.success ? '✅ Sync complete!' : '⚠️ Sync completed with errors', type: result.success ? 'success' : 'error' }
+        ]);
+      }
+    } catch (err) {
+      setDiagnosticLog(prev => [...prev, {
+        time: new Date().toLocaleTimeString(), msg: `❌ Fatal: ${err.message}`, type: 'error'
+      }]);
+    }
+    setIsSyncing(false);
+  };
+
   return (
     <div className="leads-page-container">
       
@@ -301,6 +334,43 @@ export const CampaignView = ({
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button 
+                  onClick={handleManualSync}
+                  disabled={isSyncing}
+                  className="nav-btn"
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: isSyncing ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.1)',
+                    border: '1px solid rgba(139, 92, 246, 0.3)',
+                    color: '#a78bfa',
+                    cursor: isSyncing ? 'wait' : 'pointer'
+                  }}
+                >
+                  <RefreshCw size={14} className={isSyncing ? 'spin-animation' : ''} />
+                  {isSyncing ? 'Syncing...' : 'Sync Data'}
+                </button>
+                <button 
+                  onClick={() => setShowDiagnostics(!showDiagnostics)}
+                  className="nav-btn"
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: diagnosticLog.some(l => l.type === 'error') ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.03)',
+                    border: diagnosticLog.some(l => l.type === 'error') ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(255,255,255,0.08)',
+                    color: diagnosticLog.some(l => l.type === 'error') ? '#f87171' : 'rgba(255,255,255,0.5)'
+                  }}
+                >
+                  <Terminal size={14} />
+                  {diagnosticLog.some(l => l.type === 'error') ? 'Errors!' : 'Logs'}
+                </button>                <button 
                   onClick={handleDownload}
                   className="nav-btn"
                   style={{
@@ -317,6 +387,51 @@ export const CampaignView = ({
                 <DatePicker value={searchDate} onChange={setSearchDate} />
               </div>
             </PanelHead>
+
+            {/* Diagnostic Panel */}
+            {showDiagnostics && (
+              <div style={{
+                margin: '0 16px 12px',
+                padding: '12px 16px',
+                background: 'rgba(0, 0, 0, 0.4)',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                maxHeight: '180px',
+                overflowY: 'auto',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: '11px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.5)', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    Pipeline Diagnostics
+                  </span>
+                  <button 
+                    onClick={() => { setDiagnosticLog([]); setShowDiagnostics(false); }}
+                    style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: '10px' }}
+                  >
+                    Clear
+                  </button>
+                </div>
+                {diagnosticLog.length === 0 ? (
+                  <div style={{ color: 'rgba(255,255,255,0.25)', textAlign: 'center', padding: '16px 0' }}>
+                    Click "Sync Data" to run the pipeline.
+                  </div>
+                ) : (
+                  diagnosticLog.map((log, i) => (
+                    <div key={i} style={{
+                      padding: '3px 0',
+                      color: log.type === 'error' ? '#f87171' : log.type === 'success' ? '#34d399' : 'rgba(255,255,255,0.5)',
+                      borderBottom: '1px solid rgba(255,255,255,0.03)',
+                      display: 'flex',
+                      gap: '8px'
+                    }}>
+                      <span style={{ color: 'rgba(255,255,255,0.2)', flexShrink: 0 }}>{log.time}</span>
+                      <span>{log.msg}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
 
             <div className="panel-body">
               <div className="details-table-scroll-container campaign-table-section" style={{ flex: '0 0 auto', maxHeight: 'none' }}>
