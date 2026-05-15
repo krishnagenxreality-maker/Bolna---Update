@@ -257,58 +257,78 @@ export function useBolnaDashboard() {
   };
 
   const startCalling = async (campaignTitle, scheduleDate, scheduleTime) => {
-    if (!apiKey || !agentId) { alert("Please enter your Bolna API Key and Agent ID first."); return; }
-    if (isCalling) return;
-    if (!contacts.length) { alert("No contacts loaded."); return; }
+    try {
+      if (!apiKey || !agentId) { 
+        alert("Please enter your Bolna API Key and Agent ID first."); 
+        return; 
+      }
+      if (isCalling) return;
+      if (!contacts.length) { 
+        alert("No contacts loaded. Please upload a sheet first."); 
+        return; 
+      }
 
-    // Credit validation
-    if (credits <= 0) {
-      // alert("Insufficient credits. Please upgrade your plan or add credits to continue.");
-      return;
-    }
-
-    if (sessionContacts.length > credits) {
-      alert(`You only have ${credits} credits remaining, but you are trying to call ${sessionContacts.length} contacts. Please reduce the contact list or add credits.`);
-      return;
-    }
-
-    // Plan validation for Starter
-    if (user && user.selectedPlan === 'Starter') {
-      // Logic for 1 active/scheduled campaign today handled by backend in addScheduledJob
-      // But for immediate calls, we should also check if there are other jobs
-      const today = new Date().toISOString().split('T')[0];
-      const activeJobs = scheduledJobs.filter(j => 
-        ['Scheduled', 'Running', 'Running-Acknowledge'].includes(j.status) && 
-        j.scheduledAt.startsWith(today)
-      );
-      
-      if (activeJobs.length > 0) {
+      // Credit validation
+      if (credits <= 0) {
+        alert("Insufficient credits. Please add credits to continue.");
         return;
       }
-    }
 
-    const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`);
-    const now = new Date();
-    const isImmediate = scheduledAt <= now;
-    const agentName = agentId.includes('::') ? agentId.split('::')[0] : 'Default Agent';
-
-    const success = await addScheduledJob({
-      campaignTitle,
-      agentId,
-      agentName,
-      contacts: sessionContacts,
-      scheduledAt: isImmediate ? now.toISOString() : scheduledAt.toISOString(),
-      status: isImmediate ? 'Running' : 'Scheduled',
-      sheetName: sessionContacts[0]?.sheetName || 'N/A'
-    });
-
-    if (success) {
-      if (isImmediate) {
-        addLog(`Immediate campaign "${campaignTitle}" created and starting...`, "info");
-      } else {
-        alert(`Calls scheduled successfully for ${scheduleDate} at ${scheduleTime}`);
+      if (sessionContacts.length > credits) {
+        alert(`You only have ${credits} credits remaining, but you are trying to call ${sessionContacts.length} contacts.`);
+        return;
       }
-      setSessionContacts([]); 
+
+      // Plan validation for Starter
+      if (user && user.selectedPlan === 'Starter') {
+        const today = new Date().toISOString().split('T')[0];
+        const activeJobs = (scheduledJobs || []).filter(j => 
+          j && ['Scheduled', 'Running', 'Running-Acknowledge'].includes(j.status) && 
+          j.scheduledAt && j.scheduledAt.startsWith(today)
+        );
+        
+        if (activeJobs.length > 0) {
+          alert("Starter plan is limited to 1 active/scheduled campaign per day.");
+          return;
+        }
+      }
+
+      if (!scheduleDate || !scheduleTime) {
+        alert("Please select a valid date and time for the campaign.");
+        return;
+      }
+
+      const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`);
+      if (isNaN(scheduledAt.getTime())) {
+        alert("Invalid date or time format. Please re-select.");
+        return;
+      }
+
+      const now = new Date();
+      const isImmediate = scheduledAt <= now;
+      const agentName = (typeof agentId === 'string' && agentId.includes('::')) ? agentId.split('::')[0] : 'Default Agent';
+
+      const success = await addScheduledJob({
+        campaignTitle: campaignTitle || 'Untitled Campaign',
+        agentId,
+        agentName,
+        contacts: sessionContacts,
+        scheduledAt: isImmediate ? now.toISOString() : scheduledAt.toISOString(),
+        status: isImmediate ? 'Running' : 'Scheduled',
+        sheetName: sessionContacts[0]?.sheetName || 'N/A'
+      });
+
+      if (success) {
+        if (isImmediate) {
+          addLog(`Immediate campaign "${campaignTitle || 'Untitled'}" created and starting...`, "info");
+        } else {
+          alert(`Calls scheduled successfully for ${scheduleDate} at ${scheduleTime}`);
+        }
+        setSessionContacts([]); 
+      }
+    } catch (err) {
+      console.error("Crash in startCalling:", err);
+      alert("An unexpected error occurred while scheduling calls. Please check your configuration.");
     }
   };
 
@@ -484,32 +504,44 @@ export function useBolnaDashboard() {
 
   // Watch for Running jobs to activate manual calling pipeline
   useEffect(() => {
-    const runningJob = scheduledJobs.find(j => j.status === 'Running');
+    if (!scheduledJobs || !Array.isArray(scheduledJobs)) return;
+    
+    const runningJob = scheduledJobs.find(j => j && j.status === 'Running');
     if (runningJob && !isCalling) {
-      console.log("SCHEDULE TRIGGERED");
-      console.log("START CALLING PIPELINE INVOKED");
-      
-      // Setup state for manual pipeline
-      setIsCalling(true);
-      setShowProgress(true);
-      setShowDone(false);
-      setAgentId(runningJob.agentId);
-      setActiveCampaignId(runningJob.id);
-      setSessionContacts(runningJob.contacts);
-      
-      // Populate manual queue
-      const contactsToCall = runningJob.contacts.filter(c => c.status === "pending" || c.status === "failed");
-      callQueueRef.current = contactsToCall.map(c => c.id);
-      
-      addLog(`SCHEDULED PIPELINE: Starting "${runningJob.campaignTitle}"...`, "info");
-      console.log("LIVE JOURNEY STARTED");
+      try {
+        console.log("SCHEDULE TRIGGERED", runningJob.id);
+        
+        // Ensure contacts exist before processing
+        const jobContacts = runningJob.contacts || [];
+        if (jobContacts.length === 0) {
+          console.warn("Running job has no contacts", runningJob.id);
+          return;
+        }
 
-      // Mark the job as 'Running-Acknowledge' on server so we don't re-trigger it
-      axios.post(`${API_BASE_URL}/api/schedule/status`, { jobId: runningJob.id, status: 'Running-Acknowledge' });
+        // Setup state for manual pipeline
+        setIsCalling(true);
+        setShowProgress(true);
+        setShowDone(false);
+        setAgentId(runningJob.agentId);
+        setActiveCampaignId(runningJob.id);
+        setSessionContacts(jobContacts);
+        
+        // Populate manual queue
+        const contactsToCall = jobContacts.filter(c => c && (c.status === "pending" || c.status === "failed"));
+        callQueueRef.current = contactsToCall.map(c => c.id);
+        
+        addLog(`SCHEDULED PIPELINE: Starting "${runningJob.campaignTitle || 'Untitled'}"...`, "info");
 
-      // Start the manual pipeline
-      if (apiKey) {
-        dispatchNextBatch(apiKey, runningJob.agentId);
+        // Mark the job as 'Running-Acknowledge' on server so we don't re-trigger it
+        axios.post(`${API_BASE_URL}/api/schedule/status`, { jobId: runningJob.id, status: 'Running-Acknowledge' })
+          .catch(err => console.error("Failed to acknowledge job", err));
+
+        // Start the manual pipeline
+        if (apiKey) {
+          dispatchNextBatch(apiKey, runningJob.agentId);
+        }
+      } catch (err) {
+        console.error("Crash in job monitoring effect:", err);
       }
     }
   }, [scheduledJobs, isCalling, apiKey, dispatchNextBatch, addLog, setAgentId]);
