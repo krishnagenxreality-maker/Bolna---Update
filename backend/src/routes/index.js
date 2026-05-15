@@ -38,6 +38,7 @@ router.post('/contacts', user.saveContacts);
 // --- SCHEDULE & CAMPAIGNS ---
 router.get('/schedule/:userId', schedule.getJobs);
 router.post('/schedule', schedule.createJob);
+router.post('/schedule/status', schedule.updateJobStatus);
 router.delete('/schedule/:id', schedule.deleteJob);
 router.get('/campaigns/list/:userId', schedule.getCampaigns);
 

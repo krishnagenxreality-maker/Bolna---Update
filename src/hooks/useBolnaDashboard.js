@@ -101,7 +101,13 @@ export function useBolnaDashboard() {
       // If it was a scheduled job, mark as Completed on server
       if (runningJob) {
         axios.post(`${API_BASE_URL}/api/schedule/status`, { jobId: runningJob.id, status: 'Completed' })
-          .then(() => fetchScheduledJobs());
+          .then(() => {
+            fetchScheduledJobs();
+            // Refresh campaigns list too
+            axios.get(`${API_BASE_URL}/api/campaigns/list/${user.userId}`).then(res => {
+               if (res.data.success) setCampaigns(res.data.campaigns);
+            });
+          });
       }
 
       setShowDone(true);
@@ -110,13 +116,14 @@ export function useBolnaDashboard() {
       setIsCalling(false);
       setCallStartTime(null);
       setActiveCampaignId(null);
-      addLog(`All done. ${doneCount} called, ${failedCount} failed.`, "ok");
+      addLog(`Campaign Finished. ${doneCount} called, ${failedCount} failed.`, "ok");
       
+      // Refresh all leads from server to ensure detail/response pages are latest
       if (user && user.userId) {
         axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`).then(res => {
-          if (res.data && res.data.length > 0) {
+          if (res.data) {
             setContacts(res.data);
-            contactsRef.current = res.data; // Keep ref in sync
+            contactsRef.current = res.data;
           }
         });
       }
@@ -207,13 +214,20 @@ export function useBolnaDashboard() {
     for (const id of batch) {
       const contact = contactsRef.current.find(c => c.id === id);
       if (!contact) continue;
+      
+      // CRITICAL: Double check status before placing call to prevent duplicates/loops
+      if (contact.status === "called" || contact.status === "completed" || contact.status === "calling") {
+        console.log(`Skipping contact ${contact.name} - Status is already ${contact.status}`);
+        continue;
+      }
+
       updateContactStatus(id, "queued");
       try {
         const actualBolnaId = agId.includes('::') ? agId.split('::')[1] : agId;
         const execId = await makeCall(key, actualBolnaId, contact.phone, contact.name);
         updateContactExecId(id, execId);
         updateContactStatus(id, "calling");
-        addLog(`✓ Call queued: ${contact.name} (${contact.phone}) → exec ${execId.slice(0,8)}…`, "ok");
+        addLog(`✓ Call placed: ${contact.name} (${contact.phone}) → exec ${execId.slice(0,8)}…`, "ok");
       } catch(err) {
         updateContactStatus(id, "failed", err.message);
         addLog(`✗ Failed to call ${contact.name}: ${err.message}`, "err");
@@ -503,14 +517,17 @@ export function useBolnaDashboard() {
   }, [user, fetchScheduledJobs, activeView]);
 
   // Watch for Running jobs to activate manual calling pipeline
+  const [processedJobIds, setProcessedJobIds] = useState(new Set());
+
   useEffect(() => {
-    if (!scheduledJobs || !Array.isArray(scheduledJobs)) return;
+    if (!scheduledJobs || !Array.isArray(scheduledJobs) || isCalling) return;
     
-    const runningJob = scheduledJobs.find(j => j && j.status === 'Running');
-    if (runningJob && !isCalling) {
+    const runningJob = scheduledJobs.find(j => j && j.status === 'Running' && !processedJobIds.has(j.id));
+    if (runningJob) {
       try {
         console.log("SCHEDULE TRIGGERED", runningJob.id);
-        
+        setProcessedJobIds(prev => new Set(prev).add(runningJob.id));
+
         // Ensure contacts exist before processing
         const jobContacts = runningJob.contacts || [];
         if (jobContacts.length === 0) {
@@ -524,15 +541,31 @@ export function useBolnaDashboard() {
         setShowDone(false);
         setAgentId(runningJob.agentId);
         setActiveCampaignId(runningJob.id);
-        setSessionContacts(jobContacts);
         
-        // Populate manual queue
-        const contactsToCall = jobContacts.filter(c => c && (c.status === "pending" || c.status === "failed"));
+        // SYNC: Filter job contacts against real-time contact status to prevent duplicate calls
+        const contactsToCall = jobContacts.filter(jc => {
+          if (!jc) return false;
+          // Find the most recent status from our main contacts state
+          const realTimeContact = contactsRef.current.find(c => c.id === jc.id || c.phone === jc.phone);
+          const currentStatus = realTimeContact ? realTimeContact.status : jc.status;
+          return currentStatus === "pending" || currentStatus === "failed";
+        });
+
+        if (contactsToCall.length === 0) {
+          console.log("All contacts in this job are already called or completed.");
+          // Mark as completed immediately if no pending contacts
+          axios.post(`${API_BASE_URL}/api/schedule/status`, { jobId: runningJob.id, status: 'Completed' })
+            .then(() => fetchScheduledJobs());
+          setIsCalling(false);
+          return;
+        }
+
+        setSessionContacts(jobContacts);
         callQueueRef.current = contactsToCall.map(c => c.id);
         
-        addLog(`SCHEDULED PIPELINE: Starting "${runningJob.campaignTitle || 'Untitled'}"...`, "info");
+        addLog(`SCHEDULED PIPELINE: Starting "${runningJob.campaignTitle || 'Untitled'}"…`, "info");
 
-        // Mark the job as 'Running-Acknowledge' on server so we don't re-trigger it
+        // Mark the job as 'Running-Acknowledge' on server
         axios.post(`${API_BASE_URL}/api/schedule/status`, { jobId: runningJob.id, status: 'Running-Acknowledge' })
           .catch(err => console.error("Failed to acknowledge job", err));
 
@@ -542,9 +575,10 @@ export function useBolnaDashboard() {
         }
       } catch (err) {
         console.error("Crash in job monitoring effect:", err);
+        setIsCalling(false);
       }
     }
-  }, [scheduledJobs, isCalling, apiKey, dispatchNextBatch, addLog, setAgentId]);
+  }, [scheduledJobs, isCalling, apiKey, dispatchNextBatch, addLog, setAgentId, processedJobIds]);
 
   useEffect(() => {
     if (activeView === "responses" && responseTab === "" && contacts.length > 0) {

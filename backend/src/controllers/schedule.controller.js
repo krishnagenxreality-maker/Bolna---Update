@@ -69,9 +69,25 @@ const deleteJob = async (req, res) => {
   }
 };
 
+const updateJobStatus = async (req, res) => {
+  const { jobId, status } = req.body;
+  try {
+    const { error } = await supabase.from('scheduled_jobs').update({ status }).eq('id', jobId);
+    if (error) throw error;
+
+    // Also update campaign status
+    await supabase.from('campaigns').update({ campaign_status: status }).eq('id', jobId);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   getJobs,
   createJob,
   getCampaigns,
-  deleteJob
+  deleteJob,
+  updateJobStatus
 };
