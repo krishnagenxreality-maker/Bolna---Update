@@ -329,11 +329,11 @@ export default function BolnaDashboard() {
                               <div className="job-timing">
                                 <div className="job-date">
                                   <CalendarDays size={12} />
-                                  {new Date(job.scheduledAt).toLocaleDateString()}
+                                  {job.scheduledAt ? new Date(job.scheduledAt).toLocaleDateString() : 'N/A'}
                                 </div>
                                 <div className="job-time">
                                   <Clock size={12} />
-                                  {new Date(job.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  {job.scheduledAt ? new Date(job.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                                 </div>
                               </div>
                               <div className={`job-status status-${job.status.toLowerCase()}`}>

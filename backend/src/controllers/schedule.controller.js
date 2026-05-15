@@ -27,7 +27,8 @@ const createJob = async (req, res) => {
       api_key: apiKey,
       status: status || 'Scheduled'
     };
-    await supabase.from('scheduled_jobs').insert([newJob]);
+    const { error: jobError } = await supabase.from('scheduled_jobs').insert([newJob]);
+    if (jobError) throw jobError;
 
     const newCampaign = {
       id: jobId,
@@ -41,7 +42,8 @@ const createJob = async (req, res) => {
     };
     await supabase.from('campaigns').insert([newCampaign]);
 
-    res.json({ success: true, jobId });
+    // Return the full mapped job so the frontend can use it immediately
+    res.json({ success: true, jobId, job: mapJob(newJob) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

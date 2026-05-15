@@ -1,14 +1,26 @@
 const supabase = require('./supabase.service');
 
 /**
- * Deduct 1 credit for a user atomatically
+ * Deduct 1 credit for a user (idempotent per execution_id)
  */
-const deductCredit = async (userId) => {
-  console.log(` [CREDIT] Attempting deduction for user: ${userId}`);
+const deductCredit = async (userId, executionId = null) => {
+  console.log(` [CREDIT] Attempting deduction for user: ${userId}${executionId ? ` (exec: ${executionId})` : ''}`);
 
   try {
-    // We use a select-then-update approach. 
-    // In a truly high-traffic app, we would use an RPC function in Postgres for atomicity.
+    // Idempotency check: if executionId is provided, check if already deducted
+    if (executionId) {
+      const { data: existing } = await supabase
+        .from('responses')
+        .select('credits_deducted')
+        .eq('execution_id', executionId)
+        .single();
+      
+      if (existing && existing.credits_deducted) {
+        console.log(` [CREDIT] Already deducted for execution ${executionId}. Skipping.`);
+        return false;
+      }
+    }
+
     const { data: user, error: fetchError } = await supabase
       .from('users')
       .select('remaining_credits, used_credits, credits')
@@ -24,7 +36,7 @@ const deductCredit = async (userId) => {
     const currentUsed = user.used_credits || 0;
 
     if (currentRemaining <= 0) {
-      console.warn(` [CREDIT] Insufficient balance for ${userId}`);
+      console.warn(` [CREDIT] Insufficient balance for ${userId} (${currentRemaining})`);
       return false;
     }
 
@@ -45,7 +57,17 @@ const deductCredit = async (userId) => {
       return false;
     }
 
-    console.log(` [CREDIT] Success! ${userId}: ${currentRemaining} -> ${newRemaining}`);
+    // Mark as deducted for idempotency (ignore error if column doesn't exist)
+    if (executionId) {
+      await supabase
+        .from('responses')
+        .update({ credits_deducted: true })
+        .eq('execution_id', executionId)
+        .then(() => {})
+        .catch(() => {}); // Non-blocking — column may not exist yet
+    }
+
+    console.log(` [CREDIT] ✓ Success! ${userId}: ${currentRemaining} -> ${newRemaining}`);
     return true;
   } catch (err) {
     console.error(` [CREDIT] Pipeline crash for ${userId}:`, err.message);

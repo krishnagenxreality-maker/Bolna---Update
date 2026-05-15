@@ -102,6 +102,7 @@ const mapJob = (j) => {
     id: j.id,
     userId: j.user_id,
     title: j.campaign_title,
+    campaignTitle: j.campaign_title,
     agentId: j.agent_id,
     agentName: j.agent_name,
     contacts: j.contacts,

@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { BATCH_SIZE, BATCH_DELAY_MS, POLL_INTERVAL_MS } from "../utils/constants";
 import { sleep } from "../utils/helpers";
-import { makeCall, fetchExecutionStatus, analyzeSummaryWithDeepSeek, fetchInboundCalls } from "../services/api";
+import { makeCall, fetchExecutionStatus, fetchInboundCalls } from "../services/api";
 import { parseContacts as parseContactsLogic } from "../services/fileService";
-import { DEEPSEEK_API_KEY } from "../utils/constants";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import { API_BASE_URL } from "../config";
@@ -118,14 +117,27 @@ export function useBolnaDashboard() {
       setActiveCampaignId(null);
       addLog(`Campaign Finished. ${doneCount} called, ${failedCount} failed.`, "ok");
       
-      // Refresh all leads from server to ensure detail/response pages are latest
+      // Refresh all data from server to ensure all pages are up to date
       if (user && user.userId) {
+        // Refresh contacts
         axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`).then(res => {
           if (res.data) {
             setContacts(res.data);
             contactsRef.current = res.data;
           }
-        });
+        }).catch(() => {});
+        
+        // Refresh credits (may have been deducted by backend)
+        axios.get(`${API_BASE_URL}/api/user-credits/${user.userId}`).then(res => {
+          if (res.data.credits !== undefined) {
+            setCredits(res.data.credits);
+          }
+        }).catch(() => {});
+        
+        // Refresh campaigns
+        axios.get(`${API_BASE_URL}/api/campaigns/list/${user.userId}`).then(res => {
+          if (res.data.success) setCampaigns(res.data.campaigns);
+        }).catch(() => {});
       }
     }
   }, [addLog, agentId, user, scheduledJobs, fetchScheduledJobs]);
@@ -175,17 +187,19 @@ export function useBolnaDashboard() {
         const sl = (data.status || "").toLowerCase();
         const isSuccess = ["completed","no answer","no_answer","call disconnected","call_disconnected","busy"].includes(sl);
         if (isSuccess) { 
-          let category = "";
           const recordingUrl = data.telephony_data?.recording_url || "";
-          if (data.summary) {
-            category = await analyzeSummaryWithDeepSeek(DEEPSEEK_API_KEY, data.summary);
-            console.log("RESPONSES UPDATED");
-          }
           const finalStatus = sl === "completed" ? "called" : sl;
-          updateContactStatus(contact.id, finalStatus, sl, category, data.summary || "", recordingUrl); 
-          addLog(`✓ ${sl.toUpperCase()}: ${contact.name}${category ? ` (${category})` : ""}`, "ok"); 
+          updateContactStatus(contact.id, finalStatus, sl, "", data.summary || "", recordingUrl); 
+          addLog(`✓ ${sl.toUpperCase()}: ${contact.name}`, "ok"); 
 
-          // Credit deduction is now handled on the backend via webhooks or the /api/contacts endpoint.
+          // Trigger full backend pipeline: DeepSeek AI + Leads + Responses + Credits
+          if (user && user.userId && contact.executionId) {
+            axios.post(`${API_BASE_URL}/api/sync-outbound/${user.userId}`, { 
+              executionIds: [contact.executionId] 
+            }).then(() => {
+              console.log(`[SYNC] Backend pipeline triggered for ${contact.executionId}`);
+            }).catch(e => console.error("[SYNC] Backend pipeline failed:", e.message));
+          }
         }
         else if (["failed","error","cancelled"].includes(sl)) { 
           updateContactStatus(contact.id, "failed", sl); 

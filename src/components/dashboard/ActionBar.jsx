@@ -9,9 +9,14 @@ export const ActionBar = ({ isCalling, startCalling, contactsCount }) => {
   return (
     <div className="action-bar">
       <button
+        type="button"
         className={`btn-call ${isCalling ? "btn-calling" : ""} ${(!hasContacts || isDemoUser) ? "btn-disabled" : "btn-violet"}`}
         disabled={isCalling || !hasContacts || isDemoUser}
-        onClick={startCalling}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (startCalling) startCalling();
+        }}
       >
         {isCalling ? (
           <><span className="pulse-dot"/><span>Calling in Progress…</span></>

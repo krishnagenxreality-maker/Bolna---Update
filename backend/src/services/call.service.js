@@ -5,12 +5,23 @@ const credit = require('./credit.service');
 
 /**
  * Unified pipeline for processing call completion (Outbound and Inbound)
+ * This is the SINGLE source of truth for post-call data persistence.
+ * 
+ * Pipeline Steps:
+ * 1. Fetch user API key
+ * 2. Fetch call data from Bolna
+ * 3. AI categorization via DeepSeek (non-blocking)
+ * 4. Persist to: contacts, responses, leads
+ * 5. Deduct credit (idempotent)
  */
 const processCallCompletion = async (executionId, userId, direction = 'outbound') => {
-  console.log(`\n [PIPELINE] Processing ${direction} call: ${executionId} (User: ${userId})`);
+  console.log(`\n========================================`);
+  console.log(` [PIPELINE] START: ${executionId}`);
+  console.log(` [PIPELINE] User: ${userId}, Direction: ${direction}`);
+  console.log(`========================================`);
 
   try {
-    // 1. Fetch User API Key
+    // ── STEP 1: Fetch User API Key ──
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('bolna_api_key')
@@ -18,14 +29,15 @@ const processCallCompletion = async (executionId, userId, direction = 'outbound'
       .single();
 
     if (userError || !user?.bolna_api_key) {
-      console.error(` [PIPELINE] Aborted: No Bolna API Key found for user ${userId}`);
+      console.error(` [PIPELINE] ABORT: No Bolna API Key for user ${userId}. Error:`, userError?.message);
       return;
     }
+    console.log(` [PIPELINE] ✓ Step 1: User API key found`);
 
-    // 2. Fetch Latest Call Data from Bolna
+    // ── STEP 2: Fetch Call Data from Bolna ──
     const bolnaData = await bolna.getExecutionStatus(user.bolna_api_key, executionId);
     if (!bolnaData) {
-      console.warn(` [PIPELINE] Aborted: Could not fetch execution details from Bolna`);
+      console.warn(` [PIPELINE] ABORT: Could not fetch execution details from Bolna for ${executionId}`);
       return;
     }
 
@@ -34,18 +46,26 @@ const processCallCompletion = async (executionId, userId, direction = 'outbound'
     const recordingUrl = bolnaData.telephony_data?.recording_url || bolnaData.recording_url || '';
     const status = (bolnaData.status || '').toLowerCase();
     const duration = bolnaData.duration || 0;
+    const phone = bolnaData.telephony_data?.recipient_phone_number || bolnaData.telephony_data?.caller_id || '';
+    const contactName = bolnaData.recipient_name || bolnaData.caller_name || 'Anonymous';
     
-    console.log(` [PIPELINE] Status: ${status}, Summary Length: ${summary.length}`);
+    console.log(` [PIPELINE] ✓ Step 2: Bolna data fetched. Status: "${status}", Summary: ${summary.length} chars, Recording: ${recordingUrl ? 'YES' : 'NO'}`);
 
-    // 3. AI Analysis via DeepSeek
+    // ── STEP 3: AI Analysis via DeepSeek (NON-BLOCKING) ──
     let category = 'Uncategorized';
-    if (summary && summary.length > 10) {
-      category = await deepseek.analyzeSummary(summary);
+    try {
+      if (summary && summary.length > 10) {
+        category = await deepseek.analyzeSummary(summary);
+        console.log(` [PIPELINE] ✓ Step 3: DeepSeek category = "${category}"`);
+      } else {
+        console.log(` [PIPELINE] ⚠ Step 3: Summary too short (${summary.length} chars), skipping AI`);
+      }
+    } catch (deepseekErr) {
+      console.error(` [PIPELINE] ⚠ Step 3: DeepSeek FAILED (non-blocking):`, deepseekErr.message);
+      // Pipeline continues — category stays "Uncategorized"
     }
 
-    // 4. Persistence - Update Database Idempotently
-    
-    // A. Update Contacts/CallDetails (Mainly for Outbound tracking)
+    // ── STEP 4A: Update Contacts table ──
     const { error: contactError } = await supabase
       .from('contacts')
       .update({
@@ -59,13 +79,17 @@ const processCallCompletion = async (executionId, userId, direction = 'outbound'
       })
       .eq('execution_id', executionId);
     
-    if (contactError) console.error(' [PIPELINE] Contacts Update Error:', contactError.message);
+    if (contactError) {
+      console.error(` [PIPELINE] ⚠ Step 4A: Contacts update failed:`, contactError.message);
+    } else {
+      console.log(` [PIPELINE] ✓ Step 4A: Contacts table updated`);
+    }
 
-    // B. Upsert into Responses Table (Source of truth for Responses Page)
+    // ── STEP 4B: Upsert into Responses table ──
     const responseRecord = {
       execution_id: executionId,
       user_id: userId,
-      phone: bolnaData.telephony_data?.recipient_phone_number || bolnaData.telephony_data?.caller_id || '',
+      phone: phone,
       status: status,
       summary: summary,
       transcript: transcript,
@@ -74,18 +98,22 @@ const processCallCompletion = async (executionId, userId, direction = 'outbound'
     };
 
     const { error: resError } = await supabase.from('responses').upsert(responseRecord, { onConflict: 'execution_id' });
-    if (resError) console.error(' [PIPELINE] Responses Upsert Error:', resError.message);
+    if (resError) {
+      console.error(` [PIPELINE] ⚠ Step 4B: Responses upsert failed:`, resError.message);
+    } else {
+      console.log(` [PIPELINE] ✓ Step 4B: Responses table updated`);
+    }
 
-    // C. Lead Generation Logic
-    const interestedKeywords = ['Interested', 'Appointment', 'Booking', 'Inquiry', 'Positive'];
-    const isLeadCandidate = interestedKeywords.some(kw => category.toLowerCase().includes(kw.toLowerCase()));
+    // ── STEP 4C: Lead Generation — ALL completed/connected calls get a lead ──
+    const connectedStatuses = ['completed', 'busy', 'no answer', 'no_answer', 'call disconnected', 'call_disconnected'];
+    const isConnected = connectedStatuses.includes(status);
     
-    if (isLeadCandidate || status === 'completed') {
+    if (isConnected) {
       const leadRecord = {
         execution_id: executionId,
         user_id: userId,
-        name: bolnaData.recipient_name || bolnaData.caller_name || 'Anonymous',
-        phone: responseRecord.phone,
+        name: contactName,
+        phone: phone,
         category: category,
         summary: summary,
         recording_url: recordingUrl,
@@ -94,16 +122,23 @@ const processCallCompletion = async (executionId, userId, direction = 'outbound'
       };
       
       const { error: leadError } = await supabase.from('leads').upsert(leadRecord, { onConflict: 'execution_id' });
-      if (leadError) console.error(' [PIPELINE] Leads Upsert Error:', leadError.message);
+      if (leadError) {
+        console.error(` [PIPELINE] ⚠ Step 4C: Leads upsert FAILED:`, leadError.message);
+        console.error(` [PIPELINE]   → Lead record was:`, JSON.stringify(leadRecord));
+      } else {
+        console.log(` [PIPELINE] ✓ Step 4C: Lead saved — "${category}" for ${phone}`);
+      }
+    } else {
+      console.log(` [PIPELINE] ⚠ Step 4C: Skipped lead (status "${status}" not connected)`);
     }
 
-    // D. Inbound Tracking (Specialized table)
+    // ── STEP 4D: Inbound Tracking ──
     if (direction === 'inbound') {
       const inboundRecord = {
         execution_id: executionId,
         user_id: userId,
-        caller_name: bolnaData.caller_name || 'Anonymous',
-        caller_phone: responseRecord.phone,
+        caller_name: contactName,
+        caller_phone: phone,
         agent_name: bolnaData.agent_name || 'Inbound Agent',
         agent_id: bolnaData.agent_id,
         call_date: new Date().toISOString(),
@@ -113,19 +148,31 @@ const processCallCompletion = async (executionId, userId, direction = 'outbound'
         reason: category,
         status: status
       };
-      await supabase.from('inbound_calls').upsert(inboundRecord, { onConflict: 'execution_id' });
+      const { error: inboundErr } = await supabase.from('inbound_calls').upsert(inboundRecord, { onConflict: 'execution_id' });
+      if (inboundErr) {
+        console.error(` [PIPELINE] ⚠ Step 4D: Inbound upsert failed:`, inboundErr.message);
+      } else {
+        console.log(` [PIPELINE] ✓ Step 4D: Inbound call tracked`);
+      }
     }
 
-    // 5. Credit Deduction (Only once per execution)
-    // We check if it was connected first.
-    const wasConnected = ['completed', 'busy', 'no answer', 'no_answer', 'call disconnected', 'call_disconnected'].includes(status);
-    if (wasConnected) {
-      await credit.deductCredit(userId);
+    // ── STEP 5: Credit Deduction ──
+    if (isConnected) {
+      const deducted = await credit.deductCredit(userId, executionId);
+      if (deducted) {
+        console.log(` [PIPELINE] ✓ Step 5: Credit deducted for ${userId}`);
+      } else {
+        console.log(` [PIPELINE] ⚠ Step 5: Credit NOT deducted (insufficient or already deducted)`);
+      }
+    } else {
+      console.log(` [PIPELINE] ⚠ Step 5: No credit deduction (call not connected)`);
     }
 
-    console.log(` [PIPELINE] Successfully processed execution: ${executionId}\n`);
+    console.log(` [PIPELINE] ✅ COMPLETE: ${executionId}`);
+    console.log(`========================================\n`);
   } catch (err) {
-    console.error(` [PIPELINE] Critical Failure for ${executionId}:`, err.message);
+    console.error(`\n [PIPELINE] ❌ CRITICAL FAILURE for ${executionId}:`, err.message);
+    console.error(err.stack);
   }
 };
 
@@ -149,7 +196,8 @@ const executeJob = async (jobId) => {
     await supabase.from('campaigns').update({ campaign_status: 'Running' }).eq('id', jobId);
 
     const contacts = Array.isArray(job.contacts) ? job.contacts : [];
-    const agentId = job.agent_id.includes('::') ? job.agent_id.split('::')[1] : job.agent_id;
+    const rawAgentId = job.agent_id || '';
+    const agentId = rawAgentId.includes('::') ? rawAgentId.split('::')[1] : rawAgentId;
     
     console.log(` [JOB] Dispatching ${contacts.length} calls via Agent ${agentId}...`);
 
