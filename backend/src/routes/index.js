@@ -14,6 +14,7 @@ const demo = require('../controllers/demo.controller');
 router.post('/login', auth.login);
 router.post('/logout', auth.logout);
 router.post('/signup', auth.signup);
+router.post('/users/set-password/:userId', auth.setPassword);
 
 // --- ADMIN ---
 router.get('/users', admin.getAllUsers);
@@ -21,7 +22,6 @@ router.post('/users', admin.createUser);
 router.delete('/users/:userId', admin.deleteUser);
 router.get('/demo-requests', demo.getDemoRequests);
 router.post('/demo-requests', demo.submitDemoRequest);
-router.post('/users/set-password/:userId', auth.login); // Placeholder for set-password logic
 
 // --- USER & CONTACTS ---
 router.get('/user-config/:userId', user.getUserConfig);

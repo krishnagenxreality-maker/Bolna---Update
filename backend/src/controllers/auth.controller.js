@@ -101,8 +101,35 @@ const signup = async (req, res) => {
   }
 };
 
+const setPassword = async (req, res) => {
+  const { userId } = req.params;
+  const { password } = req.body;
+
+  if (!password) return res.status(400).json({ success: false, message: "Password required" });
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const { data, error } = await supabase
+      .from('users')
+      .update({ 
+        password: hashedPassword,
+        is_first_login: false 
+      })
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, user: mapUser(data) });
+  } catch (err) {
+    console.error(' [AUTH] SetPassword Error:', err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   login,
   logout,
-  signup
+  signup,
+  setPassword
 };
