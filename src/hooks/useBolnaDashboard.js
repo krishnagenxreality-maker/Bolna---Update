@@ -39,6 +39,7 @@ export function useBolnaDashboard() {
   const contactsRef  = useRef([]);
   const callQueueRef = useRef([]);
   const pollRef      = useRef(null);
+  const processedJobIdsRef = useRef(new Set());
 
   // --- CALLBACKS & FUNCTIONS ---
 
@@ -50,14 +51,16 @@ export function useBolnaDashboard() {
   const fetchScheduledJobs = useCallback(async () => {
     if (!user || !user.userId) return;
     try {
-      const [scheduleRes, campaignRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/schedule/${user.userId}`),
-        axios.get(`${API_BASE_URL}/api/campaigns/${user.userId}`)
-      ]);
+      const scheduleRes = await axios.get(`${API_BASE_URL}/api/schedule/${user.userId}`);
       if (scheduleRes.data.success) setScheduledJobs(scheduleRes.data.jobs);
-      if (campaignRes.data.success) setCampaigns(campaignRes.data.campaigns);
     } catch (err) {
       console.error("Failed to fetch scheduled jobs:", err);
+    }
+    try {
+      const campaignRes = await axios.get(`${API_BASE_URL}/api/campaigns/${user.userId}`);
+      if (campaignRes.data.success) setCampaigns(campaignRes.data.campaigns);
+    } catch (err) {
+      console.error("Failed to fetch campaigns:", err);
     }
   }, [user]);
 
@@ -102,8 +105,6 @@ export function useBolnaDashboard() {
       setDoneSummary(`${doneCount} call(s) completed successfully${failedCount > 0 ? `, ${failedCount} failed` : ""}.`);
       setIsCalling(false);
       setCallStartTime(null);
-      addLog(`All done. ${doneCount} called, ${failedCount} failed.`, "ok");
-      
       if (user && user.userId) {
         axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`).then(res => {
           if (res.data && res.data.length > 0) {
@@ -111,6 +112,8 @@ export function useBolnaDashboard() {
           }
         });
       }
+      addLog(`Campaign completion detected. Final stats: ${doneCount} called, ${failedCount} failed.`, "ok");
+      console.log(`[Campaign] Finished: ${doneCount} success, ${failedCount} fail`);
     }
   }, [addLog, agentId, user, scheduledJobs, fetchScheduledJobs]);
 
@@ -214,7 +217,8 @@ export function useBolnaDashboard() {
         const execId = await makeCall(key, actualBolnaId, contact.phone, contact.name);
         updateContactExecId(id, execId);
         updateContactStatus(id, "calling");
-        addLog(`✓ Call queued: ${contact.name} (${contact.phone}) → exec ${execId.slice(0,8)}…`, "ok");
+        addLog(`✓ Call triggered: ${contact.name} (${contact.phone})`, "ok");
+        console.log(`[Call] Started: ${contact.name} (${contact.phone}) -> exec ${execId.slice(0,8)}`);
       } catch(err) {
         updateContactStatus(id, "failed", err.message);
         addLog(`✗ Failed to call ${contact.name}: ${err.message}`, "err");
@@ -236,7 +240,8 @@ export function useBolnaDashboard() {
         apiKey
       });
       if (res.data.success) {
-        setScheduledJobs(prev => [...prev, res.data.job]);
+        // Immediately refetch jobs so the Running job is detected by the useEffect
+        await fetchScheduledJobs();
         return true;
       }
     } catch (err) {
@@ -305,11 +310,14 @@ export function useBolnaDashboard() {
 
     if (success) {
       if (isImmediate) {
-        addLog(`Immediate campaign "${campaignTitle}" created and starting...`, "info");
+        addLog(`Immediate campaign "${campaignTitle}" created. Triggering calls...`, "info");
+        console.log(`[Campaign] Immediate start: ${campaignTitle} (${sessionContacts.length} numbers)`);
       } else {
         alert(`Calls scheduled successfully for ${scheduleDate} at ${scheduleTime}`);
+        addLog(`Campaign "${campaignTitle}" scheduled for ${scheduleDate} ${scheduleTime}`, "info");
+        console.log(`[Campaign] Scheduled: ${campaignTitle} at ${scheduleDate} ${scheduleTime}`);
+        setSessionContacts([]); // Only clear if NOT immediate
       }
-      setSessionContacts([]); 
     }
   };
 
@@ -477,33 +485,51 @@ export function useBolnaDashboard() {
   // Watch for Running jobs to activate manual calling pipeline
   useEffect(() => {
     const runningJob = scheduledJobs.find(j => j.status === 'Running');
-    if (runningJob && !isCalling) {
-      console.log("SCHEDULE TRIGGERED");
-      console.log("START CALLING PIPELINE INVOKED");
+    if (runningJob && !isCalling && !processedJobIdsRef.current.has(runningJob.id)) {
+      console.log("SCHEDULE TRIGGERED", runningJob.id);
+      processedJobIdsRef.current.add(runningJob.id);
+      
+      // Use API key from job if local state is missing
+      const activeKey = apiKey || runningJob.apiKey;
+      const activeAgentId = runningJob.agentId;
+
+      if (!activeKey) {
+        addLog(`Cannot start scheduled job: No API Key found for this campaign.`, "err");
+        return;
+      }
+
+      // Sync state for UI consistency
+      setApiKey(activeKey);
+      setAgentId(activeAgentId);
       
       // Setup state for manual pipeline
       setIsCalling(true);
       setShowProgress(true);
       setShowDone(false);
-      setAgentId(runningJob.agentId);
+      
+      // Sync contacts to main state so stats and views update
       setSessionContacts(runningJob.contacts);
+      setContacts(prev => {
+        const existingIds = new Set(prev.map(c => c.id));
+        const newOnes = runningJob.contacts.filter(c => !existingIds.has(c.id));
+        return [...prev, ...newOnes];
+      });
       
       // Populate manual queue
       const contactsToCall = runningJob.contacts.filter(c => c.status === "pending" || c.status === "failed");
       callQueueRef.current = contactsToCall.map(c => c.id);
       
-      addLog(`SCHEDULED PIPELINE: Starting "${runningJob.campaignTitle}"...`, "info");
-      console.log("LIVE JOURNEY STARTED");
+      addLog(`SCHEDULED PIPELINE: Starting "${runningJob.campaignTitle || runningJob.title}" with ${contactsToCall.length} pending calls...`, "info");
+      console.log(`[Pipeline] Triggered for job ${runningJob.id}. Total: ${runningJob.contacts.length}, Pending: ${contactsToCall.length}`);
 
       // Mark the job as 'Running-Acknowledge' on server so we don't re-trigger it
-      axios.post(`${API_BASE_URL}/api/schedule/status`, { jobId: runningJob.id, status: 'Running-Acknowledge' });
+      axios.post(`${API_BASE_URL}/api/schedule/status`, { jobId: runningJob.id, status: 'Running-Acknowledge' })
+        .catch(err => console.error("Failed to acknowledge job status", err));
 
       // Start the manual pipeline
-      if (apiKey) {
-        dispatchNextBatch(apiKey, runningJob.agentId);
-      }
+      dispatchNextBatch(activeKey, activeAgentId);
     }
-  }, [scheduledJobs, isCalling, apiKey, dispatchNextBatch, addLog, setAgentId]);
+  }, [scheduledJobs, isCalling, apiKey, dispatchNextBatch, addLog, setAgentId, setContacts]);
 
   // Auto-select first response tab
   useEffect(() => {
@@ -526,7 +552,10 @@ export function useBolnaDashboard() {
   const done    = displayContacts.filter(c => c.status === "completed" || c.status === "called").length;
   const active  = displayContacts.filter(c => c.status === "calling"   || c.status === "queued").length;
   const failed  = displayContacts.filter(c => c.status === "failed").length;
+  const pending = displayContacts.filter(c => !c.status || c.status === "pending").length;
   const pct     = total > 0 ? Math.round(((done + failed) / total) * 100) : 0;
+  
+  const stats = { total, done, active, failed, pending, pct };
 
   // --- CUSTOM AGENT CREATION (Feature 3/4) ---
   const addCustomAgent = async (agentData) => {

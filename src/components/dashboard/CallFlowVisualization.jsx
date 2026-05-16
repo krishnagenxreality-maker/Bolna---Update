@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Phone, Users, CheckCircle, Clock, Zap, Target, XCircle, HelpCircle, Timer } from 'lucide-react';
 
-export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartTime }) => {
-  const selectedAgentId = agentId?.split('::')[1];
+export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartTime, stats }) => {
+  const selectedAgentId = agentId?.includes('::') ? agentId.split('::')[1] : agentId;
   const activeContacts = selectedAgentId 
-    ? contacts.filter(c => c.agentId === selectedAgentId || c.id?.includes(selectedAgentId))
-    : contacts;
+    ? (contacts || []).filter(c => c.agentId === agentId || c.agentId === selectedAgentId || c.id?.includes(selectedAgentId))
+    : (contacts || []);
 
-  const stats = {
+  // Use passed stats if available, otherwise calculate locally
+  const statsToUse = stats || {
     uploaded: activeContacts.length,
-    inProgress: activeContacts.filter(c => c.status === 'processing' || c.status === 'calling').length,
+    pending: activeContacts.filter(c => !c.status || c.status === 'pending').length,
+    inProgress: activeContacts.filter(c => c.status === 'processing' || c.status === 'calling' || c.status === 'queued').length,
     completed: activeContacts.filter(c => c.status === 'called' || c.status === 'completed').length,
     interested: activeContacts.filter(c => (c.leadCategory?.toLowerCase() === 'interested') || (c.classification?.toLowerCase() === 'interested')).length,
     notInterested: activeContacts.filter(c => (c.leadCategory?.toLowerCase() === 'not_interested') || (c.classification?.toLowerCase() === 'not_interested')).length,
@@ -17,9 +19,21 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
     noAnswer: activeContacts.filter(c => c.response?.toLowerCase().includes('no answer') || c.response?.toLowerCase().includes('busy')).length
   };
 
+  // Map hook stats to visual stats
+  const visualStats = {
+    uploaded: statsToUse.total || statsToUse.uploaded,
+    pending: statsToUse.pending,
+    inProgress: statsToUse.active || statsToUse.inProgress,
+    completed: statsToUse.done || statsToUse.completed,
+    interested: statsToUse.interested,
+    notInterested: statsToUse.notInterested,
+    reschedule: statsToUse.reschedule,
+    noAnswer: statsToUse.noAnswer
+  };
+
   // ETA calculation
   const [etaText, setEtaText] = useState('');
-  
+
   useEffect(() => {
     if (!isCalling || !callStartTime) {
       setEtaText('');
@@ -31,7 +45,7 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
     const CALL_TIME_S = 30; // ~30s per call
 
     const computeEta = () => {
-      const remaining = stats.uploaded - stats.completed - stats.inProgress;
+      const remaining = visualStats.uploaded - visualStats.completed;
       if (remaining <= 0) {
         setEtaText('Completing...');
         return;
@@ -57,7 +71,7 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
     computeEta();
     const interval = setInterval(computeEta, 1000);
     return () => clearInterval(interval);
-  }, [isCalling, callStartTime, stats.uploaded, stats.completed, stats.inProgress]);
+  }, [isCalling, callStartTime, visualStats.uploaded, visualStats.completed]);
 
   return (
     <div className="gaming-flow-panel">
@@ -91,40 +105,53 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
           
           {/* Node 1: Uploaded */}
           <GamingNode 
-            icon={<Users size={22} />}
+            icon={<Target size={22} />}
             title="Registry"
-            label="Calls Uploaded"
-            value={stats.uploaded}
-            subtext="Calls ready to process"
+            label="Total Calls"
+            value={visualStats.uploaded}
+            subtext="Input detected"
             color="#94a3b8"
             active={true}
           />
 
-          <GamingConnector active={stats.uploaded > 0} color="#6366f1" />
+          <GamingConnector active={visualStats.uploaded > 0} color="#6366f1" />
 
-          {/* Node 2: In Progress */}
+          {/* Node 2: Pending */}
+          <GamingNode 
+            icon={<Clock size={22} />}
+            title="Standby"
+            label="Pending"
+            value={visualStats.pending}
+            subtext="Waiting in queue"
+            color="#f59e0b"
+            active={visualStats.pending > 0}
+          />
+
+          <GamingConnector active={visualStats.pending > 0 || visualStats.inProgress > 0} color="#3b82f6" />
+
+          {/* Node 3: In Progress */}
           <GamingNode 
             icon={<Zap size={22} />}
             title="Dialer"
             label="In Progress"
-            value={stats.inProgress}
-            subtext="Currently dialing"
+            value={visualStats.inProgress}
+            subtext="Active dialing"
             color="#22d3ee"
-            pulse={isCalling && stats.inProgress > 0}
-            active={stats.inProgress > 0}
+            pulse={isCalling && visualStats.inProgress > 0}
+            active={visualStats.inProgress > 0}
           />
 
-          <GamingConnector active={stats.inProgress > 0 || stats.completed > 0} color="#a855f7" />
+          <GamingConnector active={visualStats.inProgress > 0 || visualStats.completed > 0} color="#a855f7" />
 
-          {/* Node 3: Completed */}
+          {/* Node 4: Completed */}
           <GamingNode 
             icon={<CheckCircle size={22} />}
             title="Analysis"
             label="Completed"
-            value={stats.completed}
-            subtext="Successful connections"
+            value={visualStats.completed}
+            subtext="Finished calls"
             color="#a855f7"
-            active={stats.completed > 0}
+            active={visualStats.completed > 0}
           />
 
           {/* Branching */}
@@ -132,24 +159,24 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
              <div className="branch-lines">
                 <svg width="60" height="160" viewBox="0 0 60 160" className="neon-svg">
                    <path d="M 0 80 Q 30 80 30 20 L 60 20" fill="none" stroke="rgba(74, 222, 128, 0.15)" strokeWidth="2" />
-                   <path d="M 0 80 Q 30 80 30 20 L 60 20" fill="none" stroke="#4ade80" strokeWidth="2" className="neon-path" style={{ opacity: stats.interested > 0 ? 1 : 0.1 }} />
+                   <path d="M 0 80 Q 30 80 30 20 L 60 20" fill="none" stroke="#4ade80" strokeWidth="2" className="neon-path" style={{ opacity: visualStats.interested > 0 ? 1 : 0.1 }} />
                    
                    <path d="M 0 80 Q 30 80 30 55 L 60 55" fill="none" stroke="rgba(251, 191, 36, 0.15)" strokeWidth="2" />
-                   <path d="M 0 80 Q 30 80 30 55 L 60 55" fill="none" stroke="#fbbf24" strokeWidth="2" className="neon-path" style={{ opacity: stats.reschedule > 0 ? 1 : 0.1 }} />
+                   <path d="M 0 80 Q 30 80 30 55 L 60 55" fill="none" stroke="#fbbf24" strokeWidth="2" className="neon-path" style={{ opacity: visualStats.reschedule > 0 ? 1 : 0.1 }} />
                    
                    <path d="M 0 80 Q 30 80 30 105 L 60 105" fill="none" stroke="rgba(96, 165, 250, 0.15)" strokeWidth="2" />
-                   <path d="M 0 80 Q 30 80 30 105 L 60 105" fill="none" stroke="#60a5fa" strokeWidth="2" className="neon-path" style={{ opacity: stats.noAnswer > 0 ? 1 : 0.1 }} />
+                   <path d="M 0 80 Q 30 80 30 105 L 60 105" fill="none" stroke="#60a5fa" strokeWidth="2" className="neon-path" style={{ opacity: visualStats.noAnswer > 0 ? 1 : 0.1 }} />
                    
                    <path d="M 0 80 Q 30 80 30 140 L 60 140" fill="none" stroke="rgba(248, 113, 113, 0.15)" strokeWidth="2" />
-                   <path d="M 0 80 Q 30 80 30 140 L 60 140" fill="none" stroke="#f87171" strokeWidth="2" className="neon-path" style={{ opacity: stats.notInterested > 0 ? 1 : 0.1 }} />
+                   <path d="M 0 80 Q 30 80 30 140 L 60 140" fill="none" stroke="#f87171" strokeWidth="2" className="neon-path" style={{ opacity: visualStats.notInterested > 0 ? 1 : 0.1 }} />
                 </svg>
              </div>
 
              <div className="gaming-branch-nodes">
-                <GamingMiniNode label="Interested" value={stats.interested} sub="Leads secured" color="#4ade80" />
-                <GamingMiniNode label="Reschedule" value={stats.reschedule} sub="Needs follow-up" color="#fbbf24" />
-                <GamingMiniNode label="No Answer" value={stats.noAnswer} sub="Pending retry" color="#60a5fa" />
-                <GamingMiniNode label="Not Interested" value={stats.notInterested} sub="Closed cases" color="#f87171" />
+                <GamingMiniNode label="Interested" value={visualStats.interested} sub="Leads secured" color="#4ade80" />
+                <GamingMiniNode label="Reschedule" value={visualStats.reschedule} sub="Needs follow-up" color="#fbbf24" />
+                <GamingMiniNode label="No Answer" value={visualStats.noAnswer} sub="Pending retry" color="#60a5fa" />
+                <GamingMiniNode label="Not Interested" value={visualStats.notInterested} sub="Closed cases" color="#f87171" />
              </div>
           </div>
         </div>

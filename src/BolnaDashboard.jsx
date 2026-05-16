@@ -306,7 +306,13 @@ export default function BolnaDashboard() {
                         </div>
                       </div>
 
-                      <CallFlowVisualization contacts={sessionContacts} agentId={agentId} isCalling={isCalling} callStartTime={callStartTime} />
+                      <CallFlowVisualization 
+                        contacts={sessionContacts} 
+                        agentId={agentId} 
+                        isCalling={isCalling} 
+                        callStartTime={callStartTime} 
+                        stats={stats}
+                      />
                     </div>
                   </div>
 
