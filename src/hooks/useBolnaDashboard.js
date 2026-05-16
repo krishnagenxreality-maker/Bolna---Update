@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { BATCH_SIZE, BATCH_DELAY_MS, POLL_INTERVAL_MS } from "../utils/constants";
 import { sleep } from "../utils/helpers";
-import { makeCall, fetchExecutionStatus, analyzeSummaryWithDeepSeek, fetchInboundCalls } from "../services/api";
+import { makeCall, fetchExecutionStatus, analyzeSummaryWithDeepSeek } from "../services/api";
 import { parseContacts as parseContactsLogic } from "../services/fileService";
 import { DEEPSEEK_API_KEY } from "../utils/constants";
 import { useAuth } from "../context/AuthContext";
@@ -32,8 +32,6 @@ export function useBolnaDashboard() {
   const [scheduledJobs, setScheduledJobs] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [callStartTime, setCallStartTime] = useState(null);
-  const [inboundCalls, setInboundCalls] = useState([]);
-  const [isLoadingInbound, setIsLoadingInbound] = useState(false);
 
   // --- REFS ---
   const contactsRef  = useRef([]);
@@ -61,6 +59,15 @@ export function useBolnaDashboard() {
       if (campaignRes.data.success) setCampaigns(campaignRes.data.campaigns);
     } catch (err) {
       console.error("Failed to fetch campaigns:", err);
+    }
+    try {
+      const contactRes = await axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`);
+      if (contactRes.data) {
+        setContacts(contactRes.data);
+        contactsRef.current = contactRes.data;
+      }
+    } catch (err) {
+      console.error("Failed to fetch contacts:", err);
     }
   }, [user]);
 
@@ -146,7 +153,14 @@ export function useBolnaDashboard() {
   }, [saveContactsToDB]);
 
   const pollStatuses = useCallback(async (key) => {
-    const inProgress = contactsRef.current.filter(c => c.executionId && (c.status === "calling" || c.status === "queued"));
+    // Poll for active calls OR completed calls that haven't been analyzed yet
+    const inProgress = contactsRef.current.filter(c => 
+      c.executionId && (
+        c.status === "calling" || 
+        c.status === "queued" || 
+        ((c.status === "called" || c.status === "completed") && !c.leadCategory)
+      )
+    );
     if (!inProgress.length) {
       if (pollRef.current) {
         clearInterval(pollRef.current);
@@ -399,25 +413,6 @@ export function useBolnaDashboard() {
             }
           }
 
-          // Fetch custom agents and merge
-          try {
-            const customRes = await axios.get(`${API_BASE_URL}/api/custom-agents/${user.userId}`);
-            console.log("FETCH_CUSTOM_AGENTS", { count: customRes.data.agents?.length });
-            if (customRes.data.success && customRes.data.agents) {
-              const customAgents = customRes.data.agents.map(a => ({
-                name: a.agent_name,
-                id: a.bolna_agent_id,
-                isCustom: true,
-                scriptType: a.script_type,
-                script: a.script,
-                voiceId: a.voice_id,
-                voiceName: a.voice_name
-              }));
-              currentAgents = [...currentAgents, ...customAgents];
-            }
-          } catch (e) { 
-            console.error("FETCH_CUSTOM_AGENTS_ERROR", e);
-          }
 
           console.log("AVAILABLE_AGENTS_FINAL", currentAgents.map(a => ({ name: a.name, id: a.id, hasScript: !!a.script })));
           setAvailableAgents(currentAgents);
@@ -444,18 +439,7 @@ export function useBolnaDashboard() {
           const scheduleRes = await axios.get(`${API_BASE_URL}/api/schedule/${user.userId}`);
           if (scheduleRes.data.success) setScheduledJobs(scheduleRes.data.jobs);
 
-          // Initial inbound sync/fetch
-          axios.post(`${API_BASE_URL}/api/inbound-calls/sync/${user.userId}`)
-            .then(res => {
-              if (res.data.success) setInboundCalls(res.data.calls || []);
-            })
-            .catch(() => {
-              axios.get(`${API_BASE_URL}/api/inbound-calls/${user.userId}`)
-                .then(res => {
-                  if (res.data.success) setInboundCalls(res.data.calls || []);
-                })
-                .catch(() => {});
-            });
+
         } catch (err) { }
       }
     };
@@ -466,19 +450,8 @@ export function useBolnaDashboard() {
   useEffect(() => {
     if (!user || !user.userId) return;
     const interval = setInterval(() => { fetchScheduledJobs(); }, 10000);
-    const inboundInterval = setInterval(() => {
-      if (activeView === 'inbound') {
-        axios.post(`${API_BASE_URL}/api/inbound-calls/sync/${user.userId}`)
-          .then(res => {
-            if (res.data.success) setInboundCalls(res.data.calls || []);
-          })
-          .catch(() => {});
-      }
-    }, 30000); // Poll inbound every 30s when on inbound view
-
     return () => {
       clearInterval(interval);
-      clearInterval(inboundInterval);
     };
   }, [user, fetchScheduledJobs, activeView]);
 
@@ -548,46 +521,26 @@ export function useBolnaDashboard() {
     ? contacts.filter(c => c.agentId === agentId)
     : contacts;
 
-  const total   = displayContacts.length;
-  const done    = displayContacts.filter(c => c.status === "completed" || c.status === "called").length;
-  const active  = displayContacts.filter(c => c.status === "calling"   || c.status === "queued").length;
-  const failed  = displayContacts.filter(c => c.status === "failed").length;
-  const pending = displayContacts.filter(c => !c.status || c.status === "pending").length;
-  const pct     = total > 0 ? Math.round(((done + failed) / total) * 100) : 0;
-  
-  const stats = { total, done, active, failed, pending, pct };
+  const total    = displayContacts.length;
+  const done     = displayContacts.filter(c => c.status === "called" || c.status === "completed").length;
+  const active   = displayContacts.filter(c => ["calling","queued","processing"].includes(c.status)).length;
+  const failed   = displayContacts.filter(c => c.status === "failed").length;
+  const pending  = displayContacts.filter(c => !c.status || c.status === "pending").length;
+  const pct      = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  // --- CUSTOM AGENT CREATION (Feature 3/4) ---
-  const addCustomAgent = async (agentData) => {
-    if (!user || !user.userId) return;
-    console.log("SYNC_CUSTOM_AGENT_START", agentData);
-    try {
-      const res = await axios.post(`${API_BASE_URL}/api/custom-agents`, {
-        userId: user.userId,
-        ...agentData
-      });
-      console.log("SYNC_CUSTOM_AGENT_RESPONSE", res.data);
-      if (res.data.success) {
-        const newAgent = {
-          name: agentData.agentName,
-          id: agentData.bolnaAgentId,
-          isCustom: true,
-          scriptType: agentData.scriptType,
-          script: agentData.script,
-          voiceId: agentData.voiceId,
-          voiceName: agentData.voiceName
-        };
-        console.log("SYNC_CUSTOM_AGENT_SUCCESS", newAgent);
-        setAvailableAgents(prev => [...prev, newAgent]);
-        const selectionId = `${newAgent.name}::${newAgent.id}`;
-        console.log("SELECTING_NEW_AGENT", selectionId);
-        setAgentId(selectionId);
-      }
-    } catch (err) {
-      console.error('Failed to save custom agent:', err);
-      throw err;
-    }
+  const stats = { 
+    total, 
+    totalCalls: total,
+    done, 
+    connected: done,
+    active, 
+    failed, 
+    pending, 
+    pct,
+    leadsCount: displayContacts.filter(c => c.leadCategory && c.leadCategory !== '').length
   };
+
+
 
   // --- RETRY CALLS (Feature 6) ---
   const retryCalls = async (contactIds) => {
@@ -634,38 +587,13 @@ export function useBolnaDashboard() {
     startCalling,
     stopCalling,
     availableAgents, setAvailableAgents,
-    stats: { total, done, active, failed, pct },
+    stats,
     credits,
     scheduledJobs,
     campaigns,
     deleteScheduledJob,
     fetchScheduledJobs,
-    callStartTime,
-    addCustomAgent,
     retryCalls,
-    inboundCalls,
-    refreshInbound: () => {
-      if (user && user.userId) {
-        setIsLoadingInbound(true);
-        axios.post(`${API_BASE_URL}/api/inbound-calls/sync/${user.userId}`)
-          .then(res => {
-            if (res.data.success) {
-              setInboundCalls(res.data.calls || []);
-            }
-            setIsLoadingInbound(false);
-          })
-          .catch(err => {
-            console.error('Inbound sync failed:', err);
-            // Fallback: try to get stored calls
-            axios.get(`${API_BASE_URL}/api/inbound-calls/${user.userId}`)
-              .then(res => {
-                if (res.data.success) setInboundCalls(res.data.calls || []);
-              })
-              .catch(() => {});
-            setIsLoadingInbound(false);
-          });
-      }
-    },
-    isLoadingInbound
+    callStartTime
   };
 }

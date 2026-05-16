@@ -8,11 +8,12 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
     : (contacts || []);
 
   // Use passed stats if available, otherwise calculate locally
-  const statsToUse = stats || {
-    uploaded: activeContacts.length,
+  // Use passed stats if available, otherwise calculate locally
+  const statsToUse = stats && Object.keys(stats).length > 0 ? stats : {
+    total: activeContacts.length,
     pending: activeContacts.filter(c => !c.status || c.status === 'pending').length,
-    inProgress: activeContacts.filter(c => c.status === 'processing' || c.status === 'calling' || c.status === 'queued').length,
-    completed: activeContacts.filter(c => c.status === 'called' || c.status === 'completed').length,
+    active: activeContacts.filter(c => c.status === 'processing' || c.status === 'calling' || c.status === 'queued').length,
+    done: activeContacts.filter(c => c.status === 'called' || c.status === 'completed').length,
     interested: activeContacts.filter(c => (c.leadCategory?.toLowerCase() === 'interested') || (c.classification?.toLowerCase() === 'interested')).length,
     notInterested: activeContacts.filter(c => (c.leadCategory?.toLowerCase() === 'not_interested') || (c.classification?.toLowerCase() === 'not_interested')).length,
     reschedule: activeContacts.filter(c => (c.leadCategory?.toLowerCase() === 'reschedule') || (c.classification?.toLowerCase() === 'reschedule')).length,
@@ -21,14 +22,14 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
 
   // Map hook stats to visual stats
   const visualStats = {
-    uploaded: statsToUse.total || statsToUse.uploaded,
-    pending: statsToUse.pending,
-    inProgress: statsToUse.active || statsToUse.inProgress,
-    completed: statsToUse.done || statsToUse.completed,
-    interested: statsToUse.interested,
-    notInterested: statsToUse.notInterested,
-    reschedule: statsToUse.reschedule,
-    noAnswer: statsToUse.noAnswer
+    uploaded: statsToUse.total || 0,
+    pending: statsToUse.pending || 0,
+    inProgress: statsToUse.active || 0,
+    completed: statsToUse.done || 0,
+    interested: statsToUse.interested || 0,
+    notInterested: statsToUse.notInterested || 0,
+    reschedule: statsToUse.reschedule || 0,
+    noAnswer: statsToUse.noAnswer || 0
   };
 
   // ETA calculation

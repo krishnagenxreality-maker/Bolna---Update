@@ -147,20 +147,7 @@ export const TutorialProvider = ({ children, activeView, user }) => {
         position: 'left'
       }
     ],
-    inbound: [
-      {
-        target: '.inbound-refresh-btn',
-        title: 'Refresh Data',
-        content: 'Click here to pull the latest incoming calls received by your AI agents.',
-        position: 'bottom'
-      },
-      {
-        target: '.inbound-table-section',
-        title: 'Incoming Traffic',
-        content: 'Monitor calls where customers reached out to you. Perfect for support and inbound sales.',
-        position: 'top'
-      }
-    ],
+
     campaign: [
       {
         target: '.campaign-table-section',

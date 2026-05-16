@@ -28,9 +28,9 @@ export const LeadsView = ({
   // Filter by date
   const filteredContacts = useMemo(() => contacts.filter(c => !searchDate || c.date === searchDate), [contacts, searchDate]);
   
-  // Get all contacts that have a leadCategory (completed calls with AI analysis)
+  // Get all contacts that are successfully called (completed)
   const categorizedContacts = useMemo(() => {
-    return filteredContacts.filter(c => c.leadCategory && c.leadCategory !== '');
+    return filteredContacts.filter(c => c.status === 'called' || c.status === 'completed' || (c.leadCategory && c.leadCategory !== ''));
   }, [filteredContacts]);
 
   // Dynamic unique categories
@@ -99,7 +99,6 @@ export const LeadsView = ({
     { id: 'details', label: 'Call Details', icon: <ListTodo size={18} /> },
     { id: 'responses', label: 'Responses', icon: <BarChart3 size={18} /> },
     { id: 'leads', label: 'Leads', icon: <Users size={18} /> },
-    { id: 'inbound', label: 'Inbound', icon: <PhoneIncoming size={18} /> },
     { id: 'campaign', label: 'Campaign', icon: <Megaphone size={18} /> },
     { id: 'report', label: 'Report', icon: <ClipboardList size={18} /> }
   ];

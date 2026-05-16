@@ -299,10 +299,9 @@ Your output must follow this EXACT structure with these EXACT section headings:
 ## 4. Agent Insights
 ## 5. Lead Generation & Quality Analysis
 ## 6. Cost Efficiency Analysis
-## 7. Inbound Agent Performance
-## 8. Stream-wise Lead Distribution
-## 9. Recommendations & Next Steps
-## 10. Summary
+## 7. Stream-wise Lead Distribution
+## 8. Recommendations & Next Steps
+## 9. Summary
 
 Rules:
 - Use professional business English
@@ -375,8 +374,6 @@ Do not include any time-based metrics. Focus only on call counts, lead quality, 
     { id: 'manager', label: 'Call Manager', icon: <PhoneCall size={18} /> },
     { id: 'details', label: 'Call Details', icon: <ListTodo size={18} /> },
     { id: 'responses', label: 'Responses', icon: <BarChart3 size={18} /> },
-    { id: 'leads', label: 'Leads', icon: <Users size={18} /> },
-    { id: 'inbound', label: 'Inbound', icon: <PhoneIncoming size={18} /> },
     { id: 'campaign', label: 'Campaign', icon: <Megaphone size={18} /> },
     { id: 'report', label: 'Report', icon: <ClipboardList size={18} /> }
   ];

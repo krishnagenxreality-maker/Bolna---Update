@@ -890,14 +890,16 @@ export default function HomePage() {
             <h2 style={{ color: '#fff', fontSize: '24px', marginBottom: '8px' }}>Get Started with Calling Gen</h2>
             <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px', marginBottom: '40px' }}>Choose how you'd like to proceed with our service.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <Link 
-                to="/login" 
-                state={{ from: '/?join=true' }} 
+              <button 
+                onClick={() => {
+                  handleCloseJoin();
+                  navigate('/login', { state: { from: '/?join=true' } });
+                }} 
                 className="btn-call" 
-                style={{ width: '100%', padding: '16px', justifyContent: 'center', textDecoration: 'none' }}
+                style={{ width: '100%', padding: '16px', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
               >
                 Already have an account
-              </Link>
+              </button>
               <button onClick={() => navigate('/pricing')} className="nav-btn" style={{ width: '100%', padding: '16px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)' }}>
                 New User? Contact Admin
               </button>

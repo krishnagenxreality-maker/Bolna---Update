@@ -23,7 +23,7 @@ import { ProgressPanel } from './components/dashboard/ProgressPanel';
 import { DoneBanner } from './components/dashboard/DoneBanner';
 import { CompletionModal } from './components/dashboard/CompletionModal';
 import { AgentScriptPanel } from './components/dashboard/AgentScriptPanel';
-import { CreateAgentModal } from './components/dashboard/CreateAgentModal';
+
 
 // Other Views
 import { CallDetailsView } from './components/details/CallDetailsView';
@@ -32,13 +32,12 @@ import { LeadsView } from './components/leads/LeadsView';
 import { CalendarDashboardView } from './components/calendar/CalendarDashboardView';
 import { ReportView } from './components/report/ReportView';
 import { CampaignView } from './components/campaign/CampaignView';
-import { InboundView } from './components/inbound/InboundView';
 
 import { Sidebar } from './components/layout/Sidebar';
 import { Dropdown } from './components/ui/Dropdown';
 import { DatePicker } from './components/ui/DatePicker';
 import { TimePicker } from './components/ui/TimePicker';
-import { ListTodo, BarChart, Users, ClipboardList, ArrowRight, CalendarDays, Clock, FileText, Megaphone, PhoneIncoming } from 'lucide-react';
+import { ListTodo, BarChart, Users, ClipboardList, ArrowRight, CalendarDays, Clock, FileText, Megaphone } from 'lucide-react';
 
 export default function BolnaDashboard() {
   const { user } = useAuth();
@@ -68,19 +67,16 @@ export default function BolnaDashboard() {
     campaigns,
     deleteScheduledJob,
     callStartTime,
-    addCustomAgent,
     retryCalls,
     setAvailableAgents,
-    inboundCalls,
-    refreshInbound,
-    isLoadingInbound
+    fetchScheduledJobs
   } = useBolnaDashboard();
 
   // Local state for Call Manager scheduling UI
   const [showLockModal, setShowLockModal] = useState(false);
   const [lockFeatureName, setLockFeatureName] = useState('');
   const [campaignTitle, setCampaignTitle] = useState('');
-  const [showCreateAgentModal, setShowCreateAgentModal] = useState(false);
+
   const [scheduleDate, setScheduleDate] = useState(searchDate || new Date().toISOString().split('T')[0]);
   const [scheduleTime, setScheduleTime] = useState(() => {
     const now = new Date();
@@ -115,16 +111,16 @@ export default function BolnaDashboard() {
     setIsShining(false);
   };
 
+  // Views that should take up the entire screen (usually those with their own complex layouts)
+  const isFullWidthView = ['calendar', 'report', 'manager', 'details', 'responses', 'leads', 'campaign'].includes(activeView);
+
   const managerQuickNavItems = [
     { id: 'details', label: 'Call Details', icon: <ListTodo size={20} />, color: '#3b82f6' },
     { id: 'responses', label: 'Responses', icon: <BarChart size={20} />, color: '#7dffb3' },
     { id: 'leads', label: 'Leads', icon: <Users size={20} />, color: '#f5c842' },
     { id: 'campaign', label: 'Campaign', icon: <Megaphone size={20} />, color: '#ec4899' },
-    { id: 'inbound', label: 'Inbound', icon: <PhoneIncoming size={20} />, color: '#60a5fa' },
     { id: 'report', label: 'Report', icon: <ClipboardList size={20} />, color: '#a855f7' }
   ];
-
-  const isFullWidthView = activeView === 'calendar' || activeView === 'manager' || activeView === 'details' || activeView === 'responses' || activeView === 'leads' || activeView === 'campaign' || activeView === 'report' || activeView === 'inbound';
 
   return (
     <TutorialProvider activeView={activeView} user={user}>
@@ -186,18 +182,15 @@ export default function BolnaDashboard() {
                             value={agentId}
                             onChange={(val) => {
                               if (val === '__other__') {
-                                setShowCreateAgentModal(true);
+                                // show create agent modal logic removed
                               } else {
                                 setAgentId(val);
                               }
                             }}
-                            options={[
-                              ...availableAgents.map(agent => ({
-                                label: agent.name,
-                                value: `${agent.name}::${agent.id}`
-                              })),
-                              { label: '＋ Other (Create Agent)', value: '__other__' }
-                            ]}
+                            options={availableAgents.map(agent => ({
+                              label: agent.name,
+                              value: `${agent.name}::${agent.id}`
+                            }))}
                           />
                         ) : (
                           <div className="field-input read-only" style={{ 
@@ -420,15 +413,6 @@ export default function BolnaDashboard() {
                 />
               )}
 
-              {activeView === 'inbound' && (
-                <InboundView
-                  inboundCalls={inboundCalls}
-                  isLoading={isLoadingInbound}
-                  onRefresh={refreshInbound}
-                  activeView={activeView}
-                  setActiveView={setActiveView}
-                />
-              )}
               {activeView === 'report' && (
                 <ReportView
                   contacts={allContacts}
@@ -444,13 +428,7 @@ export default function BolnaDashboard() {
           </div>
         </div>
 
-        {/* Create Agent Modal */}
-        <CreateAgentModal
-          isOpen={showCreateAgentModal}
-          onClose={() => setShowCreateAgentModal(false)}
-          apiKey={apiKey}
-          onAgentCreated={addCustomAgent}
-        />
+
         <LockedFeatureModal 
           isOpen={showLockModal} 
           onClose={() => setShowLockModal(false)} 
