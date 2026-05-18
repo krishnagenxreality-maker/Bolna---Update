@@ -251,23 +251,8 @@ export const ReportView = ({
   });
 
   const handleGenerate = async () => {
-    // Plan validation
-    if (user?.selectedPlan === 'Starter') {
-      setShowLockModal(true);
-      return;
-    }
-
     if (total === 0) {
       alert("No calls found for the selected date.");
-      return;
-    }
-
-    // Weekly/Monthly Limit Check (Example logic for Growth/Pro)
-    const isGrowth = user?.selectedPlan === 'Growth';
-    const isPro = user?.selectedPlan === 'Pro';
-    
-    if (isGrowth && (user?.reportUsageWeekly || 0) >= 7) {
-      alert("Growth Plan Limit: You have reached your weekly limit of 7 AI reports. Please wait for next week or upgrade to Pro.");
       return;
     }
 

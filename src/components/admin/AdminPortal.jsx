@@ -80,6 +80,8 @@ export default function AdminPortal() {
 
   const handleMarkCreated = (requestId) => {
     const req = requests.find(r => r.id === requestId);
+    const selectedPlan = req?.creditsSelected?.includes('Growth') ? 'Growth' : 'Starter';
+    const autoCredits = selectedPlan === 'Growth' ? 6000 : 2000;
     setFormData({
       userId: req?.name || '',
       password: '',
@@ -87,11 +89,11 @@ export default function AdminPortal() {
       email: req?.email || '',
       bolnaApiKey: '',
       agents: [{ name: '', id: '' }],
-      credits: parseCreditsFromRequest(req?.creditsSelected) || 2000,
-      totalCredits: parseCreditsFromRequest(req?.creditsSelected) || 2000,
-      remainingCredits: parseCreditsFromRequest(req?.creditsSelected) || 2000,
+      credits: autoCredits,
+      totalCredits: autoCredits,
+      remainingCredits: autoCredits,
       usedCredits: 0,
-      selectedPlan: req?.creditsSelected?.includes('Growth') ? 'Growth' : req?.creditsSelected?.includes('Pro') ? 'Pro' : 'Starter',
+      selectedPlan: selectedPlan,
       userType: req?.purposeType || 'regular'
     });
     setError('');
@@ -941,12 +943,21 @@ export default function AdminPortal() {
                           <select
                             className="field-input"
                             value={formData.selectedPlan}
-                            onChange={e => setFormData(prev => ({ ...prev, selectedPlan: e.target.value }))}
+                            onChange={e => {
+                              const plan = e.target.value;
+                              const credits = plan === 'Growth' ? 6000 : 2000;
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                selectedPlan: plan,
+                                credits: credits,
+                                totalCredits: credits,
+                                remainingCredits: credits
+                              }));
+                            }}
                             style={{ appearance: 'auto' }}
                           >
                             <option value="Starter">Starter (2k Credits)</option>
                             <option value="Growth">Growth (6k Credits)</option>
-                            <option value="Pro">Pro (15k Credits)</option>
                           </select>
                         )}
                       </div>
@@ -971,6 +982,21 @@ export default function AdminPortal() {
                             <option value="education">Education</option>
                           </select>
                         )}
+                      </div>
+                    </div>
+                  )}
+
+                  {createdFromRequestId && (
+                    <div className="config-grid">
+                      <div className="field">
+                        <label className="field-label">Auto-assigned Credits</label>
+                        <input
+                          type="text"
+                          className="field-input"
+                          value={formData.credits}
+                          readOnly
+                          style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.4)', cursor: 'not-allowed' }}
+                        />
                       </div>
                     </div>
                   )}

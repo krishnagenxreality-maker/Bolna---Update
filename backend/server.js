@@ -113,20 +113,7 @@ app.post('/api/login', async (req, res) => {
         await supabase.from('users').update({ password: hashedPassword }).eq('user_id', userId);
       }
     }
-
     if (passwordMatch) {
-      // Session Control: Single device login
-      // Restriction applies only to Starter Plan. Growth and Pro Plans allow multiple devices.
-      const isRestrictedPlan = currentPlan === 'Starter';
-
-      if (isRestrictedPlan && user.device_session && !req.body.forceLogout && userId !== 'AdminGenx') {
-        return res.status(403).json({ 
-          success: false, 
-          message: 'This account is already logged in on another device. Please logout from other device or click Logout Other Devices.',
-          sessionActive: true
-        });
-      }
-
       const deviceSessionToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
       
       // Update session token in DB
@@ -528,8 +515,7 @@ app.post('/api/requests', async (req, res) => {
         // Map plan names to credits
         const planCredits = {
           'Starter': 2000,
-          'Growth': 6000,
-          'Pro': 15000
+          'Growth': 6000
         };
         const creditsToAssign = planCredits[r.creditsSelected] || 2000;
 

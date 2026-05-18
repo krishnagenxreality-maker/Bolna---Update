@@ -44,25 +44,6 @@ const PLANS = [
       '3 team members',
     ],
   },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: '₹24,999',
-    setup: '₹29,999',
-    cta: 'Contact Sales',
-    popular: false,
-    features: [
-      '15,000 Completed AI calls',
-      'No charges for No-Answer/Busy',
-      'Multi-agent AI calling',
-      'Custom AI voice',
-      'Dedicated infrastructure',
-      'Enterprise analytics',
-      'Priority queue',
-      'Dedicated onboarding',
-      'Team collaboration',
-    ],
-  },
 ];
 
 const CREDIT_STEPS = [
@@ -153,17 +134,13 @@ export default function UpgradePricingPage() {
   const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [showProModal, setShowProModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', org: '', email: '' });
-  const [proForm, setProForm] = useState({ name: '', email: '', phone: '' });
   const [submitted, setSubmitted] = useState(false);
-  const [proSubmitted, setProSubmitted] = useState(false);
   const [sliderIdx, setSliderIdx] = useState(0);
 
   const currentStep = CREDIT_STEPS[sliderIdx];
 
   const handlePlanClick = (plan) => {
-    if (plan.id === 'pro') { setShowProModal(true); return; }
     setSelectedPlan(plan);
     setShowModal(true);
   };
@@ -180,21 +157,6 @@ export default function UpgradePricingPage() {
       });
       setSubmitted(true);
       setTimeout(() => { setShowModal(false); setSubmitted(false); setFormData({ name: '', org: '', email: '' }); }, 3000);
-    } catch { alert('Failed to submit. Please try again.'); }
-  };
-
-  const handleProSubmit = async (e) => {
-    e.preventDefault();
-    const bolnaUser = JSON.parse(localStorage.getItem('bolna_user'));
-    try {
-      await axios.post(`${API_BASE_URL}/api/requests`, {
-        userId: bolnaUser?.userId,
-        name: proForm.name, email: proForm.email, phone: proForm.phone,
-        purpose: 'Pro Plan - Contact Sales', callPurpose: 'Enterprise sales inquiry',
-        creditsSelected: 'Pro', scriptContent: '', purposeType: 'regular',
-      });
-      setProSubmitted(true);
-      setTimeout(() => { setShowProModal(false); setProSubmitted(false); setProForm({ name: '', email: '', phone: '' }); }, 3000);
     } catch { alert('Failed to submit. Please try again.'); }
   };
 
@@ -231,7 +193,7 @@ export default function UpgradePricingPage() {
         </div>
 
         {/* ── Pricing Cards ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', width: '100%', maxWidth: '1100px', marginBottom: '80px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', width: '100%', maxWidth: '840px', margin: '0 auto 80px' }}>
           {PLANS.map((plan, idx) => (
             <div
               key={plan.id}
@@ -365,52 +327,7 @@ export default function UpgradePricingPage() {
         </div>
       )}
 
-      {/* ══ PRO CONTACT SALES MODAL ══ */}
-      {showProModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }} onClick={() => setShowProModal(false)}>
-          <div style={{ width: '100%', maxWidth: '520px', background: '#141414', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '40px 44px', position: 'relative', animation: 'modalIn 0.3s cubic-bezier(0.16,1,0.3,1) both' }} onClick={e => e.stopPropagation()}>
-            {proSubmitted ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <CheckCircle2 size={52} style={{ color: '#34d399', margin: '0 auto 18px', display: 'block' }} />
-                <h3 style={{ fontSize: 24, color: '#fff', marginBottom: 10, fontFamily: 'Outfit', fontWeight: 700 }}>Thank you!</h3>
-                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 15, fontFamily: 'Outfit', lineHeight: 1.6 }}>Our sales team will contact you within 24 hours.</p>
-              </div>
-            ) : (
-              <>
-                <button onClick={() => setShowProModal(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 20 }}>✕</button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#a78bfa', fontWeight: 700, fontFamily: 'Outfit' }}>1</div>
-                  <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 700, fontFamily: 'Outfit', margin: 0 }}>CallingGen — Pro Plan | Contact Sales</h2>
-                </div>
-                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, fontFamily: 'Outfit', marginBottom: 36, lineHeight: 1.5 }}>Please provide your details and our sales team will connect with you shortly.</p>
-                <form onSubmit={handleProSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-                  <div className="sales-field">
-                    <label className="sales-label">Full Name *</label>
-                    <input className="sales-input" type="text" placeholder="Type your answer here..." required value={proForm.name} onChange={e => setProForm({ ...proForm, name: e.target.value })} />
-                  </div>
-                  <div className="sales-field">
-                    <label className="sales-label">Business Email *</label>
-                    <input className="sales-input" type="email" placeholder="name@example.com" required value={proForm.email} onChange={e => setProForm({ ...proForm, email: e.target.value })} />
-                  </div>
-                  <div className="sales-field">
-                    <label className="sales-label">Phone Number *</label>
-                    <div className="phone-row">
-                      <div className="country-prefix">
-                        <span style={{ fontSize: 18 }}>🇮🇳</span>
-                        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>▾</span>
-                        <span style={{ marginLeft: 2, color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>+91</span>
-                        <span style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.12)', margin: '0 10px' }} />
-                      </div>
-                      <input className="phone-input" type="tel" placeholder="081234 56789" required value={proForm.phone} onChange={e => setProForm({ ...proForm, phone: e.target.value })} />
-                    </div>
-                  </div>
-                  <button type="submit" className="ok-btn">OK ✓</button>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+
 
     </div>
   );

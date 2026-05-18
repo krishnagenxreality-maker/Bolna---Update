@@ -292,20 +292,7 @@ export function useBolnaDashboard() {
       return;
     }
 
-    // Plan validation for Starter
-    if (user && user.selectedPlan === 'Starter') {
-      // Logic for 1 active/scheduled campaign today handled by backend in addScheduledJob
-      // But for immediate calls, we should also check if there are other jobs
-      const today = new Date().toISOString().split('T')[0];
-      const activeJobs = scheduledJobs.filter(j => 
-        ['Scheduled', 'Running', 'Running-Acknowledge'].includes(j.status) && 
-        j.scheduledAt.startsWith(today)
-      );
-      
-      if (activeJobs.length > 0) {
-        return;
-      }
-    }
+
 
     const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`);
     const now = new Date();
