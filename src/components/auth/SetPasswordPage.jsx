@@ -5,6 +5,7 @@ import { SmokeBackground } from '../layout/SmokeBackground';
 import { Lock, AlertCircle, Shield, KeyRound } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
+import LegalModal from '../common/LegalModal';
 import '../../styles/BolnaDashboard.css';
 
 export default function SetPasswordPage() {
@@ -12,8 +13,16 @@ export default function SetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [legalOpen, setLegalOpen] = useState(false);
+  const [legalType, setLegalType] = useState('terms');
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const openLegal = (type) => {
+    setLegalType(type);
+    setLegalOpen(true);
+  };
 
   // If no user is logged in or user is not a first-time login user, redirect
   if (!user || !user.isFirstLogin) {
@@ -23,6 +32,11 @@ export default function SetPasswordPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!consentChecked) {
+      setError('You must agree to the terms and consent policy to proceed.');
+      return;
+    }
 
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match');
@@ -124,6 +138,30 @@ export default function SetPasswordPage() {
               />
             </div>
 
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginTop: '12px', marginBottom: '12px' }}>
+              <input
+                type="checkbox"
+                id="legal-consent"
+                checked={consentChecked}
+                onChange={(e) => setConsentChecked(e.target.checked)}
+                style={{
+                  marginTop: '4px',
+                  cursor: 'pointer',
+                  accentColor: '#fff',
+                  width: '16px',
+                  height: '16px',
+                  flexShrink: 0
+                }}
+              />
+              <label htmlFor="legal-consent" style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.5)', lineHeight: '1.5', cursor: 'pointer', fontFamily: 'Outfit, sans-serif', userSelect: 'none' }}>
+                I agree to the{' '}
+                <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); openLegal('terms'); }} style={{ color: '#fff', textDecoration: 'underline', fontWeight: '500', cursor: 'pointer' }}>Terms & Conditions</span>,{' '}
+                <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); openLegal('privacy'); }} style={{ color: '#fff', textDecoration: 'underline', fontWeight: '500', cursor: 'pointer' }}>Privacy Policy</span>,{' '}
+                <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); openLegal('refund'); }} style={{ color: '#fff', textDecoration: 'underline', fontWeight: '500', cursor: 'pointer' }}>Refund Policy</span>, and{' '}
+                <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); openLegal('consent'); }} style={{ color: '#fff', textDecoration: 'underline', fontWeight: '500', cursor: 'pointer' }}>AI Communication Consent</span>.
+              </label>
+            </div>
+
             {error && (
               <div className="spill s-failed" style={{ 
                 width: '100%', 
@@ -142,12 +180,14 @@ export default function SetPasswordPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !consentChecked}
               className="btn-call"
               style={{ 
                 width: '100%', 
                 marginTop: '10px',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                opacity: (isLoading || !consentChecked) ? 0.5 : 1,
+                cursor: (isLoading || !consentChecked) ? 'not-allowed' : 'pointer'
               }}
             >
               {isLoading ? (
@@ -163,6 +203,12 @@ export default function SetPasswordPage() {
               )}
             </button>
           </form>
+
+          <LegalModal
+            isOpen={legalOpen}
+            onClose={() => setLegalOpen(false)}
+            docType={legalType}
+          />
 
           <div style={{ marginTop: '32px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px' }}>
             <button 

@@ -10,6 +10,7 @@ import {
   ShoppingCart, HeartPulse, Hotel, Landmark, MapPin
 } from 'lucide-react';
 import RequestDemoModal from '../common/RequestDemoModal';
+import LegalModal from '../common/LegalModal';
 import '../../styles/BolnaDashboard.css';
 
 /* ─────────────────────────────────────────
@@ -418,7 +419,14 @@ export default function HomePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const showJoinModal = searchParams.get('join') === 'true';
   const [showDemoModal, setShowDemoModal] = useState(false);
+  const [legalOpen, setLegalOpen] = useState(false);
+  const [legalType, setLegalType] = useState('terms');
   const [heroVisible, setHeroVisible] = useState(false);
+
+  const openLegal = (type) => {
+    setLegalType(type);
+    setLegalOpen(true);
+  };
 
   /* scroll + parallax + spotlight */
   const heroParallax = useParallax(0.18);
@@ -862,6 +870,132 @@ export default function HomePage() {
 
       </main>
 
+      {/* ── FOOTER ── */}
+      <footer style={{
+        borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+        background: 'rgba(10, 10, 10, 0.5)',
+        backdropFilter: 'blur(10px)',
+        padding: '40px 20px',
+        position: 'relative',
+        zIndex: 10,
+        fontFamily: 'Outfit, sans-serif'
+      }}>
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '20px',
+          justifyContent: 'space-between',
+          textAlign: 'center'
+        }}>
+          {/* Logo / Brand & Copyright */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            flexDirection: 'column'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <div className="logo-mark" style={{ width: '28px', height: '28px', borderRadius: '6px' }}>
+                <Shield size={14} />
+              </div>
+              <span style={{ color: '#fff', fontSize: '16px', fontWeight: '700' }}>
+                Calling<span className="hdr-accent">Gen</span>
+              </span>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', margin: '4px 0 0' }}>
+              © {new Date().getFullYear()} CallingGen. All rights reserved.
+            </p>
+          </div>
+
+          {/* Legal / Policy Links */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: '24px',
+            margin: '10px 0'
+          }}>
+            <span 
+              onClick={() => openLegal('terms')}
+              style={{
+                color: 'rgba(255,255,255,0.45)',
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'color 0.2s',
+                textDecoration: 'none'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
+              onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
+            >
+              Terms & Conditions
+            </span>
+            <span 
+              onClick={() => openLegal('privacy')}
+              style={{
+                color: 'rgba(255,255,255,0.45)',
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'color 0.2s',
+                textDecoration: 'none'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
+              onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
+            >
+              Privacy Policy
+            </span>
+            <span 
+              onClick={() => openLegal('refund')}
+              style={{
+                color: 'rgba(255,255,255,0.45)',
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'color 0.2s',
+                textDecoration: 'none'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
+              onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
+            >
+              Refund Policy
+            </span>
+            <span 
+              onClick={() => openLegal('contact')}
+              style={{
+                color: 'rgba(255,255,255,0.45)',
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'color 0.2s',
+                textDecoration: 'none'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
+              onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
+            >
+              Contact Us
+            </span>
+            <span 
+              onClick={() => openLegal('consent')}
+              style={{
+                color: 'rgba(255,255,255,0.45)',
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'color 0.2s',
+                textDecoration: 'none'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
+              onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
+            >
+              AI Communication Consent
+            </span>
+          </div>
+        </div>
+      </footer>
+
       {/* ── JOIN MODAL ── */}
       {showJoinModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(15px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -895,6 +1029,12 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      <LegalModal
+        isOpen={legalOpen}
+        onClose={() => setLegalOpen(false)}
+        docType={legalType}
+      />
     </div>
   );
 }
