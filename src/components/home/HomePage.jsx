@@ -379,8 +379,6 @@ function IndustryCard({ icon: Icon, title, items, delay = 0 }) {
 const SECTOR_TABS = [
   { id: 'EdTech',      label: 'EdTech',       icon: GraduationCap, color: '#a78bfa' },
   { id: 'Ecommerce',   label: 'Ecommerce',    icon: ShoppingCart,  color: '#34d399' },
-  { id: 'HealthTech',  label: 'HealthTech',   icon: HeartPulse,    color: '#38bdf8' },
-  { id: 'BFSI',        label: 'BFSI',         icon: Landmark,      color: '#fbbf24' },
   { id: 'Hospitality', label: 'Hospitality',  icon: Hotel,         color: '#f87171' },
   { id: 'RealEstate',  label: 'Real Estate',  icon: MapPin,        color: '#fb923c' },
 ];
@@ -398,18 +396,6 @@ const SECTOR_AGENTS = {
     { title: 'Return & Refund Agent',     tags: ['Support', 'English + Hindi'],       desc: 'Handles return requests, refund status updates, and replacement queries 24/7 without any human involvement.', color: '#34d399' },
     { title: 'Loyalty & Offers Agent',    tags: ['Marketing', 'English'],             desc: 'Proactively calls your top customers with personalised offers and loyalty programme updates to drive repeat orders.', color: '#34d399' },
   ],
-  HealthTech: [
-    { title: 'Appointment Reminder Agent', tags: ['Reminders', 'English + Hindi'],   desc: 'Drastically reduces no-shows by calling patients 24 hrs before appointments with smart, friendly reminders.', color: '#38bdf8' },
-    { title: 'Post-Discharge Follow-up',   tags: ['Care', 'English'],                desc: 'Checks on patients after discharge, collects feedback, and flags health concerns to care coordinators automatically.', color: '#38bdf8' },
-    { title: 'Lab Report Agent',           tags: ['Notifications', 'English'],       desc: 'Notifies patients the moment reports are ready and answers basic lab result queries in natural conversation.', color: '#38bdf8' },
-    { title: 'Medicine Refill Agent',      tags: ['Pharmacy', 'English + Hindi'],    desc: 'Proactively calls patients due for prescription refills to prevent treatment gaps and drive pharmacy revenue.', color: '#38bdf8' },
-  ],
-  BFSI: [
-    { title: 'EMI Reminder Agent',        tags: ['Collections', 'English + Hindi'],  desc: 'Automates EMI and loan repayment reminders, reducing defaults with empathetic, compliant AI voice outreach.', color: '#fbbf24' },
-    { title: 'KYC Update Agent',          tags: ['Compliance', 'English'],           desc: 'Calls customers for pending KYC document submissions, reducing branch footfall and compliance risk instantly.', color: '#fbbf24' },
-    { title: 'Insurance Renewal Agent',   tags: ['Renewals', 'English + Hindi'],     desc: 'Reminds policyholders of upcoming renewals and intelligently cross-sells relevant products through voice conversation.', color: '#fbbf24' },
-    { title: 'Lead Qualification Agent',  tags: ['Lead Ops', 'Hindi'],               desc: 'Calls every inbound loan or card enquiry instantly to qualify intent, score leads, and route hot prospects to your team.', color: '#fbbf24' },
-  ],
   RealEstate: [
     { title: 'Property Lead Qualifier',    tags: ['Lead Ops', 'English + Hindi'],   desc: 'Instantly calls every inbound property enquiry, qualifies buyer intent, budget, and timeline — then routes hot leads to your sales team.', color: '#fb923c' },
     { title: 'Site Visit Booking Agent',   tags: ['Scheduling', 'English + Hindi'], desc: 'Automates site visit scheduling by calling interested buyers, confirming availability, and sending reminders to reduce no-shows.', color: '#fb923c' },
@@ -419,7 +405,7 @@ const SECTOR_AGENTS = {
   Hospitality: [
     { title: 'Booking Confirmation Agent', tags: ['Reservations', 'English'],        desc: 'Confirms hotel or restaurant bookings, answers guest queries, and upsells upgrades through natural AI voice..', color: '#f87171' },
     { title: 'Check-in Reminder Agent',    tags: ['Reminders', 'English + Hindi'],   desc: 'Calls guests before arrival with check-in details, directions, and special request confirmations automatically.', color: '#f87171' },
-    { title: 'Feedback Collection Agent',  tags: ['Reviews', 'English'],             desc: 'Collects post-stay feedback via a natural voice survey, helping you improve service quality and online ratings.', color: '#f87171' },
+    { title: 'Feedback Collection Agent',  tags: ['Reviews', 'English'],            desc: 'Collects post-stay feedback via a natural voice survey, helping you improve service quality and online ratings.', color: '#f87171' },
     { title: 'Re-booking Campaign Agent',  tags: ['Retention', 'English + Hindi'],   desc: 'Reaches out to past guests with personalised seasonal offers to drive repeat bookings and boost lifetime value.', color: '#f87171' },
   ],
 };
@@ -491,9 +477,8 @@ export default function HomePage() {
 
   const faqs = [
     { q: 'What languages does CallingGen support?',          a: 'CallingGen currently supports Telugu, Hindi, English, and Tamil. Our AI voice agents are designed specifically for Indian accents and conversational styles. More languages are being added continuously.' },
-    { q: 'How does billing work?',                          a: 'We offer credit-based plans starting at ₹10,000/month for 1,000 calls. Each credit covers one AI call. Enterprise plans with custom concurrent calling limits are available — contact admin for details.' },
+    { q: 'How does billing work?',                          a: 'We offer credit-based plans starting at ₹4,999/month for 2,000 calls. Each credit covers one AI call. Enterprise plans with custom concurrent calling limits are available — contact admin for details.' },
     { q: 'What does the onboarding process look like?',     a: 'Onboarding takes under 48 hours. After your demo, we configure your AI agent, set up your calling workflow, and run a test campaign before going live. Our team supports you end-to-end.' },
-    { q: 'Can I integrate CallingGen with my existing CRM?',a: 'Yes. CallingGen supports API-based integrations with most CRM platforms. Campaign data, call outcomes, and lead scores can be synced to your existing workflow automatically.' },
     { q: 'Is my contact data secure?',                     a: 'Absolutely. All data is processed and stored securely with strict access controls. We do not share or sell your contact lists. Data residency and compliance options are available for enterprise customers.' },
     { q: 'How is CallingGen different from bulk SMS or email?', a: 'Unlike SMS or email, AI voice calls create real two-way conversations. Our agents respond dynamically to what the lead says, qualify intent in real time, and escalate hot leads — all without human involvement.' },
   ];

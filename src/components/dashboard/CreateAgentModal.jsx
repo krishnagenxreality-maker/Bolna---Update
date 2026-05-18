@@ -123,7 +123,7 @@ export const CreateAgentModal = ({ isOpen, onClose, apiKey, onAgentCreated }) =>
       return;
     }
     if (!apiKey) {
-      setError('No Bolna API key found. Please contact admin.');
+      setError('No CallingGen API key found. Please contact admin.');
       setIsCreating(false);
       return;
     }
@@ -231,12 +231,12 @@ export const CreateAgentModal = ({ isOpen, onClose, apiKey, onAgentCreated }) =>
           const errData = JSON.parse(resText);
           // Requirement 6: Show real API error message
           if (errData.message) {
-            errorMessage = `Bolna API Error: ${errData.message}`;
+            errorMessage = `CallingGen API Error: ${errData.message}`;
           } else if (errData.detail) {
-            errorMessage = `Bolna API Detail: ${JSON.stringify(errData.detail)}`;
+            errorMessage = `CallingGen API Detail: ${JSON.stringify(errData.detail)}`;
           }
         } catch (e) {
-          errorMessage = `Bolna API error (${bolnaRes.status}): ${resText.slice(0, 150)}`;
+          errorMessage = `CallingGen API error (${bolnaRes.status}): ${resText.slice(0, 150)}`;
         }
         throw new Error(errorMessage);
       }
@@ -247,7 +247,7 @@ export const CreateAgentModal = ({ isOpen, onClose, apiKey, onAgentCreated }) =>
       console.log("CREATE_AGENT_SUCCESS", { bolnaAgentId });
 
       if (!bolnaAgentId) {
-        throw new Error('Agent created but no ID was returned from Bolna.');
+        throw new Error('Agent created but no ID was returned from CallingGen.');
       }
 
       await onAgentCreated({

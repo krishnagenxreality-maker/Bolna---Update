@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { Panel, PanelHead } from '../ui/Panel';
 import { DatePicker } from '../ui/DatePicker';
+import { Dropdown } from '../ui/Dropdown';
 import { fetchExecutionStatus } from '../../services/api';
 import { 
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
@@ -41,6 +42,13 @@ export const LeadsView = ({
     });
     return Array.from(cats).sort();
   }, [categorizedContacts]);
+
+  const categoryOptions = useMemo(() => {
+    return [
+      { value: "", label: "All Categories" },
+      ...uniqueCategories.map(cat => ({ value: cat, label: cat }))
+    ];
+  }, [uniqueCategories]);
 
   // Filter by selected category
   const filteredLeads = useMemo(() => {
@@ -265,17 +273,12 @@ export const LeadsView = ({
                 <div className="leads-filter-bar">
                   <div className="leads-filter-dropdown-wrap">
                     <Tag size={14} style={{ color: 'rgba(255,255,255,0.4)' }} />
-                    <select
-                      id="leads-category-filter"
-                      className="leads-filter-dropdown"
+                    <Dropdown
                       value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                    >
-                      <option value="">All Categories</option>
-                      {uniqueCategories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
+                      onChange={setSelectedCategory}
+                      options={categoryOptions}
+                      placeholder="All Categories"
+                    />
                   </div>
                   {selectedCategory && (
                     <button 

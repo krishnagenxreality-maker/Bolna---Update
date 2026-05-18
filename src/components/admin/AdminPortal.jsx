@@ -7,6 +7,7 @@ import {
   Users, UserPlus, Trash2, LogOut, X, Shield,
   Building2, Key, Monitor, Pencil, Eye, EyeOff
 } from 'lucide-react';
+import { Dropdown } from '../ui/Dropdown';
 import '../../styles/BolnaDashboard.css';
 
 export default function AdminPortal() {
@@ -1122,11 +1123,9 @@ export default function AdminPortal() {
                             style={{ background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.4)', cursor: 'not-allowed' }}
                           />
                         ) : (
-                          <select
-                            className="field-input"
+                          <Dropdown
                             value={formData.selectedPlan}
-                            onChange={e => {
-                              const plan = e.target.value;
+                            onChange={plan => {
                               const credits = plan === 'Growth' ? 6000 : 2000;
                               setFormData(prev => ({ 
                                 ...prev, 
@@ -1136,28 +1135,11 @@ export default function AdminPortal() {
                                 remainingCredits: credits
                               }));
                             }}
-                            style={{ 
-                              appearance: 'none',
-                              background: 'rgba(255, 255, 255, 0.04)',
-                              border: '1px solid rgba(255, 255, 255, 0.09)',
-                              borderRadius: '9px',
-                              padding: '12px 16px',
-                              color: '#fff',
-                              outline: 'none',
-                              cursor: 'pointer',
-                              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                              backgroundRepeat: 'no-repeat',
-                              backgroundPosition: 'right 16px center',
-                              backgroundSize: '16px',
-                              paddingRight: '40px',
-                              transition: 'border-color .2s, box-shadow .2s'
-                            }}
-                            onMouseOver={(e) => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)'}
-                            onMouseOut={(e) => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.09)'}
-                          >
-                            <option value="Starter" style={{ background: '#121212', color: '#fff' }}>Starter (2k Credits)</option>
-                            <option value="Growth" style={{ background: '#121212', color: '#fff' }}>Growth (6k Credits)</option>
-                          </select>
+                            options={[
+                              { value: "Starter", label: "Starter (2k Credits)" },
+                              { value: "Growth", label: "Growth (6k Credits)" }
+                            ]}
+                          />
                         )}
                       </div>
                     </div>
@@ -1212,7 +1194,7 @@ export default function AdminPortal() {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div className="field">
-                      <label className="field-label">Bolna API Key</label>
+                      <label className="field-label">CallingGen API Key</label>
                       <input
                         type="text"
                         className="field-input"
@@ -1224,7 +1206,7 @@ export default function AdminPortal() {
 
                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                        <label className="field-label" style={{ marginBottom: 0 }}>Bolna Agents</label>
+                        <label className="field-label" style={{ marginBottom: 0 }}>CallingGen Agents</label>
                         <button
                           type="button"
                           onClick={addAgentField}
@@ -1254,7 +1236,7 @@ export default function AdminPortal() {
                               <input
                                 type="text"
                                 className="field-input"
-                                placeholder="Bolna ID"
+                                placeholder="CallingGen ID"
                                 value={agent.id}
                                 onChange={e => handleAgentChange(index, 'id', e.target.value)}
                                 required

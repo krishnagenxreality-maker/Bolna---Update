@@ -11,7 +11,7 @@ export const ConfigPanel = ({ apiKey, agentId, setAgentId, availableAgents = [] 
           <div className="config-grid">
             <div className="field">
               <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Key size={14} /> Bolna API Key
+                <Key size={14} /> CallingGen API Key
               </label>
               <div className="field-input read-only" style={{ 
                 background: 'rgba(255, 255, 255, 0.03)', 
@@ -27,7 +27,7 @@ export const ConfigPanel = ({ apiKey, agentId, setAgentId, availableAgents = [] 
             </div>
             <div className="field agent-selector-wrapper">
               <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <UserCheck size={14} /> Bolna Agent
+                <UserCheck size={14} /> CallingGen Agent
               </label>
               
               {availableAgents.length > 1 ? (

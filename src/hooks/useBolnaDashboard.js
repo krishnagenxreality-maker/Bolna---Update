@@ -277,7 +277,7 @@ export function useBolnaDashboard() {
   };
 
   const startCalling = async (campaignTitle, scheduleDate, scheduleTime) => {
-    if (!apiKey || !agentId) { alert("Please enter your Bolna API Key and Agent ID first."); return; }
+    if (!apiKey || !agentId) { alert("Please enter your CallingGen API Key and Agent ID first."); return; }
     if (isCalling) return;
     if (!contacts.length) { alert("No contacts loaded."); return; }
 
