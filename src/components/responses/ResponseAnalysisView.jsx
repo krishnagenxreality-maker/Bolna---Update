@@ -8,6 +8,10 @@ import {
 import { 
   CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, Megaphone, PhoneIncoming 
 } from 'lucide-react';
+import { normalizeDate } from '../../utils/helpers';
+import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
+import { API_BASE_URL } from '../../config';
 
 export const ResponseAnalysisView = ({ 
   contacts, 
@@ -21,11 +25,55 @@ export const ResponseAnalysisView = ({
   onRetryCalls,
   isCalling
 }) => {
+  const { user } = useAuth();
   const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
   const ROWS_PER_PAGE = 7;
 
-  const filteredContacts = useMemo(() => contacts.filter(c => !searchDate || c.date === searchDate), [contacts, searchDate]);
+  const [dbContacts, setDbContacts] = useState([]);
+  const [loadingDb, setLoadingDb] = useState(false);
+
+  // Fetch persisted records directly from Supabase on mount/refresh/login
+  useEffect(() => {
+    if (!user || !user.userId) return;
+    let isMounted = true;
+    const fetchPersisted = async () => {
+      setLoadingDb(true);
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`);
+        if (res.data && isMounted) {
+          setDbContacts(res.data);
+        }
+      } catch (err) {
+        console.error("[ResponseAnalysisView] Failed to fetch persisted contacts:", err);
+      } finally {
+        if (isMounted) setLoadingDb(false);
+      }
+    };
+    fetchPersisted();
+    return () => { isMounted = false; };
+  }, [user]);
+
+  // Combine database records with live session updates
+  const combinedContacts = useMemo(() => {
+    const map = new Map(dbContacts.map(c => [c.id, c]));
+    if (contacts && contacts.length > 0) {
+      contacts.forEach(c => {
+        map.set(c.id, c);
+      });
+    }
+    return Array.from(map.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  }, [dbContacts, contacts]);
+
+  const filteredContacts = useMemo(() => {
+    const targetSearchDate = normalizeDate(searchDate);
+    return combinedContacts.filter(c => 
+      !targetSearchDate || 
+      normalizeDate(c.date) === targetSearchDate || 
+      normalizeDate(c.createdAt) === targetSearchDate
+    );
+  }, [combinedContacts, searchDate]);
+
   const uniqueResponses = useMemo(() => Array.from(new Set(filteredContacts.map(c => c.response).filter(r => r))).sort(), [filteredContacts]);
 
   // Reset page when filters change
@@ -36,6 +84,20 @@ export const ResponseAnalysisView = ({
   const currentTableData = useMemo(() => {
     return filteredContacts.filter(c => !responseTab || c.response === responseTab);
   }, [filteredContacts, responseTab]);
+
+  const displayStats = useMemo(() => {
+    const total = combinedContacts.length;
+    const connected = combinedContacts.filter(c => c.status === 'called' || c.status === 'completed').length;
+    const busy = combinedContacts.filter(c => c.status === 'busy' || (c.response || '').toLowerCase().includes('busy')).length;
+    const leadsCount = combinedContacts.filter(c => c.leadCategory && c.leadCategory !== '').length;
+    return {
+      totalCalls: total,
+      connected,
+      busy,
+      leadsCount
+    };
+  }, [combinedContacts]);
+
 
   const totalPages = Math.ceil(currentTableData.length / ROWS_PER_PAGE);
   const currentRows = useMemo(() => {
@@ -116,7 +178,7 @@ export const ResponseAnalysisView = ({
                 <PhoneCall size={14} />
               </div>
               <div className="metric-info">
-                <div className="metric-value">{stats?.totalCalls || contacts.length}</div>
+                <div className="metric-value">{displayStats.totalCalls}</div>
                 <div className="metric-label">Total Calls</div>
               </div>
             </div>
@@ -126,7 +188,7 @@ export const ResponseAnalysisView = ({
                 <PhoneCall size={14} />
               </div>
               <div className="metric-info">
-                <div className="metric-value">{stats?.connected || contacts.filter(c => c.status === 'called').length}</div>
+                <div className="metric-value">{displayStats.connected}</div>
                 <div className="metric-label">Completed</div>
               </div>
             </div>
@@ -136,7 +198,7 @@ export const ResponseAnalysisView = ({
                 <PhoneCall size={14} />
               </div>
               <div className="metric-info">
-                <div className="metric-value">{contacts.filter(c => c.status === 'busy').length}</div>
+                <div className="metric-value">{displayStats.busy}</div>
                 <div className="metric-label">Busy</div>
               </div>
             </div>
@@ -146,7 +208,7 @@ export const ResponseAnalysisView = ({
                 <Users size={14} />
               </div>
               <div className="metric-info">
-                <div className="metric-value">{stats?.leadsCount || 0}</div>
+                <div className="metric-value">{displayStats.leadsCount}</div>
                 <div className="metric-label">Leads</div>
               </div>
             </div>

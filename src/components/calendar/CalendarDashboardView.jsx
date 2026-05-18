@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Phone, TrendingUp, CheckCircle, XCircle, Use
 import { Dropdown } from '../ui/Dropdown';
 import { DatePicker } from '../ui/DatePicker';
 import { VisualAnalytics } from './VisualAnalytics';
+import { normalizeDate } from '../../utils/helpers';
 import './CalendarDashboardView.css';
 
 export const CalendarDashboardView = ({ 
@@ -52,12 +53,14 @@ export const CalendarDashboardView = ({
     }
 
     // Date Filter
+    const targetSpecificDate = normalizeDate(specificDate);
     const dateMatch = dateFilterType === 'all' || 
-                      c.date === specificDate || 
-                      (c.createdAt && c.createdAt.startsWith(specificDate)) ||
-                      (c.date && c.date.startsWith(specificDate));
+                      !targetSpecificDate ||
+                      normalizeDate(c.date) === targetSpecificDate || 
+                      normalizeDate(c.createdAt) === targetSpecificDate;
     return agentMatch && dateMatch;
   });
+
 
   // Calculate Overall Metrics
   const totalCalls = activeContacts.length;
@@ -87,9 +90,14 @@ export const CalendarDashboardView = ({
 
   const getDayStats = (day) => {
     const dateStr = formatDateString(day);
-    const dayContacts = activeContacts.filter(c => c.date === dateStr);
+    const targetDateStr = normalizeDate(dateStr);
+    const dayContacts = activeContacts.filter(c => 
+      normalizeDate(c.date) === targetDateStr || 
+      normalizeDate(c.createdAt) === targetDateStr
+    );
     
     if (dayContacts.length === 0) return null;
+
 
     const total = dayContacts.length;
     const completed = dayContacts.filter(c => c.status === 'completed' || c.status === 'called').length;

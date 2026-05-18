@@ -10,6 +10,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { LockedFeatureModal } from '../ui/LockedFeatureModal';
+import { normalizeDate } from '../../utils/helpers';
+import axios from 'axios';
+import { API_BASE_URL } from '../../config';
 
 export const CallDetailsView = ({ 
   contacts, 
@@ -29,19 +32,59 @@ export const CallDetailsView = ({
   const [showLockModal, setShowLockModal] = useState(false);
   const ROWS_PER_PAGE = 7;
 
+  const [dbContacts, setDbContacts] = useState([]);
+  const [loadingDb, setLoadingDb] = useState(false);
+
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(0);
     setSelectedForRetry([]);
   }, [searchDate, detailsStatusTab]);
 
+  // Fetch persisted records directly from Supabase on mount/refresh/login
+  useEffect(() => {
+    if (!user || !user.userId) return;
+    let isMounted = true;
+    const fetchPersisted = async () => {
+      setLoadingDb(true);
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`);
+        if (res.data && isMounted) {
+          setDbContacts(res.data);
+        }
+      } catch (err) {
+        console.error("[CallDetailsView] Failed to fetch persisted contacts:", err);
+      } finally {
+        if (isMounted) setLoadingDb(false);
+      }
+    };
+    fetchPersisted();
+    return () => { isMounted = false; };
+  }, [user]);
+
+  // Combine database records with live session updates
+  const combinedContacts = useMemo(() => {
+    const map = new Map(dbContacts.map(c => [c.id, c]));
+    if (contacts && contacts.length > 0) {
+      contacts.forEach(c => {
+        map.set(c.id, c);
+      });
+    }
+    return Array.from(map.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  }, [dbContacts, contacts]);
+
   const filteredData = useMemo(() => {
-    return contacts.filter(c => {
+    return combinedContacts.filter(c => {
       const statusMatch = detailsStatusTab === 'all' || c.status === detailsStatusTab;
-      const dateMatch = !searchDate || c.date === searchDate;
+      const targetSearchDate = normalizeDate(searchDate);
+      const dateMatch = !targetSearchDate || 
+                        normalizeDate(c.date) === targetSearchDate || 
+                        normalizeDate(c.createdAt) === targetSearchDate;
       return statusMatch && dateMatch;
     });
-  }, [contacts, detailsStatusTab, searchDate]);
+  }, [combinedContacts, detailsStatusTab, searchDate]);
+
+
 
   // Contacts eligible for retry (busy or no answer)
   const retryEligible = useMemo(() => {
@@ -86,11 +129,28 @@ export const CallDetailsView = ({
 
   const trendData = useMemo(() => {
     const counts = {};
-    contacts.forEach(c => {
-      counts[c.date] = (counts[c.date] || 0) + 1;
+    combinedContacts.forEach(c => {
+      const d = normalizeDate(c.date) || normalizeDate(c.createdAt);
+      if (d) {
+        counts[d] = (counts[d] || 0) + 1;
+      }
     });
     return Object.keys(counts).sort().map(date => ({ date, count: counts[date] }));
-  }, [contacts]);
+  }, [combinedContacts]);
+
+  const displayStats = useMemo(() => {
+    const total = combinedContacts.length;
+    const connected = combinedContacts.filter(c => c.status === 'called' || c.status === 'completed').length;
+    const failed = combinedContacts.filter(c => c.status === 'failed').length;
+    const leadsCount = combinedContacts.filter(c => c.leadCategory && c.leadCategory !== '').length;
+    return {
+      totalCalls: total,
+      connected,
+      failed,
+      leadsCount
+    };
+  }, [combinedContacts]);
+
 
   const statusData = useMemo(() => {
     const counts = { completed: 0, failed: 0, busy: 0, 'no answer': 0 };
@@ -159,7 +219,7 @@ export const CallDetailsView = ({
                 <PhoneCall size={14} />
               </div>
               <div className="metric-info">
-                <div className="metric-value">{stats?.totalCalls || contacts.length}</div>
+                <div className="metric-value">{displayStats.totalCalls}</div>
                 <div className="metric-label">Total Calls</div>
               </div>
             </div>
@@ -169,7 +229,7 @@ export const CallDetailsView = ({
                 <PhoneCall size={14} />
               </div>
               <div className="metric-info">
-                <div className="metric-value">{stats?.connected || contacts.filter(c => c.status === 'called').length}</div>
+                <div className="metric-value">{displayStats.connected}</div>
                 <div className="metric-label">Connected</div>
               </div>
             </div>
@@ -179,7 +239,7 @@ export const CallDetailsView = ({
                 <PhoneCall size={14} />
               </div>
               <div className="metric-info">
-                <div className="metric-value">{stats?.failed || contacts.filter(c => c.status === 'failed').length}</div>
+                <div className="metric-value">{displayStats.failed}</div>
                 <div className="metric-label">Failed</div>
               </div>
             </div>
@@ -189,7 +249,7 @@ export const CallDetailsView = ({
                 <Users size={14} />
               </div>
               <div className="metric-info">
-                <div className="metric-value">{stats?.leadsCount || 0}</div>
+                <div className="metric-value">{displayStats.leadsCount}</div>
                 <div className="metric-label">Leads</div>
               </div>
             </div>

@@ -707,11 +707,40 @@ app.get('/api/contacts/:userId', async (req, res) => {
     const { data, error } = await supabase
       .from('contacts')
       .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .eq('user_id', userId);
 
     if (error) throw error;
-    res.json(data.map(mapContact));
+    
+    const mapped = (data || []).map(mapContact);
+    
+    // Sort mapped contacts in-memory by the timestamp embedded in the ID (newest first)
+    mapped.sort((a, b) => {
+      const getTs = (c) => {
+        if (c.id && c.id.includes('::')) {
+          const parts = c.id.split('::');
+          if (parts.length >= 3) {
+            const tsParts = parts[2].split('-');
+            const ts = parseInt(tsParts[0], 10);
+            if (!isNaN(ts)) return ts;
+          }
+        }
+        return 0;
+      };
+      
+      const tsA = getTs(a);
+      const tsB = getTs(b);
+      
+      if (tsA !== tsB) {
+        return tsB - tsA; // Newest first
+      }
+      
+      // Fallback: compare dates
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    res.json(mapped);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

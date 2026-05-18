@@ -10,8 +10,10 @@ import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { normalizeDate } from '../../utils/helpers';
 
 const SECTION_COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#6366f1', '#06b6d4', '#84cc16', '#f97316', '#ef4444'];
+
 
 
 // ── Markdown table parser ──────────────────────────────────────────────────────
@@ -207,10 +209,15 @@ export const ReportView = ({
     agentId ? contacts.filter(c => c.agentId === agentId) : contacts,
     [contacts, agentId]
   );
-  const dayContacts = useMemo(() =>
-    activeContacts.filter(c => c.date === searchDate),
-    [activeContacts, searchDate]
-  );
+  const dayContacts = useMemo(() => {
+    const targetSearchDate = normalizeDate(searchDate);
+    return activeContacts.filter(c => 
+      !targetSearchDate || 
+      normalizeDate(c.date) === targetSearchDate || 
+      normalizeDate(c.createdAt) === targetSearchDate
+    );
+  }, [activeContacts, searchDate]);
+
 
   const total         = dayContacts.length;
   const completed     = dayContacts.filter(c => c.status === 'completed' || c.status === 'called').length;

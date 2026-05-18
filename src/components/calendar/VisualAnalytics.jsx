@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { normalizeDate } from '../../utils/helpers';
 
 const PIE_COLORS = ['#7dffb3', '#ff7070', '#f5c842', '#3b82f6'];
+
 
 const ChartCard = ({ title, children, fullWidth, isExpanded, onClick }) => (
   <div 
@@ -161,10 +163,11 @@ export const VisualAnalytics = ({ contacts }) => {
 
   // 3. Call Trend (Grouped by date)
   const trendMap = contacts.reduce((acc, c) => {
-    const d = c.date || c.createdAt?.split('T')[0];
+    const d = normalizeDate(c.date) || normalizeDate(c.createdAt);
     if (d) acc[d] = (acc[d] || 0) + 1;
     return acc;
   }, {});
+
   const trendData = Object.entries(trendMap)
     .map(([date, count]) => ({ date, count }))
     .sort((a, b) => a.date.localeCompare(b.date))

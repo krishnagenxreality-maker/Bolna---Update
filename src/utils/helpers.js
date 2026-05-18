@@ -15,3 +15,34 @@ export function cleanPhoneNumber(phone) {
   }
   return cleaned;
 }
+
+export function normalizeDate(d) {
+  if (!d) return "";
+  try {
+    if (typeof d === "string") {
+      const trimmed = d.trim();
+      // YYYY-MM-DD exactly (zero timezone shift)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        return trimmed;
+      }
+      const dateOnlyMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})[T ]/);
+      if (dateOnlyMatch) {
+        // If it does not contain a timezone indicator (Z or +/- offset), treat it as local date
+        if (!trimmed.endsWith('Z') && !trimmed.includes('+') && !/-\d{2}:\d{2}$/.test(trimmed)) {
+          return dateOnlyMatch[1];
+        }
+      }
+    }
+    const parsed = new Date(d);
+    if (!isNaN(parsed.getTime())) {
+      const y = parsed.getFullYear();
+      const m = String(parsed.getMonth() + 1).padStart(2, '0');
+      const dVal = String(parsed.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dVal}`;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+  return "";
+}
+

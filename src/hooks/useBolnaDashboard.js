@@ -377,14 +377,18 @@ export function useBolnaDashboard() {
   // Fetch user config and contacts from backend
   useEffect(() => {
     const initData = async () => {
-      if (user && user.userId) {
-        try {
-          const configRes = await axios.get(`${API_BASE_URL}/api/user-config/${user.userId}`);
+      if (!user || !user.userId) return;
+
+      let currentAgents = [];
+      
+      // 1. Fetch user configuration
+      try {
+        const configRes = await axios.get(`${API_BASE_URL}/api/user-config/${user.userId}`);
+        if (configRes.data) {
           if (configRes.data.bolnaApiKey) setApiKey(configRes.data.bolnaApiKey);
           if (configRes.data.credits !== undefined) setCredits(configRes.data.credits);
           
-          let currentAgents = [];
-          if (configRes.data && configRes.data.bolnaAgentId) {
+          if (configRes.data.bolnaAgentId) {
             const raw = configRes.data.bolnaAgentId;
             try {
               if (typeof raw === 'string' && (raw.startsWith('[') || raw.startsWith('{'))) {
@@ -400,7 +404,6 @@ export function useBolnaDashboard() {
             }
           }
 
-
           console.log("AVAILABLE_AGENTS_FINAL", currentAgents.map(a => ({ name: a.name, id: a.id, hasScript: !!a.script })));
           setAvailableAgents(currentAgents);
           if (currentAgents.length > 0 && !agentId) {
@@ -408,30 +411,78 @@ export function useBolnaDashboard() {
             console.log("AUTO_SELECT_AGENT", defaultId);
             setAgentId(defaultId);
           }
+        }
+      } catch (err) {
+        console.error("Failed to fetch user config on login:", err);
+      }
 
+      // 2. Fetch contacts (Ensure this ALWAYS runs even if config fails)
+      try {
+        const contactsRes = await axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`);
+        if (contactsRes.data && contactsRes.data.length > 0) {
+          const defaultAgentId = currentAgents.length > 0 ? `${currentAgents[0].name}::${currentAgents[0].id}` : '';
+          const mappedContacts = contactsRes.data.map(c => {
+            if (c.id && c.id.includes('::')) {
+              const parts = c.id.split('::');
+              if (parts.length >= 3) return { ...c, agentId: `${parts[0]}::${parts[1]}` };
+              else if (parts.length === 2) return { ...c, agentId: parts[0] };
+            }
+            return { ...c, agentId: c.agentId || defaultAgentId };
+          });
+          setContacts(mappedContacts);
+          contactsRef.current = mappedContacts;
+        } else {
+          setContacts([]);
+          contactsRef.current = [];
+        }
+      } catch (err) {
+        console.error("Failed to fetch contacts on login:", err);
+        setContacts([]);
+        contactsRef.current = [];
+      }
+
+      // 3. Fetch scheduled jobs
+      try {
+        const scheduleRes = await axios.get(`${API_BASE_URL}/api/schedule/${user.userId}`);
+        if (scheduleRes.data.success) {
+          setScheduledJobs(scheduleRes.data.jobs);
+        }
+      } catch (err) {
+        console.error("Failed to fetch schedule on login:", err);
+      }
+    };
+    initData();
+  }, [user]);
+
+  // Fetch / re-fetch contacts on view changes to details, responses, leads
+  useEffect(() => {
+    if (!user || !user.userId) return;
+    if (["details", "responses", "leads"].includes(activeView)) {
+      const refetchContacts = async () => {
+        try {
           const contactsRes = await axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`);
-          if (contactsRes.data && contactsRes.data.length > 0) {
-            const defaultAgentId = currentAgents.length > 0 ? `${currentAgents[0].name}::${currentAgents[0].id}` : '';
+          if (contactsRes.data) {
+            const defaultAgentId = availableAgents.length > 0 ? `${availableAgents[0].name}::${availableAgents[0].id}` : '';
             const mappedContacts = contactsRes.data.map(c => {
               if (c.id && c.id.includes('::')) {
                 const parts = c.id.split('::');
                 if (parts.length >= 3) return { ...c, agentId: `${parts[0]}::${parts[1]}` };
                 else if (parts.length === 2) return { ...c, agentId: parts[0] };
               }
-              return { ...c, agentId: defaultAgentId };
+              return { ...c, agentId: c.agentId || defaultAgentId };
             });
             setContacts(mappedContacts);
             contactsRef.current = mappedContacts;
+            console.log(`[useBolnaDashboard] Auto-refetched ${mappedContacts.length} contacts for view "${activeView}"`);
           }
-          const scheduleRes = await axios.get(`${API_BASE_URL}/api/schedule/${user.userId}`);
-          if (scheduleRes.data.success) setScheduledJobs(scheduleRes.data.jobs);
+        } catch (err) {
+          console.error("Failed to refetch contacts on view change:", err);
+        }
+      };
+      refetchContacts();
+    }
+  }, [activeView, user, availableAgents]);
 
-
-        } catch (err) { }
-      }
-    };
-    initData();
-  }, [user]);
 
   // Polling for Scheduled Jobs to detect status changes
   useEffect(() => {

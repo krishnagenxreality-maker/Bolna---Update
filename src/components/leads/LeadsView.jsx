@@ -10,6 +10,10 @@ import {
   CalendarDays, PhoneCall, ListTodo, BarChart3, Users, ClipboardList, ChevronLeft, ChevronRight, Download, 
   Tag, Layers, CheckCircle2, PhoneOff, X, Play, FileText, Mic, Megaphone, PhoneIncoming
 } from 'lucide-react';
+import { normalizeDate } from '../../utils/helpers';
+import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
+import { API_BASE_URL } from '../../config';
 
 export const LeadsView = ({ 
   contacts, 
@@ -20,14 +24,58 @@ export const LeadsView = ({
   setActiveView,
   apiKey
 }) => {
+  const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [modalData, setModalData] = useState(null);
   const [loadingRecording, setLoadingRecording] = useState(false);
   const ROWS_PER_PAGE = 7;
 
+  const [dbContacts, setDbContacts] = useState([]);
+  const [loadingDb, setLoadingDb] = useState(false);
+
+  // Fetch persisted records directly from Supabase on mount/refresh/login
+  useEffect(() => {
+    if (!user || !user.userId) return;
+    let isMounted = true;
+    const fetchPersisted = async () => {
+      setLoadingDb(true);
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/contacts/${user.userId}`);
+        if (res.data && isMounted) {
+          setDbContacts(res.data);
+        }
+      } catch (err) {
+        console.error("[LeadsView] Failed to fetch persisted contacts:", err);
+      } finally {
+        if (isMounted) setLoadingDb(false);
+      }
+    };
+    fetchPersisted();
+    return () => { isMounted = false; };
+  }, [user]);
+
+  // Combine database records with live session updates
+  const combinedContacts = useMemo(() => {
+    const map = new Map(dbContacts.map(c => [c.id, c]));
+    if (contacts && contacts.length > 0) {
+      contacts.forEach(c => {
+        map.set(c.id, c);
+      });
+    }
+    return Array.from(map.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  }, [dbContacts, contacts]);
+
   // Filter by date
-  const filteredContacts = useMemo(() => contacts.filter(c => !searchDate || c.date === searchDate), [contacts, searchDate]);
+  const filteredContacts = useMemo(() => {
+    const targetSearchDate = normalizeDate(searchDate);
+    return combinedContacts.filter(c => 
+      !targetSearchDate || 
+      normalizeDate(c.date) === targetSearchDate || 
+      normalizeDate(c.createdAt) === targetSearchDate
+    );
+  }, [combinedContacts, searchDate]);
+
   
   // Get all contacts that are successfully called (completed)
   const categorizedContacts = useMemo(() => {
@@ -83,11 +131,14 @@ export const LeadsView = ({
   // Leads per day trend
   const leadsTrendData = useMemo(() => {
     const counts = {};
-    contacts.filter(c => c.leadCategory && c.leadCategory !== '').forEach(c => {
-      counts[c.date] = (counts[c.date] || 0) + 1;
+    combinedContacts.filter(c => c.leadCategory && c.leadCategory !== '').forEach(c => {
+      const d = normalizeDate(c.date) || normalizeDate(c.createdAt);
+      if (d) {
+        counts[d] = (counts[d] || 0) + 1;
+      }
     });
     return Object.keys(counts).sort().slice(-7).map(date => ({ date, count: counts[date] }));
-  }, [contacts]);
+  }, [combinedContacts]);
 
   // Dynamic color palette for pie chart
   const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
