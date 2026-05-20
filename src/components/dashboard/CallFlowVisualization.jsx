@@ -2,25 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { Phone, Users, CheckCircle, Clock, Zap, Target, XCircle, HelpCircle, Timer } from 'lucide-react';
 
 export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartTime, stats }) => {
-  const selectedAgentId = agentId?.includes('::') ? agentId.split('::')[1] : agentId;
-  const activeContacts = selectedAgentId 
-    ? (contacts || []).filter(c => c.agentId === agentId || c.agentId === selectedAgentId || c.id?.includes(selectedAgentId))
-    : (contacts || []);
+  // Directly use contacts passed from parent (sessionContacts) so no session records are dropped due to missing agentId key
+  const activeContacts = contacts || [];
 
-  // Use passed stats if available, otherwise calculate locally
-  // Use passed stats if available, otherwise calculate locally
-  const statsToUse = stats && Object.keys(stats).length > 0 ? stats : {
+  // Calculate session statistics dynamically and robustly in real-time
+  const statsToUse = {
     total: activeContacts.length,
     pending: activeContacts.filter(c => !c.status || c.status === 'pending').length,
-    active: activeContacts.filter(c => c.status === 'processing' || c.status === 'calling' || c.status === 'queued').length,
-    done: activeContacts.filter(c => c.status === 'called' || c.status === 'completed').length,
+    active: activeContacts.filter(c => ['processing', 'calling', 'queued'].includes(c.status)).length,
+    done: activeContacts.filter(c => ['called', 'completed'].includes(c.status)).length,
     interested: activeContacts.filter(c => (c.leadCategory?.toLowerCase() === 'interested') || (c.classification?.toLowerCase() === 'interested')).length,
     notInterested: activeContacts.filter(c => (c.leadCategory?.toLowerCase() === 'not_interested') || (c.classification?.toLowerCase() === 'not_interested')).length,
     reschedule: activeContacts.filter(c => (c.leadCategory?.toLowerCase() === 'reschedule') || (c.classification?.toLowerCase() === 'reschedule')).length,
-    noAnswer: activeContacts.filter(c => c.response?.toLowerCase().includes('no answer') || c.response?.toLowerCase().includes('busy')).length
+    noAnswer: activeContacts.filter(c => 
+      c.response?.toLowerCase().includes('no answer') || 
+      c.response?.toLowerCase().includes('busy') ||
+      c.status?.toLowerCase().includes('no answer') || 
+      c.status?.toLowerCase().includes('busy')
+    ).length
   };
 
-  // Map hook stats to visual stats
+  // Map local real-time stats to visual stats
   const visualStats = {
     uploaded: statsToUse.total || 0,
     pending: statsToUse.pending || 0,
@@ -31,6 +33,9 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
     reschedule: statsToUse.reschedule || 0,
     noAnswer: statsToUse.noAnswer || 0
   };
+
+  const progressPercent = visualStats.uploaded > 0 ? Math.round((visualStats.completed / visualStats.uploaded) * 100) : 0;
+  const isFullyCompleted = visualStats.uploaded > 0 && visualStats.completed === visualStats.uploaded;
 
   // ETA calculation
   const [etaText, setEtaText] = useState('');
@@ -75,7 +80,7 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
   }, [isCalling, callStartTime, visualStats.uploaded, visualStats.completed]);
 
   return (
-    <div className="gaming-flow-panel">
+    <div className={`gaming-flow-panel ${isFullyCompleted ? 'live-journey-completed' : ''}`}>
       <div className="flow-header">
         <div className="live-tag">
           <div className="live-dot" />
@@ -98,6 +103,28 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
             </div>
           )}
           <div className="flow-title">Mission Control / Call Flow</div>
+        </div>
+      </div>
+
+      {/* Sleek, neon-glowing progress bar */}
+      <div className="live-journey-progress-container" style={{
+        height: '4px',
+        background: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: '10px',
+        overflow: 'hidden',
+        marginBottom: '20px',
+        position: 'relative',
+        border: '1px solid rgba(255, 255, 255, 0.05)'
+      }}>
+        <div className="live-journey-progress-fill" style={{
+          width: `${progressPercent}%`,
+          height: '100%',
+          background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+          boxShadow: '0 0 12px #a855f7',
+          transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+          position: 'relative'
+        }}>
+          <div className="progress-shimmer" />
         </div>
       </div>
       
@@ -194,6 +221,7 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
           box-shadow: 0 10px 30px rgba(0,0,0,0.3);
           position: relative;
           overflow: hidden;
+          transition: all 0.6s ease;
         }
         .gaming-flow-panel::before {
           content: '';
@@ -201,11 +229,15 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
           top: 0; left: 0; right: 0; height: 1px;
           background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
         }
+        .live-journey-completed {
+          border-color: rgba(74, 222, 128, 0.25) !important;
+          box-shadow: 0 0 35px rgba(74, 222, 128, 0.15), 0 10px 30px rgba(0,0,0,0.4) !important;
+        }
         .flow-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
+          margin-bottom: 16px;
           border-bottom: 1px solid rgba(255,255,255,0.03);
           padding-bottom: 12px;
         }
@@ -294,6 +326,7 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
           font-weight: 800;
           line-height: 1;
           font-family: 'Outfit', sans-serif;
+          transition: all 0.3s ease;
         }
         .node-subtext {
           font-size: 10px;
@@ -302,17 +335,20 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
         }
         .gaming-connector {
           width: 60px;
-          height: 1px;
-          background: rgba(255,255,255,0.03);
+          height: 3px;
+          background: rgba(255,255,255,0.04);
           position: relative;
-          overflow: hidden;
+          overflow: visible;
+          border-radius: 10px;
         }
         .connector-flow {
           position: absolute;
           top: 0; left: -100%;
           width: 100%; height: 100%;
-          background: linear-gradient(90deg, transparent, var(--flow-color), transparent);
-          animation: gamingFlow 1.5s infinite linear;
+          background: linear-gradient(90deg, transparent, var(--flow-color), var(--flow-color), transparent);
+          box-shadow: 0 0 10px var(--flow-color), 0 0 18px var(--flow-color);
+          animation: gamingFlow 2s infinite linear;
+          border-radius: inherit;
         }
         @keyframes gamingFlow { 
           from { left: -100%; }
@@ -363,10 +399,12 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
           overflow: visible; 
         }
         .neon-path {
-          stroke-dasharray: 10 20;
-          animation: neonDash 0.8s linear infinite;
+          stroke-dasharray: 6 12;
+          filter: drop-shadow(0 0 4px currentColor);
+          animation: neonDash 1.2s linear infinite;
+          transition: opacity 0.5s ease;
         }
-        @keyframes neonDash { from { stroke-dashoffset: 30; } to { stroke-dashoffset: 0; } }
+        @keyframes neonDash { from { stroke-dashoffset: 36; } to { stroke-dashoffset: 0; } }
         .pulse-effect { animation: gamingPulse 2s infinite; }
         @keyframes gamingPulse {
           0% { box-shadow: 0 0 0 0 var(--pulse-color); }
@@ -376,6 +414,24 @@ export const CallFlowVisualization = ({ contacts, agentId, isCalling, callStartT
         @keyframes fadeInEta {
           from { opacity: 0; transform: translateX(10px); }
           to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-pop {
+          animation: pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes pop {
+          0% { transform: scale(0.8); opacity: 0.5; }
+          50% { transform: scale(1.18); opacity: 1; }
+          100% { transform: scale(1); }
+        }
+        @keyframes progressShimmer {
+          from { left: -100%; }
+          to { left: 100%; }
+        }
+        .progress-shimmer {
+          position: absolute;
+          top: 0; left: 0; width: 50%; height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+          animation: progressShimmer 2s infinite linear;
         }
       ` }} />
     </div>
@@ -391,7 +447,7 @@ const GamingNode = ({ icon, title, label, value, subtext, color, pulse, active }
     <div className="node-glow" style={{ background: color }} />
     <div className="node-icon" style={{ color: color, background: `${color}11` }}>{icon}</div>
     <div className="node-title">{title}</div>
-    <div className="node-value" style={{ color: active ? '#fff' : 'rgba(255,255,255,0.1)' }}>{value}</div>
+    <div key={value} className="node-value animate-pop" style={{ color: active ? '#fff' : 'rgba(255,255,255,0.1)' }}>{value}</div>
     <div className="node-subtext">{subtext}</div>
   </div>
 );
@@ -409,6 +465,6 @@ const GamingMiniNode = ({ label, value, sub, color }) => (
       <span className="mini-label">{label}</span>
       <span className="mini-sub">{sub}</span>
     </div>
-    <div className="mini-val" style={{ color: value > 0 ? color : 'rgba(255,255,255,0.1)' }}>{value}</div>
+    <div key={value} className="mini-val animate-pop" style={{ color: value > 0 ? color : 'rgba(255,255,255,0.1)' }}>{value}</div>
   </div>
 );

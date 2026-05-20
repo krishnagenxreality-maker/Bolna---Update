@@ -561,15 +561,10 @@ export function useBolnaDashboard() {
     }
   }, [scheduledJobs, isCalling, apiKey, dispatchNextBatch, addLog, setAgentId, setContacts]);
 
-  // Auto-select first response tab
+  // Sync scheduleDate when searchDate changes (coming from calendar)
   useEffect(() => {
-    if (activeView === "responses" && !responseTab && contacts.length > 0) {
-      const uniqueResponses = Array.from(new Set(contacts.map(c => c.response).filter(r => r))).sort();
-      if (uniqueResponses.length > 0) {
-        setResponseTab(uniqueResponses[0]);
-      }
-    }
-  }, [activeView, responseTab, contacts]);
+    if (searchDate) setScheduleDate(searchDate);
+  }, [searchDate]);
 
   // sync contactsRef whenever contacts state changes
   useEffect(() => { contactsRef.current = contacts; }, [contacts]);
