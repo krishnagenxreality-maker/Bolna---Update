@@ -6,6 +6,70 @@ const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
+const emailService = require('./emailService');
+
+const tempPasswordsPath = path.join(__dirname, 'temp_passwords.json');
+const lowCreditNotifiedPath = path.join(__dirname, 'low_credit_notified.json');
+
+// Helper to read JSON safely
+function readJsonFile(filePath, defaultValue = {}) {
+  try {
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error(`Error reading file ${filePath}:`, err);
+  }
+  return defaultValue;
+}
+
+// Helper to write JSON safely
+function writeJsonFile(filePath, content) {
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(content, null, 2), 'utf8');
+  } catch (err) {
+    console.error(`Error writing file ${filePath}:`, err);
+  }
+}
+
+// Memory OTP store for forgot password flow
+const otpStore = {};
+
+// Helper to monitor user credits and trigger a single low credit email alert
+async function checkAndNotifyLowCredits(userId, remainingCredits) {
+  try {
+    if (remainingCredits <= 100) {
+      const notified = readJsonFile(lowCreditNotifiedPath);
+      if (!notified[userId]) {
+        // Fetch user email
+        const { data: user, error } = await supabase
+          .from('users')
+          .select('email')
+          .eq('user_id', userId)
+          .single();
+
+        if (user && user.email) {
+          await emailService.sendLowCreditsEmail(user.email, remainingCredits);
+          // Set notified to true
+          notified[userId] = true;
+          writeJsonFile(lowCreditNotifiedPath, notified);
+          console.log(`Low credit warning sent to ${user.email} (${remainingCredits} credits remaining)`);
+        }
+      }
+    } else {
+      // Clear the notified flag if credits are topped up > 100
+      const notified = readJsonFile(lowCreditNotifiedPath);
+      if (notified[userId]) {
+        notified[userId] = false;
+        writeJsonFile(lowCreditNotifiedPath, notified);
+        console.log(`Low credit warning flag reset for ${userId} (credits replenished to ${remainingCredits})`);
+      }
+    }
+  } catch (err) {
+    console.error(`Error in checkAndNotifyLowCredits for user ${userId}:`, err);
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -198,7 +262,73 @@ app.post('/api/users', async (req, res) => {
         .eq('id', demoRequestId);
     }
 
+    // Store original temporary password in local cache for manual Send Credentials button
+    const tempPasswords = readJsonFile(tempPasswordsPath);
+    tempPasswords[newUser.userId] = { tempPassword: newUser.password };
+    writeJsonFile(tempPasswordsPath, tempPasswords);
+
+    // Automatically send welcome email with credentials
+    if (newUser.email) {
+      emailService.sendAccountCreatedEmail(newUser.email, newUser.userId, newUser.password)
+        .catch(err => console.error(`Error sending account created email to ${newUser.email}:`, err));
+    }
+
     res.json({ success: true, user: mapUser(data) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin: Send / Resend user credentials manually
+app.post('/api/users/send-credentials/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    // 1. Fetch user to get registered email
+    const { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const email = user.email;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'User does not have a registered email address' });
+    }
+
+    // 2. Lookup temp password cache
+    const tempPasswords = readJsonFile(tempPasswordsPath);
+    let tempPassword = tempPasswords[userId]?.tempPassword;
+
+    // 3. Fallback: Generate if missing (e.g. server restart)
+    if (!tempPassword) {
+      // Generate a new random 8-character temporary password
+      tempPassword = Math.random().toString(36).substring(2, 10);
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+      // Update Supabase and set is_first_login = true
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ 
+          password: hashedPassword,
+          is_first_login: true 
+        })
+        .eq('user_id', userId);
+
+      if (updateError) throw updateError;
+
+      // Update local cache
+      tempPasswords[userId] = { tempPassword };
+      writeJsonFile(tempPasswordsPath, tempPasswords);
+    }
+
+    // 4. Send email
+    await emailService.sendAccountCreatedEmail(email, userId, tempPassword);
+
+    res.json({ success: true, message: 'Credentials sent successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -268,6 +398,11 @@ app.put('/api/users/:oldUserId', async (req, res) => {
     if (error) {
       if (error.code === '23505') return res.status(400).json({ success: false, message: 'New User ID already exists' });
       throw error;
+    }
+
+    if (data) {
+      const rem = data.remaining_credits !== undefined ? data.remaining_credits : (data.credits || 0);
+      checkAndNotifyLowCredits(oldUserId, rem).catch(err => console.error("Error in checkAndNotifyLowCredits helper:", err));
     }
 
     res.json({ success: true, user: mapUser(data) });
@@ -362,6 +497,10 @@ app.post('/api/user-credits/deduct/:userId', async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // Asynchronously monitor credit threshold and trigger alerts
+    checkAndNotifyLowCredits(userId, data.remaining_credits).catch(err => console.error("Error in checkAndNotifyLowCredits helper:", err));
+
     res.json({ 
       success: true, 
       credits: data.remaining_credits,
@@ -400,6 +539,10 @@ app.post('/api/user-credits/add/:userId', async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // Asynchronously monitor credit threshold and reset alerts
+    checkAndNotifyLowCredits(userId, data.remaining_credits).catch(err => console.error("Error in checkAndNotifyLowCredits helper:", err));
+
     res.json({ success: true, credits: data.remaining_credits, totalCredits: data.total_credits });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -455,7 +598,157 @@ app.post('/api/users/set-password/:userId', async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // Send password updated confirmation email
+    if (data.email) {
+      emailService.sendPasswordUpdatedEmail(data.email, userId)
+        .catch(err => console.error(`Error sending password updated email to ${data.email}:`, err));
+    }
+
+    // Clear plain text temp credentials from cache
+    const tempPasswords = readJsonFile(tempPasswordsPath);
+    delete tempPasswords[userId];
+    writeJsonFile(tempPasswordsPath, tempPasswords);
+
     res.json({ success: true, user: mapUser(data) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// User Auth: Forgot Password - Step 1/2/3 Request OTP
+app.post('/api/auth/forgot-password/request', async (req, res) => {
+  const { userIdOrEmail } = req.body;
+  if (!userIdOrEmail) {
+    return res.status(400).json({ success: false, message: 'User ID or Email is required' });
+  }
+
+  try {
+    // 1. Fetch user by user_id or email
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .or(`user_id.eq.${userIdOrEmail},email.eq.${userIdOrEmail}`)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (!user.email) {
+      return res.status(400).json({ success: false, message: 'This user does not have a registered email address for verification' });
+    }
+
+    // 2. Generate 6-digit verification OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // 3. Save OTP in memory store with 10-minute expiry and attempt tracking
+    otpStore[user.user_id] = {
+      otp,
+      email: user.email,
+      expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+      attempts: 0,
+      verified: false
+    };
+
+    // 4. Send OTP email
+    await emailService.sendForgotOtpEmail(user.email, otp);
+
+    res.json({ 
+      success: true, 
+      message: 'Verification OTP sent to registered email address',
+      userId: user.user_id,
+      emailMasked: user.email.replace(/(.{2})(.*)(@.*)/, "$1***$3")
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// User Auth: Forgot Password - Step 4 Verify OTP
+app.post('/api/auth/forgot-password/verify', async (req, res) => {
+  const { userId, otp } = req.body;
+  if (!userId || !otp) {
+    return res.status(400).json({ success: false, message: 'User ID and OTP are required' });
+  }
+
+  try {
+    const otpData = otpStore[userId];
+    if (!otpData) {
+      return res.status(400).json({ success: false, message: 'No active OTP verification session found' });
+    }
+
+    // Check expiry
+    if (Date.now() > otpData.expiresAt) {
+      delete otpStore[userId];
+      return res.status(400).json({ success: false, message: 'Verification OTP has expired (10 mins). Please request a new one' });
+    }
+
+    // Brute force defense: check attempts
+    if (otpData.attempts >= 3) {
+      delete otpStore[userId];
+      return res.status(400).json({ success: false, message: 'Too many incorrect attempts. Verification session locked. Please request a new OTP' });
+    }
+
+    // Verify code
+    if (otpData.otp !== otp.trim()) {
+      otpData.attempts += 1;
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid verification code. ${3 - otpData.attempts} attempts remaining` 
+      });
+    }
+
+    // Mark as verified
+    otpData.verified = true;
+    res.json({ success: true, message: 'OTP verified successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// User Auth: Forgot Password - Step 5 Reset/Change Password
+app.post('/api/auth/forgot-password/reset', async (req, res) => {
+  const { userId, otp, newPassword } = req.body;
+  if (!userId || !otp || !newPassword) {
+    return res.status(400).json({ success: false, message: 'All parameters (userId, otp, newPassword) are required' });
+  }
+
+  try {
+    const otpData = otpStore[userId];
+    if (!otpData || !otpData.verified || otpData.otp !== otp.trim()) {
+      return res.status(400).json({ success: false, message: 'Unauthorized or verification session invalid' });
+    }
+
+    // Check expiry again
+    if (Date.now() > otpData.expiresAt) {
+      delete otpStore[userId];
+      return res.status(400).json({ success: false, message: 'Verification session expired. Please request a new OTP' });
+    }
+
+    // Update password in Supabase
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const { error } = await supabase
+      .from('users')
+      .update({ 
+        password: hashedPassword,
+        is_first_login: false // Mark is_first_login as false after password reset
+      })
+      .eq('user_id', userId);
+
+    if (error) throw error;
+
+    // Send confirmation email
+    await emailService.sendPasswordUpdatedEmail(otpData.email, userId);
+
+    // Clear caching & session
+    delete otpStore[userId];
+    const tempPasswords = readJsonFile(tempPasswordsPath);
+    delete tempPasswords[userId];
+    writeJsonFile(tempPasswordsPath, tempPasswords);
+
+    res.json({ success: true, message: 'Password updated successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

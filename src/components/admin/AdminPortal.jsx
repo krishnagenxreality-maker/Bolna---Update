@@ -8,7 +8,7 @@ import {
   Building2, Key, Monitor, Pencil, Eye, EyeOff,
   PhoneCall, Award, Coins, Layers, TrendingUp,
   Activity, Plus, ChevronRight, LayoutDashboard,
-  Calendar, MessageSquare
+  Calendar, MessageSquare, Mail
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -908,7 +908,35 @@ export default function AdminPortal() {
                         </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', alignItems: 'center' }}>
+                          <button
+                            onClick={async (e) => { 
+                              e.stopPropagation(); 
+                              if (window.confirm(`Are you sure you want to send credentials to user ${u.userId}?`)) {
+                                try {
+                                  const res = await axios.post(`${API_BASE_URL}/api/users/send-credentials/${u.userId}`);
+                                  if (res.data.success) {
+                                    alert("Credentials sent successfully!");
+                                  } else {
+                                    alert("Failed to send credentials: " + res.data.message);
+                                  }
+                                } catch(err) {
+                                  alert("Error sending credentials: " + (err.response?.data?.message || err.message));
+                                }
+                              }
+                            }}
+                            style={{
+                              background: 'none', border: 'none',
+                              color: 'rgba(96, 165, 250, 0.4)',
+                              cursor: 'pointer', transition: 'color 0.2s'
+                            }}
+                            title="Send Credentials via Email"
+                            onMouseOver={(e) => e.currentTarget.style.color = '#60a5fa'}
+                            onMouseOut={(e) => e.currentTarget.style.color = 'rgba(96, 165, 250, 0.4)'}
+                          >
+                            <Mail size={16} />
+                          </button>
+
                           <button
                             onClick={(e) => { e.stopPropagation(); handleOpenEdit(u); }}
                             style={{
@@ -1479,8 +1507,28 @@ export default function AdminPortal() {
               </div>
 
               {/* Footer */}
-              <div style={{ padding: '16px 32px 24px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                <button onClick={() => setSelectedUserForDetails(null)} className="btn-call" style={{ width: '100%', justifyContent: 'center', padding: '12px' }}>
+              <div style={{ padding: '16px 32px 24px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: '12px' }}>
+                <button 
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await axios.post(`${API_BASE_URL}/api/users/send-credentials/${selectedUserForDetails.userId}`);
+                      if (res.data.success) {
+                        alert("Credentials email sent successfully!");
+                      } else {
+                        alert("Failed to send credentials: " + res.data.message);
+                      }
+                    } catch(err) {
+                      alert("Error sending credentials: " + (err.response?.data?.message || err.message));
+                    }
+                  }} 
+                  className="btn-call" 
+                  style={{ flex: 1, justifyContent: 'center', padding: '12px', background: 'rgba(96, 165, 250, 0.1)', color: '#60a5fa', border: '1px solid rgba(96, 165, 250, 0.2)' }}
+                >
+                  <Mail size={16} style={{ marginRight: '8px' }} />
+                  Send Credentials
+                </button>
+                <button onClick={() => setSelectedUserForDetails(null)} className="btn-call" style={{ flex: 1, justifyContent: 'center', padding: '12px' }}>
                   Close
                 </button>
               </div>
