@@ -561,10 +561,7 @@ export function useBolnaDashboard() {
     }
   }, [scheduledJobs, isCalling, apiKey, dispatchNextBatch, addLog, setAgentId, setContacts]);
 
-  // Sync scheduleDate when searchDate changes (coming from calendar)
-  useEffect(() => {
-    if (searchDate) setScheduleDate(searchDate);
-  }, [searchDate]);
+
 
   // sync contactsRef whenever contacts state changes
   useEffect(() => { contactsRef.current = contacts; }, [contacts]);
