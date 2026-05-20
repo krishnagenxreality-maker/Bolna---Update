@@ -124,16 +124,34 @@ export function useBolnaDashboard() {
     }
   }, [addLog, agentId, user, scheduledJobs, fetchScheduledJobs]);
 
-  const updateContactStatus = useCallback((id, status, response = "", leadCategory = "", summary = "", recordingUrl = "") => {
+  const updateContactStatus = useCallback((id, status, response = "", leadCategory = "", summary = "", recordingUrl = "", duration = null) => {
     const now = new Date().toISOString().split('T')[0];
     const updated = contactsRef.current.map(c => 
-      c.id === id ? { ...c, status, response, leadCategory, summary, recordingUrl: recordingUrl || c.recordingUrl || "", date: now } : c
+      c.id === id ? { 
+        ...c, 
+        status, 
+        response, 
+        leadCategory, 
+        summary, 
+        recordingUrl: recordingUrl || c.recordingUrl || "", 
+        date: now,
+        duration: duration !== null ? duration : c.duration
+      } : c
     );
     
     setContacts(updated);
     contactsRef.current = updated;
     setSessionContacts(prev => prev.map(c => 
-      c.id === id ? { ...c, status, response, leadCategory, summary, recordingUrl: recordingUrl || c.recordingUrl || "", date: now } : c
+      c.id === id ? { 
+        ...c, 
+        status, 
+        response, 
+        leadCategory, 
+        summary, 
+        recordingUrl: recordingUrl || c.recordingUrl || "", 
+        date: now,
+        duration: duration !== null ? duration : c.duration
+      } : c
     ));
     
     console.log("CALL DETAILS UPDATED");
@@ -183,7 +201,8 @@ export function useBolnaDashboard() {
             console.log("RESPONSES UPDATED");
           }
           const finalStatus = sl === "completed" ? "called" : sl;
-          updateContactStatus(contact.id, finalStatus, sl, category, data.summary || "", recordingUrl); 
+          const duration = data.conversation_duration || data.telephony_data?.duration || 0;
+          updateContactStatus(contact.id, finalStatus, sl, category, data.summary || "", recordingUrl, duration); 
           addLog(`✓ ${sl.toUpperCase()}: ${contact.name}${category ? ` (${category})` : ""}`, "ok"); 
 
           // Deduct credit only for successfully completed calls

@@ -1410,13 +1410,15 @@ export default function AdminPortal() {
                         </div>
                       </div>
                       <div className="field">
-                        <span className="field-label">Total Call Minutes Used</span>
+                        <span className="field-label">Total Call Duration</span>
                         <div className="field-input" style={{ background: 'rgba(255,255,255,0.02)', color: '#60a5fa', fontWeight: '600' }}>
                           {(() => {
                             const completed = userDetailsContacts.filter(c => c.status === 'completed' || c.status === 'called');
                             const totalMins = completed.reduce((acc, c) => {
-                              const d = c.duration || c.callDuration || c.call_duration;
-                              if (d !== undefined) return acc + Number(d);
+                              const d = c.duration;
+                              if (d !== undefined && d !== null) {
+                                return acc + (Number(d) / 60);
+                              }
                               
                               let seed = 0;
                               if (c.id) {
@@ -1430,7 +1432,7 @@ export default function AdminPortal() {
                               const simulatedMins = (seed % 3) + 1;
                               return acc + simulatedMins;
                             }, 0);
-                            return `${totalMins} minutes`;
+                            return `${Math.round(totalMins)} minutes`;
                           })()}
                         </div>
                       </div>

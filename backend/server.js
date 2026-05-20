@@ -689,8 +689,26 @@ app.delete('/api/requests/:id', async (req, res) => {
 const mapContact = (c) => {
   if (!c) return null;
   const { lead_category, call_date, created_at, execution_id, user_id, classification, recording_url, ...rest } = c;
+  
+  let summaryText = c.summary || "";
+  let duration = null;
+  
+  try {
+    if (c.summary && c.summary.startsWith('{') && c.summary.endsWith('}')) {
+      const parsed = JSON.parse(c.summary);
+      if (parsed && typeof parsed === 'object') {
+        summaryText = parsed.text || "";
+        duration = parsed.duration !== undefined ? parsed.duration : null;
+      }
+    }
+  } catch (e) {
+    // summary is not JSON, keep it as-is
+  }
+
   return {
     ...rest,
+    summary: summaryText,
+    duration: duration,
     leadCategory: lead_category || classification, // Support both field names
     classification: classification,
     date: call_date,
@@ -753,19 +771,29 @@ app.post('/api/contacts', async (req, res) => {
   }
 
   try {
-    const contactsToInsert = contacts.map(c => ({
-      id: c.id.toString(),
-      user_id: userId,
-      name: c.name,
-      phone: c.phone,
-      status: c.status,
-      response: c.response,
-      summary: c.summary,
-      lead_category: c.leadCategory,
-      execution_id: c.executionId,
-      recording_url: c.recordingUrl || null,
-      call_date: c.date || new Date().toISOString().split('T')[0]
-    }));
+    const contactsToInsert = contacts.map(c => {
+      let dbSummary = c.summary;
+      // If we have duration information, store it serialized in the summary text column
+      if (c.duration !== undefined && c.duration !== null) {
+        dbSummary = JSON.stringify({
+          text: c.summary || "",
+          duration: c.duration
+        });
+      }
+      return {
+        id: c.id.toString(),
+        user_id: userId,
+        name: c.name,
+        phone: c.phone,
+        status: c.status,
+        response: c.response,
+        summary: dbSummary,
+        lead_category: c.leadCategory,
+        execution_id: c.executionId,
+        recording_url: c.recordingUrl || null,
+        call_date: c.date || new Date().toISOString().split('T')[0]
+      };
+    });
 
     const { data, error } = await supabase
       .from('contacts')
@@ -777,14 +805,27 @@ app.post('/api/contacts', async (req, res) => {
     // Handle dedicated leads table persistence
     const leadsToInsert = contactsToInsert
       .filter(c => c.lead_category && c.lead_category !== "")
-      .map(c => ({
-        user_id: userId,
-        name: c.name,
-        phone: c.phone,
-        category: c.lead_category,
-        summary: c.summary,
-        call_date: c.call_date
-      }));
+      .map(c => {
+        // Strip duration packaging for the leads table
+        let cleanSummary = c.summary;
+        try {
+          if (c.summary && c.summary.startsWith('{') && c.summary.endsWith('}')) {
+            const parsed = JSON.parse(c.summary);
+            if (parsed && typeof parsed === 'object') {
+              cleanSummary = parsed.text || "";
+            }
+          }
+        } catch (e) {}
+
+        return {
+          user_id: userId,
+          name: c.name,
+          phone: c.phone,
+          category: c.lead_category,
+          summary: cleanSummary,
+          call_date: c.call_date
+        };
+      });
 
     if (leadsToInsert.length > 0) {
       // Use upsert on leads table as well, but matching by user/phone/date/category 
