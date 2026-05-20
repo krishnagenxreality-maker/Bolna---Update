@@ -234,9 +234,8 @@ function AgentCard({ icon: Icon, title, tag, desc, color, delay = 0 }) {
 /* ─────────────────────────────────────────
    SECTOR AGENT CARD  (Bolna-style)
 ───────────────────────────────────────── */
-function SectorAgentCard({ title, tags, desc, color, delay = 0 }) {
+function SectorAgentCard({ title, tags, desc, color, delay = 0, playing, onPlayPause }) {
   const [ref, inView] = useInView();
-  const [playing, setPlaying] = useState(false);
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -278,7 +277,7 @@ function SectorAgentCard({ title, tags, desc, color, delay = 0 }) {
           {/* Right: play + arrow buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
             <button
-              onClick={() => setPlaying(p => !p)}
+              onClick={onPlayPause}
               style={{
                 width: '44px', height: '44px', borderRadius: '12px',
                 background: playing ? color : `${color}18`,
@@ -419,6 +418,43 @@ export default function HomePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const showJoinModal = searchParams.get('join') === 'true';
   const [showDemoModal, setShowDemoModal] = useState(false);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
+  const audioRef = useRef(null);
+
+  // Audio Playback Controller
+  const handlePlayPause = (agentTitle) => {
+    if (currentlyPlaying === agentTitle) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      setCurrentlyPlaying(null);
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      const audioUrl = `/Audio/${encodeURIComponent(agentTitle)}.mp3`;
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      audio.play().catch(err => {
+        console.warn("Audio play failed or was interrupted:", err);
+      });
+      setCurrentlyPlaying(agentTitle);
+      
+      audio.onended = () => {
+        setCurrentlyPlaying(null);
+      };
+    }
+  };
+
+  // Clean up audio on unmount to prevent leaks
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, []);
+
   const [legalOpen, setLegalOpen] = useState(false);
   const [legalType, setLegalType] = useState('terms');
   const [heroVisible, setHeroVisible] = useState(false);
@@ -722,6 +758,8 @@ export default function HomePage() {
                 key={agent.title + activeSector}
                 {...agent}
                 delay={i * 70}
+                playing={currentlyPlaying === agent.title}
+                onPlayPause={() => handlePlayPause(agent.title)}
               />
             ))}
           </div>
