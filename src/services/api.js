@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../config';
+
 export async function makeCall(key, agId, phone, name = "") {
   const res = await fetch("https://api.bolna.ai/call", {
     method: "POST",
@@ -28,14 +30,14 @@ export async function fetchVoices(key) {
     const res = await fetch("https://api.bolna.ai/voices", {
       headers: { "Authorization": `Bearer ${key}` }
     });
-    if (!res.ok) {
-      // Fallback to V2
+    if (res.status === 404 || res.status === 400) {
       const resV2 = await fetch("https://api.bolna.ai/v2/voices", {
         headers: { "Authorization": `Bearer ${key}` }
       });
       if (!resV2.ok) return [];
       return await resV2.json();
     }
+    if (!res.ok) return [];
     return await res.json();
   } catch (err) {
     console.error("Failed to fetch voices:", err);
@@ -55,6 +57,26 @@ export async function fetchExecutionStatus(key, executionId) {
 export async function analyzeSummaryWithDeepSeek(apiKey, summary) {
   if (!summary) return "Uncategorized";
 
+  // 1. Try secure backend analysis first
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/analyze-summary`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ summary })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.category) {
+        return data.category;
+      }
+    }
+  } catch (err) {
+    console.warn("[analyzeSummaryWithDeepSeek] Backend analysis failed, falling back to direct API:", err);
+  }
+
+  // 2. Fallback to direct client-side analysis
   try {
     const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method: "POST",

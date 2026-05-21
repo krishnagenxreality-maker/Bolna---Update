@@ -37,6 +37,7 @@ export function useBolnaDashboard() {
   const contactsRef  = useRef([]);
   const callQueueRef = useRef([]);
   const pollRef      = useRef(null);
+  const summaryPollCountRef = useRef(0);
   const processedJobIdsRef = useRef(new Set());
 
   // --- CALLBACKS & FUNCTIONS ---
@@ -96,6 +97,22 @@ export function useBolnaDashboard() {
     const inProgressCount = cs.filter(c => ["calling","queued"].includes(c.status)).length;
     
     if (inProgressCount === 0 && callQueueRef.current.length === 0) {
+      // Check if there are any completed calls missing a category/summary, and we haven't hit the 80s limit yet
+      const missingSummary = activeContacts.some(c => 
+        c.executionId && 
+        (c.status === "completed" || c.status === "called") && 
+        (!c.leadCategory || c.leadCategory === "Pending")
+      );
+
+      if (missingSummary && summaryPollCountRef.current < 8) {
+        summaryPollCountRef.current += 1;
+        console.log(`[Campaign] Waiting for async summaries. Poll count: ${summaryPollCountRef.current}/8`);
+        return; // Skip clearing interval and completing campaign for now
+      }
+
+      // Reset poll count when we actually finish
+      summaryPollCountRef.current = 0;
+
       if (pollRef.current) {
         clearInterval(pollRef.current);
         pollRef.current = null;

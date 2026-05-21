@@ -1057,6 +1057,59 @@ app.get('/api/contacts/:userId', async (req, res) => {
   }
 });
 
+// Secure backend endpoint for DeepSeek summary categorization analysis
+app.post('/api/analyze-summary', async (req, res) => {
+  const { summary } = req.body;
+  if (!summary) {
+    return res.json({ success: true, category: 'Uncategorized' });
+  }
+
+  const apiKey = process.env.DEEPSEEK_API_KEY || process.env.VITE_DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    console.error('[AnalyzeSummary] Missing DEEPSEEK_API_KEY in environment');
+    return res.json({ success: true, category: 'Uncategorized' });
+  }
+
+  try {
+    const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [
+          {
+            role: "system",
+            content: "You are a call analysis assistant. Analyze the call summary and generate a short descriptive Category Title (2-5 words) that captures the primary outcome or intent of the call. Examples: Fee Payment Confirmed, Student Marked Present, Parent Requested Callback, Appointment Rescheduled, Product Interested, Complaint Registered, Follow-up Needed, Not Interested, Information Provided, Voicemail Left. Return ONLY the category title, nothing else."
+          },
+          {
+            role: "user",
+            content: `Summary: ${summary}`
+          }
+        ],
+        temperature: 0.3
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`[AnalyzeSummary] DeepSeek API error: ${response.status} - ${errText}`);
+      return res.json({ success: true, category: 'Uncategorized' });
+    }
+
+    const data = await response.json();
+    const result = (data.choices?.[0]?.message?.content || '').trim();
+    const cleaned = result.replace(/['"]/g, '').replace(/\.$/, '');
+    
+    res.json({ success: true, category: cleaned || 'Uncategorized' });
+  } catch (err) {
+    console.error("[AnalyzeSummary] AI Analysis failed:", err);
+    res.json({ success: true, category: 'Uncategorized' });
+  }
+});
+
 app.post('/api/contacts', async (req, res) => {
   const { userId, contacts } = req.body;
   if (!userId || !Array.isArray(contacts)) {
