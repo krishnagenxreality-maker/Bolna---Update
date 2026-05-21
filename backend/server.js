@@ -225,12 +225,53 @@ app.post('/api/users', async (req, res) => {
   const newUser = req.body;
   const demoRequestId = newUser.demoRequestId;
   
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    return res.status(500).json({
+      success: false,
+      message: 'Configuration Error: SUPABASE_SERVICE_ROLE_KEY is missing in production environment. Row-Level Security (RLS) is blocking inserts.'
+    });
+  }
+
+  // Explicitly initialize administrative Supabase client using the service role key to bypass RLS
+  const supabaseAdmin = createClient(process.env.SUPABASE_URL, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+
   try {
+    // Generate placeholder email if not provided/empty
+    const emailToUse = (newUser.email && newUser.email.trim())
+      ? newUser.email.trim()
+      : `${newUser.userId.toLowerCase()}@callinggen.in`;
+
+    // 1. Create the user in Supabase Auth via Admin API
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: emailToUse,
+      password: newUser.password,
+      email_confirm: true,
+      user_metadata: {
+        userId: newUser.userId,
+        role: newUser.role || 'user'
+      }
+    });
+
+    if (authError) {
+      return res.status(400).json({
+        success: false,
+        message: `Auth User Creation Failed: ${authError.message}`
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(newUser.password, 10);
     
-    const { data, error } = await supabase
+    // 2. Insert corresponding user record in public users table using the Auth user's ID as primary key
+    const { data, error } = await supabaseAdmin
       .from('users')
       .insert([{
+        id: authData.user.id, // Map public users id to auth users id
         user_id: newUser.userId,
         password: hashedPassword,
         role: newUser.role || 'user',
@@ -250,13 +291,22 @@ app.post('/api/users', async (req, res) => {
       .single();
 
     if (error) {
-      if (error.code === '23505') return res.status(400).json({ success: false, message: 'User ID already exists' });
+      // Transaction Rollback: delete the created Auth user if public users insertion fails
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      } catch (rollbackError) {
+        console.error(`Rollback failed to delete auth user ${authData.user.id}:`, rollbackError);
+      }
+
+      if (error.code === '23505') {
+        return res.status(400).json({ success: false, message: 'User ID already exists' });
+      }
       throw error;
     }
 
     // If created from a demo request, update the request status
     if (demoRequestId) {
-      await supabase
+      await supabaseAdmin
         .from('demo_requests')
         .update({ status: 'Assigned' })
         .eq('id', demoRequestId);
